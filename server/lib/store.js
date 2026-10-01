@@ -16,6 +16,11 @@ export const FILES = {
   briefings: join(DATA_DIR, 'briefings.json'),
   signals: join(DATA_DIR, 'signal_log.json'),
   runs: join(DATA_DIR, 'runs.json'),
+  // Collection checkpoint. Searching is the slow, metered half of a run, so
+  // raw signals are written the moment collection finishes — a failure in
+  // verification or synthesis then costs seconds to retry instead of minutes
+  // and a fresh set of search credits.
+  raw: join(DATA_DIR, 'last_collection.json'),
 };
 
 export async function readJSON(file, fallback) {
@@ -39,6 +44,9 @@ export async function writeJSON(file, value) {
 export const getBriefings = () => readJSON(FILES.briefings, []);
 export const getSignals = () => readJSON(FILES.signals, []);
 export const getRuns = () => readJSON(FILES.runs, []);
+
+export const saveCollection = (payload) => writeJSON(FILES.raw, payload);
+export const getCollection = () => readJSON(FILES.raw, null);
 
 /** Store a briefing, replacing any existing briefing for the same week. */
 export async function saveBriefing(briefing) {

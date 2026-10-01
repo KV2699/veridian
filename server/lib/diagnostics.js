@@ -89,6 +89,15 @@ const RULES = [
     fix: 'Known failure mode: inside a narrow topic everything looks maximally relevant. The scores are ranking within the batch rather than measuring real BD value. Tighten the scoring guidance in the profile before trusting this week\'s priorities.',
   },
   {
+    id: 'band-inflation',
+    stage: 'verify',
+    severity: 'high',
+    test: null,
+    scope: 'run',
+    cause: 'More than half of this week\'s signals landed in the top priority band.',
+    fix: 'A normal week has a handful of top-band signals, not a majority. The usual cause is over-generous practice-area mapping: a second area moves a signal a whole band, so padding that list inflates everything. Check the practice-area discipline in the verifier, and whether organisation scale is being set to "large" by default.',
+  },
+  {
     id: 'undated-heavy',
     stage: 'extract',
     severity: 'medium',
@@ -151,6 +160,18 @@ export function diagnose({ collectors = [], signals = [], rawCount = 0 }) {
     if (high / signals.length > 0.7) {
       add(byId['score-inflation'], 'whole run', `${high} of ${signals.length} scored 8+`);
     }
+    // Band inflation is measured on the computed priority band, not on the
+    // model's own relevance view — the two can disagree, and the band is what
+    // the reader acts on.
+    const top = signals.filter((s) => s.priority_band === 'Critical').length;
+    if (top / signals.length > 0.5) {
+      add(byId['band-inflation'], 'whole run', `${top} of ${signals.length} Critical`);
+    }
+    const multi = signals.filter((s) => s.multi_service).length;
+    if (signals.length >= 10 && multi / signals.length > 0.6) {
+      add(byId['band-inflation'], 'practice-area mapping', `${multi} of ${signals.length} tagged multi-service`);
+    }
+
     const undated = signals.filter((s) => !s.date).length;
     if (undated / signals.length > 0.4) {
       add(byId['undated-heavy'], 'whole run', `${undated} of ${signals.length} undated`);

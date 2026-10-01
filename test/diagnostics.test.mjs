@@ -89,5 +89,28 @@ check('batches failing to parse blamed on the model, not the queries', ids(d).in
 check('and extraction-collapse suppressed so the real cause is not buried', !ids(d).includes('extraction-collapse'));
 check('the fix names the fast model', d.findings.find((f) => f.id === 'parse-failure')?.fix.includes('NEBIUS_MODEL_FAST'));
 
+// Band inflation is measured on the computed band, not the model's relevance —
+// a live run produced 67% Critical while every relevance score looked sane.
+d = diagnose({
+  collectors: [{ key: 'a', name: 'A', hits: 60, fresh: 60, extracted: 58, kept: 58, batches: 8, parseFailures: 0, queries: [{ query: 'q', hits: 60, fresh: 60 }] }],
+  signals: Array.from({ length: 58 }, (_, i) => ({
+    relevance_score: 7, date: '2026-09-29', url: `https://x${i}.com/1`, category: 'a',
+    priority_band: i < 39 ? 'Critical' : 'Medium', multi_service: i < 41,
+  })),
+});
+check('majority in the top band flagged as inflation', ids(d).includes('band-inflation'));
+check('and the fix points at practice-area mapping',
+  d.findings.find((f) => f.id === 'band-inflation')?.fix.includes('practice-area'));
+
+// A sane distribution must stay quiet.
+d = diagnose({
+  collectors: [{ key: 'a', name: 'A', hits: 30, fresh: 25, extracted: 12, kept: 12, batches: 4, parseFailures: 0, queries: [{ query: 'q', hits: 30, fresh: 25 }] }],
+  signals: Array.from({ length: 12 }, (_, i) => ({
+    relevance_score: i < 3 ? 9 : 6, date: '2026-09-29', url: `https://y${i}.com/1`, category: 'a',
+    priority_band: i < 3 ? 'Critical' : i < 7 ? 'High' : 'Medium', multi_service: i < 3,
+  })),
+});
+check('a healthy band spread is not flagged', !ids(d).includes('band-inflation'));
+
 console.log(failed ? `\n✗ ${failed} check(s) failed\n` : '\n✓ all checks passed\n');
 process.exit(failed ? 1 : 0);

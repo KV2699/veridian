@@ -16,6 +16,16 @@ import { log } from '../lib/log.js';
 
 const DEFAULT_FLOOR = 6;
 
+// One verdict is roughly 50 output tokens, so a busy week of 70 signals needs
+// ~3,500 before the model has written a single connection — and a reasoning
+// model needs headroom on top of that or it thinks until the budget is gone.
+const VERIFY_MAX_TOKENS = Number(process.env.VERIFY_MAX_TOKENS) || 16000;
+
+// Above this, signals are verified in chunks. Cross-category deduplication is
+// strongest in a single pass, so the chunk size is kept generous and only a
+// genuinely large week is split.
+const VERIFY_CHUNK = Number(process.env.VERIFY_CHUNK) || 45;
+
 const SYSTEM = `You are the quality assurance layer of a BD intelligence pipeline for the AI infrastructure market.
 
 You receive signals collected by four independent agents. Your job is to decide what a busy BD professional should actually see, and to be honest about what you cannot verify.
@@ -26,8 +36,19 @@ For every signal, judge:
    6-7  = real and relevant market intelligence, but not directly actionable this week.
    0-5  = vague, undated, sector-level, pure commentary, or no clear BD implication.
 2. DUPLICATION — the same underlying event may have been collected by more than one agent under different wording. Group those together and keep the single best-sourced version.
-3. PRACTICE AREA MAPPING — the collector proposed which offerings each signal opens a conversation for. Correct it. Remove any area the signal gives no real reason to discuss, and add one the collector missed. Be strict: padding this list inflates the priority score, because a signal opening two or more areas scores materially higher than one opening a single area. If a signal opens nothing specific, return an empty list.
-4. ORGANISATION SCALE — confirm or correct the size of the named organisation. Use "unknown" when the source does not establish it; never guess "large".
+3. PRACTICE AREA MAPPING — the collector proposed which offerings each signal opens a conversation for. Correct it, and correct it DOWNWARDS by default.
+
+   The test is not "could this organisation conceivably buy that offering." Almost every organisation in this market could conceivably buy almost everything. The test is: does THIS SPECIFIC DATED EVENT give a concrete, statable reason to open a conversation about that offering this week?
+
+   - MOST SIGNALS OPEN EXACTLY ONE AREA. A funding round is capital, not a networking conversation. A model release is software, not a compute conversation.
+   - Two areas require the event itself to implicate both — for example an announced buildout that names both hardware and the platform running on it.
+   - Three or more should be rare and should only happen when the source explicitly describes a programme spanning them.
+   - If you cannot write the sentence "this event means they need to talk to us about X" for an area, remove it.
+
+   GROUNDING NOTES: some signals arrive with a note saying a figure could not be found in the source, or that the source is a social-media post rather than reporting. Treat both as reasons to set needs_review, and never score such a signal in the top band.
+
+   Padding this list is the single easiest way to corrupt this briefing, because a second area moves a signal a whole priority band. When in doubt, drop the area.
+4. ORGANISATION SCALE — confirm or correct the size of the named organisation. "large" means a major enterprise, hyperscaler, government or household name. Use "unknown" when the source does not establish it. Never guess "large" because the sector is large — the organisation must be.
 5. REVIEW FLAG — set needs_review true when the claim is high-stakes but thinly sourced, a figure or date looks implausible, the company attribution is ambiguous, or the signal is an inference rather than a stated fact. Say why in review_reason.
 
 SCORING DISCIPLINE — this matters more than coverage:
@@ -65,20 +86,43 @@ export default async function qaVerify({ signals, profile }, deps = {}) {
   log.step(`${signals.length} collected → ${unique.length} after exact-URL dedup`);
 
   log.step(`Nemotron Ultra verification pass (${MODELS.ultra})`);
-  const { data, model, usage } = await ask({
-    tier: 'ultra',
-    temperature: 0.2,
-    maxTokens: 4000,
-    system: SYSTEM,
-    expectKey: 'verified',
-    user: buildPrompt(unique, profile),
-  });
 
-  const verdicts = new Map(
-    (Array.isArray(data?.verified) ? data.verified : [])
-      .filter((v) => v && typeof v.id === 'string')
-      .map((v) => [v.id, v]),
-  );
+  const chunks = unique.length > VERIFY_CHUNK ? chunk(unique, VERIFY_CHUNK) : [unique];
+  if (chunks.length > 1) {
+    log.warn(`${unique.length} signals split into ${chunks.length} verification passes — cross-chunk duplicates are caught by URL only`);
+  }
+
+  const verdicts = new Map();
+  const rawConnections = [];
+  const assessments = [];
+  let model = MODELS.ultra;
+  let usage = null;
+
+  for (const [i, group] of chunks.entries()) {
+    if (chunks.length > 1) log.step(`verification pass ${i + 1}/${chunks.length} (${group.length} signals)`);
+    const res = await ask({
+      tier: 'ultra',
+      temperature: 0.2,
+      maxTokens: VERIFY_MAX_TOKENS,
+      expectKey: 'verified',
+      system: SYSTEM,
+      user: buildPrompt(group, profile),
+    });
+    model = res.model;
+    usage = res.usage;
+    for (const v of Array.isArray(res.data?.verified) ? res.data.verified : []) {
+      if (v && typeof v.id === 'string') verdicts.set(v.id, v);
+    }
+    if (Array.isArray(res.data?.connections)) rawConnections.push(...res.data.connections);
+    if (res.data?.assessment) assessments.push(String(res.data.assessment).trim());
+  }
+
+  const data = {
+    verified: [...verdicts.values()],
+    connections: rawConnections,
+    assessment: assessments.join(' '),
+  };
+
   log.step(`Ultra returned verdicts for ${verdicts.size}/${unique.length} signals`);
 
   const kept = [];
@@ -101,7 +145,7 @@ export default async function qaVerify({ signals, profile }, deps = {}) {
     const score = clamp(v.relevance_score, s.relevance_score);
     if (score < floor) { dropped++; continue; }
 
-    const needsReview = Boolean(v.needs_review) || !s.date;
+    const needsReview = Boolean(v.needs_review) || !s.date || Boolean(s.grounding_note) || Boolean(s.weak_source);
     if (needsReview) flagged++;
 
     // The verifier's corrected mapping wins over the collector's proposal, but
@@ -120,7 +164,12 @@ export default async function qaVerify({ signals, profile }, deps = {}) {
       relevance_score: score,
       collector_score: s.relevance_score,
       needs_review: needsReview,
-      review_reason: String(v.review_reason || (!s.date ? 'No published date on source' : '')).trim(),
+      review_reason: String(
+        v.review_reason
+        || s.grounding_note
+        || (s.weak_source ? 'Source is a social media post, not reporting' : '')
+        || (!s.date ? 'No published date on source' : ''),
+      ).trim(),
       verified: true,
     });
   }
@@ -173,6 +222,8 @@ function buildPrompt(signals, profile) {
     `SOURCE: ${s.url}`,
     `COLLECTOR SCORE: ${s.relevance_score}`,
     `PRACTICE AREAS PROPOSED: ${(s.practice_areas ?? []).join(', ') || 'none'}`,
+    s.grounding_note ? `GROUNDING CONCERN: ${s.grounding_note}` : null,
+    s.weak_source ? 'SOURCE TYPE: social media post, not reporting' : null,
     `ORG SCALE PROPOSED: ${s.org_scale ?? 'unknown'}`,
   ].join('\n')).join('\n\n');
 
@@ -201,6 +252,8 @@ ${blocks}
 
 Verify, score, deduplicate and connect them. Return JSON for all ${signals.length} ids.`;
 }
+
+const chunk = (arr, n) => Array.from({ length: Math.ceil(arr.length / n) }, (_, i) => arr.slice(i * n, i * n + n));
 
 function clamp(v, fallback) {
   const n = Number(v);

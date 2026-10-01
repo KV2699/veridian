@@ -16,7 +16,7 @@
 import { pathToFileURL } from 'node:url';
 
 import { timed, log } from './lib/log.js';
-import { knownUrlKeys, saveRun } from './lib/store.js';
+import { knownUrlKeys, saveRun, saveCollection, getCollection } from './lib/store.js';
 import { MODELS } from './lib/nebius.js';
 import { diagnose, report } from './lib/diagnostics.js';
 import { loadProfile } from './profiles/index.js';
@@ -44,7 +44,14 @@ export function agentList(profile = loadProfile()) {
 let running = false;
 export const isRunning = () => running;
 
-export async function runPipeline({ trigger = 'manual', dryRun = process.env.DRY_RUN === 'true', profileKey } = {}) {
+export async function runPipeline({
+  trigger = 'manual',
+  dryRun = process.env.DRY_RUN === 'true',
+  profileKey,
+  // Reuse the last collection instead of searching again. Useful when a run
+  // failed downstream, and when iterating on verification or briefing wording.
+  resume = process.env.RESUME === 'true',
+} = {}) {
   if (running) throw Object.assign(new Error('A pipeline run is already in progress'), { code: 'BUSY' });
   running = true;
 
@@ -63,23 +70,38 @@ export async function runPipeline({ trigger = 'manual', dryRun = process.env.DRY
   try {
     if (dryRun) return await dryRunPipeline({ profile, agents, week, weekLabel, started, statuses, trigger });
 
-    const ctx = { knownUrlKeys: await knownUrlKeys() };
-    log.step(`${ctx.knownUrlKeys.size} URLs already in the signal log will be excluded`);
+    let signals, telemetry;
 
-    // ── Agents 1-N: discovery collectors + Account Watch, concurrently ──────
-    const collectorRuns = await Promise.all([
-      ...profile.collectors.map((cfg, i) =>
-        timed(i + 1, cfg.name, () => runCollector({ ...cfg, category: cfg.key, polarity: profile.polarity, practiceAreas: profile.practiceAreas }, ctx), total)),
-      timed(profile.collectors.length + 1, 'Account Watch', () => accountWatch({ profile }, ctx), total),
-    ]);
-    statuses.push(...collectorRuns.map(toStatus));
+    const checkpoint = resume ? await getCollection() : null;
+    if (checkpoint?.signals?.length) {
+      ({ signals, telemetry } = checkpoint);
+      log.warn(`RESUME — reusing ${signals.length} signals collected at ${checkpoint.collected_at}; no searches will run`);
+      for (const [i, a] of agents.slice(0, profile.collectors.length + 1).entries()) {
+        statuses.push({ agent: a.name, index: i + 1, status: 'success', duration_ms: 0, detail: 'resumed from checkpoint' });
+      }
+    } else {
+      const ctx = { knownUrlKeys: await knownUrlKeys() };
+      log.step(`${ctx.knownUrlKeys.size} URLs already in the signal log will be excluded`);
 
-    const signals = collectorRuns.flatMap((c) => c.signals ?? []);
-    const telemetry = collectorRuns.map((c) => c.telemetry).filter(Boolean);
-    const failed = collectorRuns.filter((c) => c.status === 'error');
-    if (failed.length === collectorRuns.length) throw new Error('every collector failed — check NEBIUS_API_KEY and TAVILY_API_KEY');
-    if (failed.length) log.warn(`${failed.length} of ${collectorRuns.length} collectors failed; continuing with ${signals.length} signals`);
-    log.ok(`collection complete — ${signals.length} raw signals`);
+      // ── Agents 1-N: discovery collectors + Account Watch, concurrently ────
+      const collectorRuns = await Promise.all([
+        ...profile.collectors.map((cfg, i) =>
+          timed(i + 1, cfg.name, () => runCollector({ ...cfg, category: cfg.key, polarity: profile.polarity, practiceAreas: profile.practiceAreas }, ctx), total)),
+        timed(profile.collectors.length + 1, 'Account Watch', () => accountWatch({ profile }, ctx), total),
+      ]);
+      statuses.push(...collectorRuns.map(toStatus));
+
+      signals = collectorRuns.flatMap((c) => c.signals ?? []);
+      telemetry = collectorRuns.map((c) => c.telemetry).filter(Boolean);
+      const failed = collectorRuns.filter((c) => c.status === 'error');
+      if (failed.length === collectorRuns.length) throw new Error('every collector failed — check NEBIUS_API_KEY and TAVILY_API_KEY');
+      if (failed.length) log.warn(`${failed.length} of ${collectorRuns.length} collectors failed; continuing with ${signals.length} signals`);
+      log.ok(`collection complete — ${signals.length} raw signals`);
+
+      // Checkpoint before anything downstream can fail.
+      await saveCollection({ week, collected_at: new Date().toISOString(), profile: profile.key, signals, telemetry });
+      log.step('collection checkpointed — rerun with RESUME=true to skip searching');
+    }
 
     // ── QA Verifier ─────────────────────────────────────────────────────────
     const qa = await timed(total - 2, 'QA Verifier', () => qaVerify({ signals, profile }), total);

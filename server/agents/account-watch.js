@@ -67,19 +67,21 @@ export default async function accountWatch({ profile }, ctx = {}, deps = {}) {
   const fresh = results.filter((h) => !known.has(canonicalUrl(h.url)));
   log.step(`${results.length} unique results, ${fresh.length} not seen before`);
 
+  let ungrounded = 0;
   const telemetry = (extracted) => ({
     key: 'account', name: 'Account Watch',
     queries: stats.map((s) => ({ ...s, fresh: fresh.filter((h) => h.found_via === s.query).length })),
-    hits: results.length, fresh: fresh.length, extracted,
+    hits: results.length, fresh: fresh.length, extracted, ungrounded,
   });
 
   if (!fresh.length) return { signals: [], telemetry: telemetry(0), summary: '0 account signals (nothing new)' };
 
   const signals = [];
-  for (let i = 0; i < fresh.length; i += 8) {
-    const batch = fresh.slice(i, i + 8);
-    const n = Math.floor(i / 8) + 1;
-    const of = Math.ceil(fresh.length / 8);
+  const BATCH = Number(process.env.EXTRACTION_BATCH) || 4;
+  for (let i = 0; i < fresh.length; i += BATCH) {
+    const batch = fresh.slice(i, i + BATCH);
+    const n = Math.floor(i / BATCH) + 1;
+    const of = Math.ceil(fresh.length / BATCH);
     log.step(`Nemotron FAST extraction, batch ${n}/${of} (${batch.length} results)`);
     try {
       const { data } = await ask({
@@ -87,7 +89,10 @@ export default async function accountWatch({ profile }, ctx = {}, deps = {}) {
         user: buildPrompt({ focus, signalTypes, roster, batch, polarity: profile?.polarity ?? [] }),
       });
       // Reuse the collector's guard: any url the search did not return is dropped.
-      signals.push(...normalise(data?.signals, { batch, category: 'account' }));
+      signals.push(...normalise(data?.signals, {
+        batch, category: 'account',
+        onDrop: ({ company, reason }) => { ungrounded++; log.warn(`dropped "${company}" — ${reason}`); },
+      }));
     } catch (err) {
       log.warn(`batch ${n}/${of} extraction failed, continuing — ${err.message}`);
     }

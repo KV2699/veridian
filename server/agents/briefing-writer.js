@@ -24,7 +24,7 @@ VOICE:
 HARD RULES:
 - Use ONLY the supplied signals. Never add a company, number, date or event from your own knowledge. If a section has no signals, write "No signals this week." under it.
 - Never restate a signal's score, its id, or the name of the agent that found it.
-- Mark anything flagged for review inline as "(unconfirmed)" — do not quietly drop it and do not present it as settled.
+- Mark anything flagged for review inline as "(unconfirmed)" — do not quietly drop it and do not present it as settled. This is not optional: a flagged claim presented as fact is the one failure this briefing cannot recover from.
 - Order every section most important first.
 - Connections must be real links between the supplied signals, not general market commentary.
 - The three recommended actions must each be something the reader can personally start this week, each tied to a specific signal above. No "monitor the market", no "consider exploring". Name who to approach or what to prepare.
@@ -60,7 +60,7 @@ export default async function writeBriefing({ signals, connections, assessment, 
   const { text, model, usage } = await ask({
     tier: 'ultra',
     temperature: 0.4,
-    maxTokens: 3000,
+    maxTokens: Number(process.env.BRIEFING_MAX_TOKENS) || 12000,
     system: SYSTEM,
     user: buildPrompt({ signals, connections, assessment, weekLabel, counts, CATEGORIES, profile }),
   });

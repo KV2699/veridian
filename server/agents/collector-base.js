@@ -7,6 +7,7 @@
 // extraction contract lands in all four collectors at once.
 
 import { searchMany, canonicalUrl } from '../lib/tavily.js';
+import { checkGrounding } from '../lib/grounding.js';
 import { completeJSON } from '../lib/nebius.js';
 import { log } from '../lib/log.js';
 
@@ -19,6 +20,7 @@ HARD RULES:
 - Every signal needs the exact url from the result it came from. Never invent or alter a url.
 - date must be the published date of the source. If the result has no date, use null — never guess a date.
 - One signal per distinct event. If two results describe the same event, emit one signal.
+- The summary must describe what THIS result reports. If a company is only mentioned in passing, or the fact comes from your own knowledge rather than the text in front of you, do not emit a signal for it. The organisation you name must be the organisation the result is actually about.
 - A result that is not a dated, specific, named-company event is not a signal. Skip it. Returning three real signals is better than ten padded ones.
 - Skip opinion pieces, listicles, roundups, pure stock commentary and vendor marketing with no announced event.
 - summary must be one factual sentence naming the company and what happened. No adjectives, no speculation.
@@ -36,9 +38,12 @@ practice_areas: the keys of every offering this signal opens a genuine conversat
 org_scale: the size of the organisation named — "large" (major enterprise, hyperscaler, government, or household name), "mid", "small" (startup, small institution), or "unknown" when the source does not say. Never guess "large" to inflate a signal.
 If nothing in the results qualifies, return {"signals":[]}.`;
 
-// Hits are summarised in batches so one oversized prompt cannot blow the
-// context window, and a single bad batch cannot lose the whole collection.
-const BATCH = 8;
+// Hits are summarised in small batches for three reasons: one oversized prompt
+// cannot blow the context window, a single bad batch cannot lose the whole
+// collection, and — measured on real web content — a reasoning-tuned model
+// needs the per-call output to stay small or it exhausts its token budget
+// thinking and never answers.
+const BATCH = Number(process.env.EXTRACTION_BATCH) || 4;
 
 export async function runCollector(
   { key, name, category, focus, signalTypes, queries, windowDays = 7, polarity = [], practiceAreas = [] },
@@ -59,6 +64,7 @@ export async function runCollector(
   // pass, whether or not anything was found.
   let parseFailures = 0;
   let batches = 0;
+  let ungrounded = 0;
   const telemetry = (extracted) => ({
     key: key ?? category,
     name,
@@ -68,6 +74,7 @@ export async function runCollector(
     extracted,
     parseFailures,
     batches,
+    ungrounded,
   });
 
   if (!fresh.length) {
@@ -90,7 +97,10 @@ export async function runCollector(
         system: SYSTEM,
         user: buildPrompt({ focus, signalTypes, batch, polarity, practiceAreas }),
       });
-      signals.push(...normalise(data?.signals, { batch, category, practiceAreas }));
+      signals.push(...normalise(data?.signals, {
+        batch, category, practiceAreas,
+        onDrop: ({ company, reason }) => { ungrounded++; log.warn(`dropped "${company}" — ${reason}`); },
+      }));
     } catch (err) {
       // Counted separately from "found nothing": a batch that failed to parse
       // is a model-output problem, not evidence the market is quiet.
@@ -99,7 +109,7 @@ export async function runCollector(
     }
   }
 
-  log.ok(`${signals.length} signals extracted from ${fresh.length} results`);
+  log.ok(`${signals.length} signals extracted from ${fresh.length} results${ungrounded ? ` (${ungrounded} dropped as ungrounded)` : ''}`);
   return {
     category,
     signals,
@@ -145,7 +155,7 @@ Extract the qualifying signals as JSON.`;
 
 // The model's output is never trusted as-is: urls must match a supplied result,
 // dates must be real and in-window-shaped, scores must be numbers 0-10.
-export function normalise(raw, { batch, category, practiceAreas = [] }) {
+export function normalise(raw, { batch, category, practiceAreas = [], onDrop } = {}) {
   const validAreas = new Set(practiceAreas.map((a) => a.key));
   if (!Array.isArray(raw)) return [];
   const allowed = new Map(batch.map((h) => [canonicalUrl(h.url), h]));
@@ -165,6 +175,15 @@ export function normalise(raw, { batch, category, practiceAreas = [] }) {
     const company = str(s.company);
     const summary = str(s.summary);
     if (!company || !summary) continue;
+
+    // A url that came back from the search still has to SAY this. A claim
+    // attached to a source that never mentions the organisation is a
+    // misattribution, and it is dropped rather than flagged.
+    const grounding = checkGrounding({ company, summary, url: source.url }, source);
+    if (!grounding.ok) {
+      onDrop?.({ company, summary, url: source.url, reason: grounding.reason });
+      continue;
+    }
 
     // Marked seen only once the row is known good, so a malformed row cannot
     // claim a url and suppress a valid signal for the same source.
@@ -189,6 +208,10 @@ export function normalise(raw, { batch, category, practiceAreas = [] }) {
       source_title: source.title,
       found_via: source.found_via,
       collected_at: new Date().toISOString(),
+      // Carried forward so the verifier and the briefing can mark a claim the
+      // source only partly supports, rather than presenting it as settled.
+      grounding_note: grounding.reason || null,
+      weak_source: grounding.weakSource,
     });
   }
   return out;
