@@ -35,6 +35,9 @@ HARD RULES:
 
 relevance_score is 0-10 for how strong a reason this is to contact that account THIS WEEK. A dated, specific development they would expect you to have noticed scores high. Background coverage scores low.
 
+OUTPUT FORMAT — this is strict:
+Your entire reply must be a single JSON object. Do not reason out loud, do not explain your thinking, do not write a preamble, do not use a code fence. The first character you output must be {.
+
 Reply with JSON only:
 {"signals":[{"company":"string","signal_type":"string","summary":"string","url":"string","date":"YYYY-MM-DD or null","relevance_score":0}]}
 If nothing qualifies, return {"signals":[]}.`;
@@ -80,7 +83,7 @@ export default async function accountWatch({ profile }, ctx = {}, deps = {}) {
     log.step(`Nemotron FAST extraction, batch ${n}/${of} (${batch.length} results)`);
     try {
       const { data } = await ask({
-        tier: 'fast', temperature: 0.1, maxTokens: 2000, system: SYSTEM,
+        tier: 'fast', temperature: 0, maxTokens: 4000, expectKey: 'signals', system: SYSTEM,
         user: buildPrompt({ focus, signalTypes, roster, batch, polarity: profile?.polarity ?? [] }),
       });
       // Reuse the collector's guard: any url the search did not return is dropped.

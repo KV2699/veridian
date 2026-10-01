@@ -11,6 +11,7 @@
 // malformed or sub-threshold signal through.
 
 import { completeJSON, MODELS } from '../lib/nebius.js';
+import { scoreAll } from '../lib/score.js';
 import { log } from '../lib/log.js';
 
 const DEFAULT_FLOOR = 6;
@@ -25,7 +26,9 @@ For every signal, judge:
    6-7  = real and relevant market intelligence, but not directly actionable this week.
    0-5  = vague, undated, sector-level, pure commentary, or no clear BD implication.
 2. DUPLICATION — the same underlying event may have been collected by more than one agent under different wording. Group those together and keep the single best-sourced version.
-3. REVIEW FLAG — set needs_review true when the claim is high-stakes but thinly sourced, a figure or date looks implausible, the company attribution is ambiguous, or the signal is an inference rather than a stated fact. Say why in review_reason.
+3. PRACTICE AREA MAPPING — the collector proposed which offerings each signal opens a conversation for. Correct it. Remove any area the signal gives no real reason to discuss, and add one the collector missed. Be strict: padding this list inflates the priority score, because a signal opening two or more areas scores materially higher than one opening a single area. If a signal opens nothing specific, return an empty list.
+4. ORGANISATION SCALE — confirm or correct the size of the named organisation. Use "unknown" when the source does not establish it; never guess "large".
+5. REVIEW FLAG — set needs_review true when the claim is high-stakes but thinly sourced, a figure or date looks implausible, the company attribution is ambiguous, or the signal is an inference rather than a stated fact. Say why in review_reason.
 
 SCORING DISCIPLINE — this matters more than coverage:
 - Do not inflate. If most signals in a batch score 8+, you are scoring the batch's internal ranking rather than real BD value. A normal week has a handful of 8s and a long tail of 6s and below.
@@ -36,7 +39,7 @@ SCORING DISCIPLINE — this matters more than coverage:
 Then identify CONNECTIONS: non-obvious links across categories where two or more signals together mean more than they do apart (a funding round plus a competitor's capacity constraint; a model release plus a stated procurement). Only real links present in the signals. If there are none, return an empty array.
 
 Reply with JSON only:
-{"verified":[{"id":"the id given","relevance_score":0,"needs_review":false,"review_reason":"","duplicate_of":null}],
+{"verified":[{"id":"the id given","relevance_score":0,"practice_areas":["key"],"org_scale":"large|mid|small|unknown","needs_review":false,"review_reason":"","duplicate_of":null}],
  "connections":[{"observation":"one sentence","signal_ids":["id","id"]}],
  "assessment":"one sentence on the overall quality of this week's collection"}
 
@@ -67,6 +70,7 @@ export default async function qaVerify({ signals, profile }, deps = {}) {
     temperature: 0.2,
     maxTokens: 4000,
     system: SYSTEM,
+    expectKey: 'verified',
     user: buildPrompt(unique, profile),
   });
 
@@ -99,8 +103,20 @@ export default async function qaVerify({ signals, profile }, deps = {}) {
 
     const needsReview = Boolean(v.needs_review) || !s.date;
     if (needsReview) flagged++;
+
+    // The verifier's corrected mapping wins over the collector's proposal, but
+    // only ever within the areas this profile actually sells.
+    const valid = new Set((profile?.practiceAreas ?? []).map((a) => a.key));
+    const areas = Array.isArray(v.practice_areas)
+      ? [...new Set(v.practice_areas.map((a) => String(a ?? '').trim().toLowerCase()).filter((a) => valid.has(a)))]
+      : s.practice_areas ?? [];
+
     kept.push({
       ...s,
+      practice_areas: areas,
+      org_scale: ['large', 'mid', 'small'].includes(String(v.org_scale ?? '').toLowerCase())
+        ? String(v.org_scale).toLowerCase()
+        : s.org_scale ?? 'unknown',
       relevance_score: score,
       collector_score: s.relevance_score,
       needs_review: needsReview,
@@ -109,28 +125,40 @@ export default async function qaVerify({ signals, profile }, deps = {}) {
     });
   }
 
-  kept.sort((a, b) => b.relevance_score - a.relevance_score || (b.date ?? '').localeCompare(a.date ?? ''));
+  // Priority score is arithmetic over the four factors, computed here — never
+  // taken from the model. Ranking is by that score, not by the model's own
+  // relevance view, which is kept alongside it for audit.
+  const scored = scoreAll(kept);
+  scored.sort((a, b) => b.priority_score - a.priority_score || (b.date ?? '').localeCompare(a.date ?? ''));
+
+  const multi = scored.filter((s) => s.multi_service).length;
+  const critical = scored.filter((s) => s.priority_band === 'Critical').length;
 
   const connections = (Array.isArray(data?.connections) ? data.connections : [])
     .filter((c) => c && typeof c.observation === 'string' && c.observation.trim())
     .map((c) => ({
       observation: c.observation.trim(),
-      signal_ids: Array.isArray(c.signal_ids) ? c.signal_ids.filter((id) => kept.some((s) => s.id === id)) : [],
+      signal_ids: Array.isArray(c.signal_ids) ? c.signal_ids.filter((id) => scored.some((s) => s.id === id)) : [],
     }))
     .slice(0, 5);
 
-  log.ok(`${kept.length} verified · ${dupes} cross-category duplicates · ${dropped} below score ${floor} · ${flagged} flagged for review`);
+  log.ok(`${scored.length} verified · ${dupes} cross-category duplicates · ${dropped} below score ${floor} · ${flagged} flagged for review`);
+  log.ok(`${critical} Critical · ${multi} multi-service (2+ practice areas)`);
   if (unjudged) log.warn(`${unjudged} signals were not judged by the model and are flagged as unverified`);
   if (connections.length) log.ok(`${connections.length} cross-category connections identified`);
 
   return {
-    signals: kept,
+    signals: scored,
     connections,
     assessment: String(data?.assessment || '').trim(),
     model,
     usage,
-    stats: { input: signals.length, unique: unique.length, kept: kept.length, duplicates: dupes, dropped, flagged, unjudged },
-    summary: `${kept.length} verified from ${signals.length} (${dropped} dropped, ${dupes} deduped, ${flagged} flagged)`,
+    stats: {
+      input: signals.length, unique: unique.length, kept: scored.length,
+      duplicates: dupes, dropped, flagged, unjudged,
+      multi_service: multi, critical,
+    },
+    summary: `${scored.length} verified, ${critical} Critical, ${multi} multi-service`,
   };
 }
 
@@ -144,6 +172,8 @@ function buildPrompt(signals, profile) {
     `SUMMARY: ${s.summary}`,
     `SOURCE: ${s.url}`,
     `COLLECTOR SCORE: ${s.relevance_score}`,
+    `PRACTICE AREAS PROPOSED: ${(s.practice_areas ?? []).join(', ') || 'none'}`,
+    `ORG SCALE PROPOSED: ${s.org_scale ?? 'unknown'}`,
   ].join('\n')).join('\n\n');
 
   // Scoring guidance and polarity travel with the prompt: what counts as
@@ -156,9 +186,14 @@ function buildPrompt(signals, profile) {
     ? `\nHOW TO READ THESE EVENTS (this business specifically):\n${profile.polarity.map((p) => `- ${p}`).join('\n')}\n`
     : '';
 
+  const areas = profile?.practiceAreas?.length
+    ? `\nPRACTICE AREAS THIS BUSINESS SELLS (use ONLY these keys):\n${profile.practiceAreas.map((a) => `- ${a.key}: ${a.name} — ${a.description}`).join('\n')}\n`
+    : '';
+
   return `${signals.length} signals were collected this week.
 
 MARKET: ${profile?.name ?? 'AI infrastructure'}
+${areas}
 ${guidance}${polarity}
 Signals in the "account" category are organisations this business ALREADY holds a relationship with. Score them on how strong a reason they are to get back in touch. Never mark one as a duplicate of a new prospect — they belong in a separate section of the briefing.
 

@@ -18,6 +18,8 @@ VOICE:
 - No hype, no filler openers, no "in today's fast-moving landscape", no exclamation marks.
 - Every bullet names a company and a dated action, and ends with a markdown link to its source: [source](url)
 - Write what the signal means for the reader when it is not obvious, in the same sentence. One clause, not a paragraph.
+- Where a signal opens a conversation across TWO OR MORE of this business's offerings, say so explicitly and name them — a multi-service opening is the most valuable thing in the briefing and must never be left implicit.
+- Lead each section with its highest-priority signal. Priority bands are given; treat Critical as needing contact this week.
 
 HARD RULES:
 - Use ONLY the supplied signals. Never add a company, number, date or event from your own knowledge. If a section has no signals, write "No signals this week." under it.
@@ -79,11 +81,18 @@ function buildPrompt({ signals, connections, assessment, weekLabel, counts, CATE
           `  DATE: ${s.date ?? 'undated'}`,
           `  WHAT HAPPENED: ${s.summary}`,
           `  SOURCE URL: ${s.url}`,
+          `  PRIORITY: ${s.priority_score}/100 ${s.priority_band}${s.multi_service ? ' · MULTI-SERVICE' : ''}`,
+          (s.practice_areas ?? []).length ? `  OPENS: ${s.practice_areas.join(', ')}` : null,
           s.needs_review ? `  FLAGGED FOR REVIEW: ${s.review_reason || 'thinly sourced'}` : null,
         ].filter(Boolean).join('\n')).join('\n')
       : '  (none)';
     return `### ${heading} — ${rows.length} signals\n${body}`;
   }).join('\n\n');
+
+  const multi = signals.filter((s) => s.multi_service);
+  const multiBlock = multi.length
+    ? `\nMULTI-SERVICE OPENINGS (${multi.length}) — these open two or more offerings and are the highest-value items this week:\n${multi.map((s) => `- ${s.company}: ${s.practice_areas.join(' + ')}`).join('\n')}\n`
+    : '';
 
   const conn = connections?.length
     ? connections.map((c) => `- ${c.observation}`).join('\n')
@@ -103,6 +112,7 @@ VERIFIED SIGNALS (${signals.length} total — ${CATEGORIES.map(({ key, heading }
 
 ${sections}
 
+${multiBlock}
 CONNECTIONS IDENTIFIED BY THE VERIFICATION PASS:
 ${conn}
 
@@ -121,7 +131,7 @@ ${structure}
 [2-3 observations linking signals across categories]
 
 ## Recommended Actions This Week
-[3 specific actions, each tied to a named signal above]`;
+[3 specific actions, each tied to a named signal above. Prioritise Critical-band and multi-service signals.]`;
 }
 
 // Strip any wrapper the model adds and guarantee the H1 is correct.

@@ -22,9 +22,9 @@ const completeJSON = async () => ({
   model: 'mock', usage: null, raw: '',
   data: {
     verified: [
-      { id: 'S1', relevance_score: 9,   needs_review: false },
+      { id: 'S1', relevance_score: 9, needs_review: false, practice_areas: ['compute', 'networking', 'invented-area'], org_scale: 'large' },
       { id: 'S2', relevance_score: 3,   needs_review: false },
-      { id: 'S3', relevance_score: 999, needs_review: false },
+      { id: 'S3', relevance_score: 999, needs_review: false, practice_areas: ['compute'], org_scale: 'not-a-scale' },
       // S4 deliberately omitted — tests the unjudged path.
       { id: 'S5', relevance_score: 8,   needs_review: false, duplicate_of: 'S1' },
       { id: 'S99', relevance_score: 10, needs_review: false },
@@ -34,7 +34,8 @@ const completeJSON = async () => ({
   },
 });
 
-const r = await qaVerify({ signals }, { completeJSON });
+const profile = { practiceAreas: [{ key: 'compute' }, { key: 'networking' }, { key: 'software' }] };
+const r = await qaVerify({ signals, profile }, { completeJSON });
 const by = Object.fromEntries(r.signals.map((s) => [s.company, s]));
 
 let failed = 0;
@@ -52,7 +53,21 @@ check('undated signal force-flagged for review', by['Undated']?.needs_review ===
 check('row the model skipped is kept but marked unverified', by['Skipped']?.verified === false && by['Skipped']?.needs_review === true);
 check('connection citing a non-existent id has it stripped', r.connections[0]?.signal_ids.length === 1);
 check('empty-observation connection discarded', r.connections.length === 1);
-check('output sorted by score descending', r.signals.every((s, i, a) => i === 0 || a[i - 1].relevance_score >= s.relevance_score));
+check('output ranked by computed priority score, not the model\'s relevance',
+  r.signals.every((s, i, a) => i === 0 || a[i - 1].priority_score >= s.priority_score));
+check('every signal carries an auditable score breakdown',
+  r.signals.every((s) => s.score_breakdown && typeof s.priority_score === 'number' && s.priority_band));
+
+const s1 = r.signals.find((s) => s.company === 'Real Co');
+check('practice area the profile does not sell is stripped',
+  s1 && !s1.practice_areas.includes('invented-area'), `areas: ${s1?.practice_areas.join(', ')}`);
+check('two valid areas sets multi_service true', s1?.multi_service === true);
+check('multi-service worth 25 points', s1?.score_breakdown.multi_service === 25);
+check('2 areas scores 20 for practice area fit', s1?.score_breakdown.practice_area_fit === 20);
+check('invalid org_scale falls back to unknown, not large',
+  r.signals.find((s) => s.company === 'Undated')?.org_scale === 'unknown');
+check('stats report multi-service and Critical counts',
+  typeof r.stats.multi_service === 'number' && typeof r.stats.critical === 'number');
 
 console.log(`\n  stats: ${JSON.stringify(r.stats)}`);
 console.log(failed ? `\n✗ ${failed} check(s) failed\n` : '\n✓ all checks passed\n');

@@ -14,6 +14,25 @@ export default {
   description:
     'BD intelligence for selling into, alongside, or in service of the NVIDIA AI infrastructure ecosystem — GPU cloud, sovereign AI programmes, enterprise AI buildouts, and the supply chain underneath them.',
 
+  // ── Practice areas — what you can actually sell ────────────────────────────
+  // The heart of the scoring. Every signal is mapped to the product lines it
+  // opens a conversation for, and a signal that opens TWO or more is worth
+  // materially more than one that opens a single line: a multi-service account
+  // is stickier, larger, and cheaper to serve than two single-service ones.
+  //
+  // Keep these to things a buyer would recognise as a separate purchase.
+  practiceAreas: [
+    { key: 'compute', name: 'Accelerated Compute', description: 'GPU systems and instances — DGX, HGX, cloud capacity' },
+    { key: 'networking', name: 'Networking', description: 'InfiniBand, Spectrum-X Ethernet, NVLink, BlueField DPUs — often where a deal is actually won or lost' },
+    { key: 'software', name: 'AI Enterprise Software', description: 'Per-GPU software licensing, NIM microservices, inference runtime — the recurring-revenue line' },
+    { key: 'cloud', name: 'Managed AI Cloud', description: 'DGX Cloud and managed capacity for buyers who do not want to operate hardware' },
+    { key: 'foundry', name: 'AI Foundry & Models', description: 'Custom model building, NeMo, and model-tuning services' },
+    { key: 'omniverse', name: 'Omniverse & Digital Twin', description: 'Simulation, digital twin, and industrial visualisation' },
+    { key: 'edge', name: 'Edge & Embedded', description: 'Jetson, IGX, and on-device inference deployments' },
+    { key: 'automotive', name: 'Automotive', description: 'DRIVE platform and in-vehicle compute' },
+    { key: 'partner', name: 'Partner Programmes', description: 'Inception, cloud partner and reseller routes — an entry point rather than a product' },
+  ],
+
   // ── Signal polarity ────────────────────────────────────────────────────────
   // The question no onboarding form can answer, stated explicitly so the
   // collectors and the verifier both read events the same way round.
@@ -160,6 +179,7 @@ export default {
       'A named organisation taking a dated action always outranks a market trend, however well sourced the trend is.',
       'A defensive signal (competitor win at a held account) scores as highly as an offensive one — losing an account costs more than winning a small one.',
       'An ecosystem or developer story with no named buyer is background, not a lead. Score it 5 or below.',
+      'A signal that opens a conversation across two or more practice areas is worth more than a larger signal confined to one — multi-service accounts are stickier and cheaper to serve.',
     ],
   },
 };

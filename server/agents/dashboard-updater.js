@@ -21,8 +21,15 @@ export default async function updateDashboard({ week, weekLabel, markdown, signa
     counts,
     signal_count: signals.length,
     flagged_count: signals.filter((s) => s.needs_review).length,
-    top_signals: signals.slice(0, 5).map(({ company, signal_type, summary, url, date, relevance_score, category }) =>
-      ({ company, signal_type, summary, url, date, relevance_score, category })),
+    top_signals: signals.slice(0, 5).map(({ company, signal_type, summary, url, date, relevance_score, category, priority_score, priority_band, practice_areas, multi_service }) =>
+      ({ company, signal_type, summary, url, date, relevance_score, category, priority_score, priority_band, practice_areas, multi_service })),
+    multi_service_count: signals.filter((s) => s.multi_service).length,
+    critical_count: signals.filter((s) => s.priority_band === 'Critical').length,
+    // Which offerings this week's signals actually open — the cross-sell view.
+    practice_area_coverage: signals.reduce((acc, s) => {
+      for (const a of s.practice_areas ?? []) acc[a] = (acc[a] ?? 0) + 1;
+      return acc;
+    }, {}),
     connections,
     assessment,
     qa_stats: qaStats,

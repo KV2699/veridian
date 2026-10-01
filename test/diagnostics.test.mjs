@@ -78,5 +78,16 @@ d = diagnose({
 });
 check('findings sorted most severe first', d.findings[0].severity === 'high');
 
+// A model narrating instead of answering must be named as such, not blamed on
+// the signal definition — that misdirection cost a whole live run.
+d = diagnose({
+  collectors: [{ key: 'a', name: 'A', hits: 40, fresh: 40, extracted: 0, kept: 0,
+    batches: 5, parseFailures: 5, queries: [{ query: 'q', hits: 40, fresh: 40 }] }],
+  signals: [], rawCount: 0,
+});
+check('batches failing to parse blamed on the model, not the queries', ids(d).includes('parse-failure'));
+check('and extraction-collapse suppressed so the real cause is not buried', !ids(d).includes('extraction-collapse'));
+check('the fix names the fast model', d.findings.find((f) => f.id === 'parse-failure')?.fix.includes('NEBIUS_MODEL_FAST'));
+
 console.log(failed ? `\n✗ ${failed} check(s) failed\n` : '\n✓ all checks passed\n');
 process.exit(failed ? 1 : 0);

@@ -17,6 +17,28 @@ export const MODELS = {
   get fast() { return process.env.NEBIUS_MODEL_FAST || process.env.NEBIUS_MODEL_ULTRA || 'nvidia/llama-3.1-nemotron-nano-8b-v1'; },
 };
 
+// ── Concurrency limiter ──────────────────────────────────────────────────────
+// Five collectors run in parallel, each issuing batched extraction calls. Under
+// that load Nebius throttles by returning HTTP 200 with an EMPTY completion
+// rather than a 429 — which looks like a model failure and is not one. A
+// semaphore caps simultaneous requests so throughput stays inside the limit.
+//
+// Raise NEBIUS_CONCURRENCY if your account has more headroom; lower it if you
+// still see empty completions.
+const MAX_CONCURRENT = Math.max(1, Number(process.env.NEBIUS_CONCURRENCY) || 2);
+let active = 0;
+const waiting = [];
+
+async function withSlot(fn) {
+  if (active >= MAX_CONCURRENT) await new Promise((resolve) => waiting.push(resolve));
+  active++;
+  try { return await fn(); }
+  finally {
+    active--;
+    waiting.shift()?.();
+  }
+}
+
 function requireKey() {
   const key = (process.env.NEBIUS_API_KEY ?? '').trim();
   if (!key) throw new Error('NEBIUS_API_KEY is not set — copy .env.example to .env and add your Nebius key');
@@ -52,17 +74,19 @@ export async function complete({
   let lastErr;
   for (let attempt = 0; attempt <= retries; attempt++) {
     if (attempt) {
-      const wait = 1200 * 2 ** (attempt - 1);
+      // Jitter matters: without it, several throttled callers retry in lockstep
+      // and reproduce the same burst that caused the throttling.
+      const wait = Math.round(1500 * 2 ** (attempt - 1) * (1 + Math.random()));
       log.warn(`Nebius retry ${attempt}/${retries} in ${wait}ms — ${lastErr.message}`);
       await new Promise((r) => setTimeout(r, wait));
     }
     try {
-      const res = await fetch(`${BASE}/chat/completions`, {
+      const res = await withSlot(() => fetch(`${BASE}/chat/completions`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(180_000),
-      });
+      }));
       if (!res.ok) {
         const detail = (await res.text()).slice(0, 400);
         // 4xx other than 429 will not fix themselves — fail fast.
@@ -72,8 +96,17 @@ export async function complete({
         throw new Error(`Nebius ${res.status}: ${detail}`);
       }
       const data = await res.json();
-      const text = data.choices?.[0]?.message?.content ?? '';
-      if (!text.trim()) throw new Error('Nebius returned an empty completion');
+      const choice = data.choices?.[0];
+      const text = choice?.message?.content ?? '';
+      if (!text.trim()) {
+        // Two very different causes wear the same empty reply, so name which:
+        //   length — the model spent its whole budget before answering
+        //   anything else — usually throttling under concurrency
+        const why = choice?.finish_reason === 'length'
+          ? 'the model hit max_tokens before producing an answer — raise maxTokens, or use a model that does not reason at length'
+          : 'usually throttling under concurrency — lower NEBIUS_CONCURRENCY';
+        throw new Error(`Nebius returned an empty completion (finish_reason=${choice?.finish_reason ?? 'none'}) — ${why}`);
+      }
       return { text, model, usage: data.usage ?? null };
     } catch (err) {
       if (err.fatal) throw err;
@@ -85,35 +118,94 @@ export async function complete({
 
 /**
  * Chat completion whose reply must parse as JSON.
- * Nemotron occasionally wraps JSON in prose or a fenced block even when asked
- * not to, so the first balanced JSON value in the reply is extracted.
+ *
+ * Reasoning-tuned models (Nemotron Lightning among them) routinely narrate
+ * before answering — "Let me analyze the search results..." — and may ignore
+ * response_format entirely. Two defences:
+ *   1. extractJSON scans the whole reply for the best JSON candidate rather
+ *      than trusting the first bracket it sees (prose is full of brackets).
+ *   2. If that fails, one repair call hands the prose back and asks for JSON
+ *      only. Cheaper and far more reliable than failing the batch.
  */
 export async function completeJSON(opts) {
   const { text, model, usage } = await complete({ ...opts, json: true });
-  return { data: extractJSON(text), model, usage, raw: text };
+  const expect = opts.expectKey;
+
+  try {
+    return { data: extractJSON(text, expect), model, usage, raw: text, repaired: false };
+  } catch (firstErr) {
+    log.warn(`reply was not valid JSON, attempting repair — ${firstErr.message}`);
+    const { text: fixed } = await complete({
+      tier: opts.tier,
+      temperature: 0,
+      maxTokens: opts.maxTokens ?? 2000,
+      json: true,
+      retries: 1,
+      system: 'You convert text into JSON. Output the JSON value only. No explanation, no preamble, no reasoning, no code fence. Your entire reply must start with { or [ and end with } or ].',
+      user: `Extract the JSON from the following text and return it alone. If the text contains no usable data, return ${expect ? `{"${expect}":[]}` : '{}'}.
+
+${text.slice(0, 6000)}`,
+    });
+    // A failed repair throws, and the caller treats the batch as lost.
+    return { data: extractJSON(fixed, expect), model, usage, raw: text, repaired: true };
+  }
 }
 
-export function extractJSON(text) {
-  const cleaned = text.replace(/^\s*```(?:json)?/i, '').replace(/```\s*$/, '').trim();
-  try { return JSON.parse(cleaned); } catch { /* fall through to scanning */ }
+/**
+ * Pull a JSON value out of a model reply.
+ * Scans every balanced candidate and prefers one that parses AND carries the
+ * expected key, so a stray "[News]" in the narration cannot win over the real
+ * payload further down the reply.
+ */
+export function extractJSON(text, expectKey) {
+  const cleaned = String(text ?? '')
+    .replace(/```(?:json)?/gi, '')
+    .replace(/<\/?think>/gi, '')
+    .trim();
 
-  const start = cleaned.search(/[[{]/);
-  if (start === -1) throw new Error(`No JSON found in model reply: ${text.slice(0, 180)}`);
-  const open = cleaned[start];
+  const candidates = [];
+  for (let i = 0; i < cleaned.length; i++) {
+    const ch = cleaned[i];
+    if (ch !== '{' && ch !== '[') continue;
+    const value = balancedFrom(cleaned, i);
+    if (value === null) continue;
+    try { candidates.push(JSON.parse(value)); } catch { /* not this one */ }
+  }
+
+  if (!candidates.length) {
+    throw new Error(`No JSON found in model reply: ${cleaned.slice(0, 140)}`);
+  }
+
+  // Prefer a candidate with the expected key and a non-empty array in it,
+  // then any candidate with the key, then the largest parseable object.
+  if (expectKey) {
+    const withData = candidates.find((c) => Array.isArray(c?.[expectKey]) && c[expectKey].length);
+    if (withData) return withData;
+    const withKey = candidates.find((c) => c && expectKey in c);
+    if (withKey) return withKey;
+    // A bare array is a common shape when the model drops the wrapper.
+    const bare = candidates.find((c) => Array.isArray(c) && c.length && typeof c[0] === 'object');
+    if (bare) return { [expectKey]: bare };
+  }
+
+  return candidates.sort((a, b) => JSON.stringify(b).length - JSON.stringify(a).length)[0];
+}
+
+// Returns the balanced JSON substring starting at `start`, or null.
+function balancedFrom(s, start) {
+  const open = s[start];
   const close = open === '[' ? ']' : '}';
   let depth = 0, inStr = false, esc = false;
-  for (let i = start; i < cleaned.length; i++) {
-    const ch = cleaned[i];
+  for (let i = start; i < s.length; i++) {
+    const ch = s[i];
     if (esc) { esc = false; continue; }
     if (ch === '\\') { esc = true; continue; }
     if (ch === '"') { inStr = !inStr; continue; }
     if (inStr) continue;
     if (ch === open) depth++;
-    else if (ch === close && --depth === 0) {
-      return JSON.parse(cleaned.slice(start, i + 1));
-    }
+    else if (ch === close && --depth === 0) return s.slice(start, i + 1);
   }
-  throw new Error(`Unbalanced JSON in model reply: ${text.slice(0, 180)}`);
+  return null;
 }
 
 /** List the models this Nebius account can call — used to verify Nemotron IDs. */

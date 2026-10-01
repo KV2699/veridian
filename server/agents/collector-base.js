@@ -23,10 +23,17 @@ HARD RULES:
 - Skip opinion pieces, listicles, roundups, pure stock commentary and vendor marketing with no announced event.
 - summary must be one factual sentence naming the company and what happened. No adjectives, no speculation.
 
+OUTPUT FORMAT — this is strict:
+Your entire reply must be a single JSON object. Do not reason out loud, do not explain your thinking, do not write a preamble, do not use a code fence. The first character you output must be {.
+
 Reply with JSON only, in this exact shape:
-{"signals":[{"company":"string","signal_type":"string","summary":"string","url":"string","date":"YYYY-MM-DD or null","relevance_score":0}]}
+{"signals":[{"company":"string","signal_type":"string","summary":"string","url":"string","date":"YYYY-MM-DD or null","relevance_score":0,"practice_areas":["key"],"org_scale":"large|mid|small|unknown"}]}
 
 relevance_score is 0-10 for how directly this matters to the stated BD focus. Be strict: 8+ means a named buying, building or partnering event.
+
+practice_areas: the keys of every offering this signal opens a genuine conversation for. Use ONLY the keys listed under PRACTICE AREAS below. Include an area only if the signal gives a real reason to discuss it — do not pad the list, and do not include an area just because the company could theoretically buy it one day. An empty list is correct when the signal opens nothing specific.
+
+org_scale: the size of the organisation named — "large" (major enterprise, hyperscaler, government, or household name), "mid", "small" (startup, small institution), or "unknown" when the source does not say. Never guess "large" to inflate a signal.
 If nothing in the results qualifies, return {"signals":[]}.`;
 
 // Hits are summarised in batches so one oversized prompt cannot blow the
@@ -34,7 +41,7 @@ If nothing in the results qualifies, return {"signals":[]}.`;
 const BATCH = 8;
 
 export async function runCollector(
-  { key, name, category, focus, signalTypes, queries, windowDays = 7, polarity = [] },
+  { key, name, category, focus, signalTypes, queries, windowDays = 7, polarity = [], practiceAreas = [] },
   ctx = {},
   deps = {},
 ) {
@@ -50,6 +57,8 @@ export async function runCollector(
 
   // Per-query telemetry is attributed to this collector for the diagnostics
   // pass, whether or not anything was found.
+  let parseFailures = 0;
+  let batches = 0;
   const telemetry = (extracted) => ({
     key: key ?? category,
     name,
@@ -57,6 +66,8 @@ export async function runCollector(
     hits: results.length,
     fresh: fresh.length,
     extracted,
+    parseFailures,
+    batches,
   });
 
   if (!fresh.length) {
@@ -65,6 +76,7 @@ export async function runCollector(
 
   const signals = [];
   for (let i = 0; i < fresh.length; i += BATCH) {
+    batches++;
     const batch = fresh.slice(i, i + BATCH);
     const n = Math.floor(i / BATCH) + 1;
     const of = Math.ceil(fresh.length / BATCH);
@@ -72,13 +84,17 @@ export async function runCollector(
     try {
       const { data } = await ask({
         tier: 'fast',
-        temperature: 0.1,
-        maxTokens: 2000,
+        temperature: 0,
+        maxTokens: 4000,
+        expectKey: 'signals',
         system: SYSTEM,
-        user: buildPrompt({ focus, signalTypes, batch, polarity }),
+        user: buildPrompt({ focus, signalTypes, batch, polarity, practiceAreas }),
       });
-      signals.push(...normalise(data?.signals, { batch, category }));
+      signals.push(...normalise(data?.signals, { batch, category, practiceAreas }));
     } catch (err) {
+      // Counted separately from "found nothing": a batch that failed to parse
+      // is a model-output problem, not evidence the market is quiet.
+      parseFailures++;
       log.warn(`batch ${n}/${of} extraction failed, continuing — ${err.message}`);
     }
   }
@@ -94,7 +110,7 @@ export async function runCollector(
 
 const freshPerQuery = (fresh, query) => fresh.filter((h) => h.found_via === query).length;
 
-function buildPrompt({ focus, signalTypes, batch, polarity = [] }) {
+function buildPrompt({ focus, signalTypes, batch, polarity = [], practiceAreas = [] }) {
   const results = batch.map((h, i) => [
     `--- RESULT ${i + 1} ---`,
     `TITLE: ${h.title}`,
@@ -110,7 +126,11 @@ function buildPrompt({ focus, signalTypes, batch, polarity = [] }) {
     ? `\nHOW TO READ THESE EVENTS (this business specifically):\n${polarity.map((p) => `- ${p}`).join('\n')}\n`
     : '';
 
-  return `BD FOCUS: ${focus}
+  const areasBlock = practiceAreas.length
+    ? `\nPRACTICE AREAS (the offerings this business sells — map each signal to the ones it opens):\n${practiceAreas.map((a) => `- ${a.key}: ${a.name} — ${a.description}`).join('\n')}\n`
+    : '';
+
+  return `BD FOCUS: ${focus}${areasBlock}
 
 SIGNAL TYPES TO LOOK FOR:
 ${signalTypes.map((t) => `- ${t}`).join('\n')}
@@ -125,7 +145,8 @@ Extract the qualifying signals as JSON.`;
 
 // The model's output is never trusted as-is: urls must match a supplied result,
 // dates must be real and in-window-shaped, scores must be numbers 0-10.
-export function normalise(raw, { batch, category }) {
+export function normalise(raw, { batch, category, practiceAreas = [] }) {
+  const validAreas = new Set(practiceAreas.map((a) => a.key));
   if (!Array.isArray(raw)) return [];
   const allowed = new Map(batch.map((h) => [canonicalUrl(h.url), h]));
   const out = [];
@@ -156,6 +177,14 @@ export function normalise(raw, { batch, category }) {
       url_key: key,
       date: isoDate(s.date) ?? isoDate(source.published_date),
       relevance_score: clamp(s.relevance_score),
+      // Only practice areas this profile actually sells survive — a model that
+      // invents an offering must not be able to inflate the multi-service score.
+      practice_areas: validAreas.size
+        ? [...new Set((Array.isArray(s.practice_areas) ? s.practice_areas : [])
+            .map((a) => String(a ?? '').trim().toLowerCase())
+            .filter((a) => validAreas.has(a)))]
+        : [],
+      org_scale: orgScale(s.org_scale),
       category,
       source_title: source.title,
       found_via: source.found_via,
@@ -177,6 +206,16 @@ function isoDate(v) {
   const now = Date.now();
   if (d.getTime() > now + 864e5 || d.getTime() < now - 365 * 864e5) return null;
   return m[0];
+}
+
+// Unknown is the safe default: scale points treat unknown as small, so a
+// missing value can never inflate a score.
+function orgScale(v) {
+  const s = String(v ?? '').trim().toLowerCase();
+  if (s === 'large') return 'large';
+  if (s === 'mid' || s === 'medium') return 'mid';
+  if (s === 'small') return 'small';
+  return 'unknown';
 }
 
 function clamp(v) {

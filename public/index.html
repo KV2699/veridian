@@ -154,6 +154,12 @@
     </div>
 
     <div class="card">
+      <h2>Practice area coverage</h2>
+      <div class="bars" id="areas"></div>
+      <div id="multi" style="margin-top:12px;font-size:12.5px;color:var(--muted)"></div>
+    </div>
+
+    <div class="card">
       <h2>Yield diagnostics</h2>
       <div class="funnel" id="funnel"></div>
       <div id="findings"></div>
@@ -312,6 +318,29 @@ function drawDiagnostics(diag) {
   </div>`).join('');
 }
 
+// Which of the business's offerings this week's signals actually open. A week
+// whose signals all point at one product line is a narrower week than the raw
+// signal count suggests.
+function drawAreas(coverage, multiCount, total) {
+  const el = $('areas');
+  const keys = Object.keys(coverage || {});
+  if (!keys.length) {
+    el.innerHTML = '<span style="color:var(--dim);font-size:12px">No practice areas mapped.</span>';
+    $('multi').textContent = '';
+    return;
+  }
+  const sorted = keys.sort((a, b) => coverage[b] - coverage[a]);
+  const max = Math.max(...sorted.map((k) => coverage[k]));
+  el.innerHTML = sorted.map((k) => `<div class="bar-row">
+    <span class="lbl" title="${esc(k)}">${esc(label(k))}</span>
+    <span class="bar-track"><span class="bar-fill" style="width:${(coverage[k] / max) * 100}%"></span></span>
+    <span class="val">${coverage[k]}</span>
+  </div>`).join('');
+  $('multi').innerHTML = multiCount
+    ? `<strong style="color:var(--ok)">${multiCount}</strong> of ${total} signals open <strong>2+ offerings</strong>`
+    : `No multi-service openings this week`;
+}
+
 function drawHistory() {
   if (!briefings.length) { $('history').innerHTML = '<div class="empty" style="padding:14px 0">No briefings yet.</div>'; return; }
   $('history').innerHTML = briefings.map((b) => `
@@ -331,11 +360,14 @@ function drawBriefing() {
   if (!b) {
     el.innerHTML = `<div class="empty">No briefing yet. Press <strong>Run pipeline</strong> to generate this week's.</div>`;
     drawBars({});
+    drawAreas({}, 0, 0);
     return;
   }
 
   const pills = [
     `${b.signal_count ?? 0} signals`,
+    b.critical_count ? `${b.critical_count} Critical` : null,
+    b.multi_service_count ? `${b.multi_service_count} multi-service` : null,
     b.account_count ? `${b.account_count} on your accounts` : null,
     b.flagged_count ? `${b.flagged_count} flagged` : null,
     b.trend ? `${b.trend.delta >= 0 ? '+' : ''}${b.trend.delta} vs ${b.trend.previous_week}` : null,
@@ -345,6 +377,7 @@ function drawBriefing() {
   el.innerHTML = `<div style="margin-bottom:18px">${pills.map((p) => `<span class="pill">${esc(p)}</span>`).join('')}</div>`
     + renderMarkdown(b.markdown || '');
   drawBars(b.counts);
+  drawAreas(b.practice_area_coverage, b.multi_service_count, b.signal_count);
   if (b.diagnostics) drawDiagnostics(b.diagnostics);
 }
 
