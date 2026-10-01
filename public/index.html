@@ -98,6 +98,31 @@
   .pill { display: inline-block; font-family: var(--mono); font-size: 11px; padding: 3px 9px; border-radius: 99px; background: var(--panel-2); color: var(--muted); margin-right: 6px; }
   .empty { color: var(--dim); padding: 40px 0; text-align: center; }
   .log { font-family: var(--mono); font-size: 11.5px; color: var(--muted); max-height: 136px; overflow-y: auto; white-space: pre-wrap; }
+
+  /* Yield funnel + diagnostics */
+  .funnel { display: grid; gap: 6px; font-size: 12px; margin-bottom: 14px; }
+  .fstep { display: grid; grid-template-columns: 74px 1fr 34px; align-items: center; gap: 8px; }
+  .fstep .lbl { color: var(--muted); }
+  .fstep .val { font-family: var(--mono); text-align: right; }
+  .ftrack { display: block; height: 6px; background: var(--panel-2); border-radius: 3px; overflow: hidden; }
+  .ffill { display: block; height: 100%; min-width: 2px; background: var(--accent); border-radius: 3px; }
+  .drop { color: var(--err); }
+
+  .finding { border-left: 2px solid var(--line); padding: 7px 0 7px 10px; margin-bottom: 9px; font-size: 12.5px; }
+  .finding.high { border-left-color: var(--err); }
+  .finding.medium { border-left-color: var(--warn); }
+  .finding.low { border-left-color: var(--dim); }
+  .finding .where { font-family: var(--mono); font-size: 10.5px; color: var(--dim); display: block; margin-bottom: 3px; word-break: break-word; }
+  .finding .cause { color: var(--text); }
+  .finding .fix { color: var(--muted); margin-top: 4px; display: block; font-size: 12px; }
+  .allgood { color: var(--ok); font-size: 12.5px; }
+
+  details.qtable { margin-top: 10px; }
+  details.qtable summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+  .qrow { display: grid; grid-template-columns: 1fr 30px 30px; gap: 6px; font-family: var(--mono); font-size: 10.5px; padding: 3px 0; border-bottom: 1px solid rgba(39,52,88,.4); }
+  .qrow .q { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+  .qrow .n { text-align: right; color: var(--dim); }
+  .qrow.zero .q, .qrow.zero .n { color: var(--err); }
   .err { color: var(--err); font-size: 12px; margin-top: 8px; font-family: var(--mono); }
 </style>
 </head>
@@ -107,6 +132,7 @@
   <div class="brand">
     <h1>Signal Bureau</h1>
     <span id="week">—</span>
+    <span id="profile" class="pill" style="margin:0"></span>
   </div>
   <div class="spacer"></div>
   <div class="meta" id="meta">loading…</div>
@@ -128,6 +154,16 @@
     </div>
 
     <div class="card">
+      <h2>Yield diagnostics</h2>
+      <div class="funnel" id="funnel"></div>
+      <div id="findings"></div>
+      <details class="qtable" id="qtable" hidden>
+        <summary>Per-query yield</summary>
+        <div id="qrows"></div>
+      </details>
+    </div>
+
+    <div class="card">
       <h2>Past briefings</h2>
       <div class="hist" id="history"></div>
     </div>
@@ -146,10 +182,10 @@
 </main>
 
 <script>
-const CATEGORIES = [
-  ['funding', 'Funding'], ['product', 'Product'],
-  ['competitive', 'Competitive'], ['opportunity', 'Opportunity'],
-];
+// Section names come from the active profile's counts, so the chart follows
+// whatever collectors that profile defines.
+const LABELS = { account: 'Accounts' };
+const label = (k) => LABELS[k] || k.charAt(0).toUpperCase() + k.slice(1);
 
 let briefings = [];
 let selected = null;
@@ -218,15 +254,62 @@ function drawAgents(agents, running) {
 }
 
 function drawBars(counts = {}) {
-  const max = Math.max(1, ...CATEGORIES.map(([k]) => counts[k] ?? 0));
-  $('bars').innerHTML = CATEGORIES.map(([k, label]) => {
+  const keys = Object.keys(counts);
+  if (!keys.length) { $('bars').innerHTML = '<span style="color:var(--dim);font-size:12px">No run yet.</span>'; return; }
+  const max = Math.max(1, ...keys.map((k) => counts[k] ?? 0));
+  $('bars').innerHTML = keys.map((k) => {
     const n = counts[k] ?? 0;
     return `<div class="bar-row">
-      <span class="lbl">${label}</span>
+      <span class="lbl" title="${esc(label(k))}">${esc(label(k))}</span>
       <span class="bar-track"><span class="bar-fill" style="width:${(n / max) * 100}%"></span></span>
       <span class="val">${n}</span>
     </div>`;
   }).join('');
+}
+
+const FUNNEL_STEPS = [
+  ['searched', 'Searches'], ['hits', 'Hits'], ['fresh', 'New'],
+  ['extracted', 'Signals'], ['verified', 'Verified'],
+];
+
+function drawDiagnostics(diag) {
+  const fEl = $('funnel'), findEl = $('findings'), qEl = $('qtable');
+  if (!diag) {
+    fEl.innerHTML = '<span style="color:var(--dim);font-size:12px">No run yet.</span>';
+    findEl.innerHTML = ''; qEl.hidden = true;
+    return;
+  }
+
+  // The funnel makes WHERE signals were lost visible at a glance — a collapse
+  // between two steps is more informative than the final number alone.
+  const f = diag.funnel || {};
+  const max = Math.max(1, ...FUNNEL_STEPS.map(([k]) => f[k] ?? 0));
+  fEl.innerHTML = FUNNEL_STEPS.map(([k, label], i) => {
+    const n = f[k] ?? 0;
+    const prev = i ? (f[FUNNEL_STEPS[i - 1][0]] ?? 0) : null;
+    const collapsed = prev !== null && prev > 0 && n === 0;
+    return `<div class="fstep">
+      <span class="lbl">${label}</span>
+      <span class="ftrack"><span class="ffill" style="width:${(n / max) * 100}%"></span></span>
+      <span class="val ${collapsed ? 'drop' : ''}">${n}</span>
+    </div>`;
+  }).join('');
+
+  const findings = diag.findings || [];
+  findEl.innerHTML = findings.length
+    ? findings.map((x) => `<div class="finding ${esc(x.severity)}">
+        <span class="where">${esc(x.where)}${x.detail ? ' · ' + esc(x.detail) : ''}</span>
+        <span class="cause">${esc(x.cause)}</span>
+        ${x.severity === 'low' ? '' : `<span class="fix">${esc(x.fix)}</span>`}
+      </div>`).join('')
+    : '<div class="allgood">✓ No issues detected</div>';
+
+  const rows = diag.queries || [];
+  qEl.hidden = !rows.length;
+  $('qrows').innerHTML = rows.map((q) => `<div class="qrow ${q.hits === 0 ? 'zero' : ''}">
+    <span class="q" title="${esc(q.query)}">${esc(q.query)}</span>
+    <span class="n">${q.hits ?? 0}</span><span class="n">${q.fresh ?? 0}</span>
+  </div>`).join('');
 }
 
 function drawHistory() {
@@ -253,6 +336,7 @@ function drawBriefing() {
 
   const pills = [
     `${b.signal_count ?? 0} signals`,
+    b.account_count ? `${b.account_count} on your accounts` : null,
     b.flagged_count ? `${b.flagged_count} flagged` : null,
     b.trend ? `${b.trend.delta >= 0 ? '+' : ''}${b.trend.delta} vs ${b.trend.previous_week}` : null,
     b.models?.ultra ? `ultra: ${b.models.ultra}` : null,
@@ -261,6 +345,7 @@ function drawBriefing() {
   el.innerHTML = `<div style="margin-bottom:18px">${pills.map((p) => `<span class="pill">${esc(p)}</span>`).join('')}</div>`
     + renderMarkdown(b.markdown || '');
   drawBars(b.counts);
+  if (b.diagnostics) drawDiagnostics(b.diagnostics);
 }
 
 // ── Data ─────────────────────────────────────────────────────────────────────
@@ -277,6 +362,9 @@ async function loadStatus() {
   drawAgents(s.agents, s.running);
   $('run').disabled = s.running;
   $('run').textContent = s.running ? 'Running…' : 'Run pipeline';
+
+  if (s.profile) $('profile').textContent = s.profile.name;
+  drawDiagnostics(s.diagnostics);
 
   const last = s.last_run;
   $('meta').innerHTML = [

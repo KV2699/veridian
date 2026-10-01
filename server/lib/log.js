@@ -14,8 +14,8 @@ export const log = {
     const bar = '─'.repeat(Math.max(0, 62 - text.length));
     console.log(`\n${C.indigo}${C.bold}╭─ ${text} ${bar}${C.reset}`);
   },
-  agent(n, name) {
-    console.log(`\n${C.cyan}${C.bold}▶ AGENT ${n}/7 — ${name}${C.reset}`);
+  agent(n, name, total) {
+    console.log(`\n${C.cyan}${C.bold}▶ AGENT ${n}${total ? `/${total}` : ''} — ${name}${C.reset}`);
   },
   step(msg) { console.log(`  ${C.dim}${ts()}${C.reset} ${msg}`); },
   ok(msg) { console.log(`  ${C.green}✓${C.reset} ${msg}`); },
@@ -31,8 +31,8 @@ export const log = {
 };
 
 // Wrap an agent so timing + status are captured uniformly for the dashboard.
-export async function timed(n, name, fn) {
-  log.agent(n, name);
+export async function timed(n, name, fn, total) {
+  log.agent(n, name, total);
   const started = Date.now();
   try {
     const result = await fn();

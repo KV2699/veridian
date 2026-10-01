@@ -10,7 +10,8 @@
     "pipeline": "node server/pipeline.js",
     "pipeline:dry": "DRY_RUN=true node server/pipeline.js",
     "models": "node server/lib/list-models.js",
-    "test": "node test/run-all.mjs"
+    "test": "node test/run-all.mjs",
+    "verify": "node scripts/verify-nemotron.mjs"
   },
   "engines": {
     "node": ">=18"

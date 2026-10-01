@@ -7,7 +7,7 @@
 import { saveBriefing, appendSignals, getBriefings, getSignals } from '../lib/store.js';
 import { log } from '../lib/log.js';
 
-export default async function updateDashboard({ week, weekLabel, markdown, signals, connections, counts, assessment, qaStats, models }) {
+export default async function updateDashboard({ week, weekLabel, markdown, signals, connections, counts, assessment, qaStats, models, diagnostics, profile }) {
   // Trend compares against the most recent DIFFERENT week. Re-running the same
   // week replaces its briefing, so without the week filter a re-run would
   // report a delta against itself and always read "+0".
@@ -26,6 +26,9 @@ export default async function updateDashboard({ week, weekLabel, markdown, signa
     connections,
     assessment,
     qa_stats: qaStats,
+    diagnostics: diagnostics ?? null,
+    profile: profile ?? null,
+    account_count: signals.filter((s) => s.category === 'account').length,
     models,
     trend: previous
       ? {

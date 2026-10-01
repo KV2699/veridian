@@ -18,8 +18,11 @@ export const MODELS = {
 };
 
 function requireKey() {
-  const key = process.env.NEBIUS_API_KEY;
+  const key = (process.env.NEBIUS_API_KEY ?? '').trim();
   if (!key) throw new Error('NEBIUS_API_KEY is not set — copy .env.example to .env and add your Nebius key');
+  if (/^your_|_key$/i.test(key)) {
+    throw new Error('NEBIUS_API_KEY is still the .env.example placeholder — paste your real key from studio.nebius.com');
+  }
   return key;
 }
 

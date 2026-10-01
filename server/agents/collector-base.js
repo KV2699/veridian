@@ -33,18 +33,34 @@ If nothing in the results qualifies, return {"signals":[]}.`;
 // context window, and a single bad batch cannot lose the whole collection.
 const BATCH = 8;
 
-export async function runCollector({ number, name, category, focus, signalTypes, queries }, ctx = {}, deps = {}) {
+export async function runCollector(
+  { key, name, category, focus, signalTypes, queries, windowDays = 7, polarity = [] },
+  ctx = {},
+  deps = {},
+) {
   const known = ctx.knownUrlKeys ?? new Set();
   const find = deps.searchMany ?? searchMany;
   const ask = deps.completeJSON ?? completeJSON;
 
-  log.step(`Running ${queries.length} Tavily searches (7-day window)`);
-  const hits = await find(queries, { days: 7, maxResults: 10, depth: 'advanced' });
+  log.step(`Running ${queries.length} Tavily searches (${windowDays}-day window)`);
+  const { results, stats } = await find(queries, { days: windowDays, maxResults: 10 });
 
-  const fresh = hits.filter((h) => !known.has(canonicalUrl(h.url)));
-  log.step(`${hits.length} unique results, ${fresh.length} not seen in a previous week`);
+  const fresh = results.filter((h) => !known.has(canonicalUrl(h.url)));
+  log.step(`${results.length} unique results, ${fresh.length} not seen in a previous week`);
+
+  // Per-query telemetry is attributed to this collector for the diagnostics
+  // pass, whether or not anything was found.
+  const telemetry = (extracted) => ({
+    key: key ?? category,
+    name,
+    queries: stats.map((s) => ({ ...s, fresh: freshPerQuery(fresh, s.query) })),
+    hits: results.length,
+    fresh: fresh.length,
+    extracted,
+  });
+
   if (!fresh.length) {
-    return { category, signals: [], searches: queries.length, hits: hits.length, summary: '0 signals (no new results)' };
+    return { category, signals: [], telemetry: telemetry(0), summary: '0 signals (no new results)' };
   }
 
   const signals = [];
@@ -59,7 +75,7 @@ export async function runCollector({ number, name, category, focus, signalTypes,
         temperature: 0.1,
         maxTokens: 2000,
         system: SYSTEM,
-        user: buildPrompt({ focus, signalTypes, batch }),
+        user: buildPrompt({ focus, signalTypes, batch, polarity }),
       });
       signals.push(...normalise(data?.signals, { batch, category }));
     } catch (err) {
@@ -71,13 +87,14 @@ export async function runCollector({ number, name, category, focus, signalTypes,
   return {
     category,
     signals,
-    searches: queries.length,
-    hits: hits.length,
-    summary: `${signals.length} signals from ${hits.length} results`,
+    telemetry: telemetry(signals.length),
+    summary: `${signals.length} signals from ${results.length} results`,
   };
 }
 
-function buildPrompt({ focus, signalTypes, batch }) {
+const freshPerQuery = (fresh, query) => fresh.filter((h) => h.found_via === query).length;
+
+function buildPrompt({ focus, signalTypes, batch, polarity = [] }) {
   const results = batch.map((h, i) => [
     `--- RESULT ${i + 1} ---`,
     `TITLE: ${h.title}`,
@@ -86,10 +103,18 @@ function buildPrompt({ focus, signalTypes, batch }) {
     `CONTENT: ${(h.content || '').slice(0, 1500)}`,
   ].join('\n')).join('\n\n');
 
+  // Polarity rules travel with the prompt because the same event means
+  // opposite things to different businesses — an appointment is a lead for one
+  // and a lost mandate for another. This cannot be inferred, only stated.
+  const polarityBlock = polarity.length
+    ? `\nHOW TO READ THESE EVENTS (this business specifically):\n${polarity.map((p) => `- ${p}`).join('\n')}\n`
+    : '';
+
   return `BD FOCUS: ${focus}
 
 SIGNAL TYPES TO LOOK FOR:
 ${signalTypes.map((t) => `- ${t}`).join('\n')}
+${polarityBlock}
 
 SEARCH RESULTS:
 

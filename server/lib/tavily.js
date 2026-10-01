@@ -10,9 +10,17 @@ import { log } from './log.js';
 
 const ENDPOINT = 'https://api.tavily.com/search';
 
+// Advanced search costs 2 Tavily credits, basic costs 1. Tune down to `basic`
+// while iterating on queries, back to `advanced` for real runs and the demo.
+const defaultDepth = () => (process.env.TAVILY_DEPTH === 'basic' ? 'basic' : 'advanced');
+
 function requireKey() {
-  const key = process.env.TAVILY_API_KEY;
+  const key = (process.env.TAVILY_API_KEY ?? '').trim();
   if (!key) throw new Error('TAVILY_API_KEY is not set — copy .env.example to .env and add your Tavily key');
+  // Catch the unedited placeholder here rather than letting it become a 401.
+  if (/^your_|_key$/i.test(key)) {
+    throw new Error('TAVILY_API_KEY is still the .env.example placeholder — paste your real key from tavily.com');
+  }
   return key;
 }
 
@@ -22,7 +30,7 @@ function requireKey() {
  * @param {{days?:number, maxResults?:number, depth?:'basic'|'advanced', topic?:'general'|'news'}} opts
  * @returns {Promise<Array<{title:string,url:string,content:string,score:number,published_date:string|null}>>}
  */
-export async function search(query, { days = 7, maxResults = 10, depth = 'advanced', topic = 'news' } = {}) {
+export async function search(query, { days = 7, maxResults = 10, depth = defaultDepth(), topic = 'news' } = {}) {
   const key = requireKey();
   // Tavily has shipped both a Bearer header and a body api_key field across
   // versions; sending both keeps this working either way.
@@ -59,6 +67,7 @@ export async function search(query, { days = 7, maxResults = 10, depth = 'advanc
  */
 export async function searchMany(queries, opts = {}) {
   const byUrl = new Map();
+  const stats = [];
   let failed = 0;
 
   for (const query of queries) {
@@ -72,15 +81,19 @@ export async function searchMany(queries, opts = {}) {
         byUrl.set(key, { ...hit, found_via: query });
         fresh++;
       }
-      log.step(`Tavily "${truncate(query, 58)}" → ${hits.length} hits, ${fresh} new`);
+      // Per-query counts feed the yield diagnostics: a query that reliably
+      // returns nothing is a wording problem, and it should be visible.
+      stats.push({ query, hits: hits.length, unique: fresh, failed: false });
+      log.step(`Tavily "${truncate(query, 56)}" → ${hits.length} hits, ${fresh} new`);
     } catch (err) {
       failed++;
+      stats.push({ query, hits: 0, unique: 0, failed: true, error: err.message });
       log.warn(`Tavily query failed, skipping — ${err.message}`);
     }
   }
 
   if (failed === queries.length) throw new Error('every Tavily query failed');
-  return [...byUrl.values()];
+  return { results: [...byUrl.values()], stats };
 }
 
 // Strip tracking params and trailing slashes so the same article found by two

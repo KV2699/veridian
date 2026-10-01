@@ -29,22 +29,25 @@ HARD RULES:
 
 Output GitHub-flavoured markdown in exactly the given structure. No preamble, no closing note, no text outside the structure.`;
 
-const CATEGORIES = [
-  { key: 'funding', heading: 'Funding & Investment' },
-  { key: 'product', heading: 'Product & Platform' },
-  { key: 'competitive', heading: 'Competitive Moves' },
-  { key: 'opportunity', heading: 'BD Opportunities' },
-];
+// Sections come from the profile, with Account Watch always first: a fresh
+// reason to contact someone who already knows you outranks a cold prospect.
+function sectionsFor(profile) {
+  return [
+    { key: 'account', heading: 'Your Accounts' },
+    ...profile.collectors.map((c) => ({ key: c.key, heading: c.name.replace(/ Collector$/, '') })),
+  ];
+}
 
 // `deps` exists for testing — see qa-verifier.js.
-export default async function writeBriefing({ signals, connections, assessment, week, weekLabel }, deps = {}) {
+export default async function writeBriefing({ signals, connections, assessment, week, weekLabel, profile, diagnostics }, deps = {}) {
   const ask = deps.complete ?? complete;
+  const CATEGORIES = sectionsFor(profile);
   const counts = Object.fromEntries(CATEGORIES.map(({ key }) => [key, signals.filter((s) => s.category === key).length]));
 
   if (!signals.length) {
     log.warn('no verified signals — writing an explicit empty briefing rather than inventing content');
     return {
-      markdown: emptyBriefing(weekLabel),
+      markdown: emptyBriefing(weekLabel, CATEGORIES, diagnostics),
       counts,
       model: null,
       summary: 'empty briefing (no verified signals)',
@@ -57,7 +60,7 @@ export default async function writeBriefing({ signals, connections, assessment, 
     temperature: 0.4,
     maxTokens: 3000,
     system: SYSTEM,
-    user: buildPrompt({ signals, connections, assessment, weekLabel, counts }),
+    user: buildPrompt({ signals, connections, assessment, weekLabel, counts, CATEGORIES, profile }),
   });
 
   const markdown = tidy(text, weekLabel);
@@ -66,7 +69,7 @@ export default async function writeBriefing({ signals, connections, assessment, 
   return { markdown, counts, model, usage, summary: `${markdown.split(/\s+/).length}-word briefing` };
 }
 
-function buildPrompt({ signals, connections, assessment, weekLabel, counts }) {
+function buildPrompt({ signals, connections, assessment, weekLabel, counts, CATEGORIES, profile }) {
   const sections = CATEGORIES.map(({ key, heading }) => {
     const rows = signals.filter((s) => s.category === key);
     const body = rows.length
@@ -86,9 +89,17 @@ function buildPrompt({ signals, connections, assessment, weekLabel, counts }) {
     ? connections.map((c) => `- ${c.observation}`).join('\n')
     : '  (none identified — write your own only if a genuine link exists in the signals above)';
 
+  const structure = CATEGORIES.map(({ key, heading }) =>
+    `## ${heading} (${counts[key]} signals)\n[${counts[key] ? '3-5 bullets, most important first, each ending with [source](url)' : 'write "No signals this week."'}]`
+  ).join('\n\n');
+
   return `Write the Signal Bureau briefing for the week of ${weekLabel}.
 
-VERIFIED SIGNALS (${signals.length} total — funding ${counts.funding}, product ${counts.product}, competitive ${counts.competitive}, opportunity ${counts.opportunity}):
+MARKET: ${profile?.name ?? 'AI infrastructure'} — ${profile?.description ?? ''}
+
+"Your Accounts" are organisations this reader ALREADY has a relationship with. Write those bullets as a reason to get back in touch, never as a new discovery.
+
+VERIFIED SIGNALS (${signals.length} total — ${CATEGORIES.map(({ key, heading }) => `${heading} ${counts[key]}`).join(', ')}):
 
 ${sections}
 
@@ -104,17 +115,7 @@ Produce exactly this structure:
 ## This Week's Headline
 [One sentence: the single most important thing that happened, naming the organisation.]
 
-## Funding & Investment (${counts.funding} signals)
-[3-5 bullets, most important first, each ending with [source](url)]
-
-## Product & Platform (${counts.product} signals)
-[3-5 bullets]
-
-## Competitive Moves (${counts.competitive} signals)
-[3-5 bullets]
-
-## BD Opportunities (${counts.opportunity} signals)
-[3-5 bullets]
+${structure}
 
 ## Connections Worth Noting
 [2-3 observations linking signals across categories]
@@ -135,30 +136,29 @@ function tidy(text, weekLabel) {
   return `${md.replace(/\n{3,}/g, '\n\n')}\n`;
 }
 
-function emptyBriefing(weekLabel) {
+// An empty week is written by hand rather than by the model: there is nothing
+// to synthesise, and the useful content is the diagnosis of why it was empty.
+function emptyBriefing(weekLabel, CATEGORIES, diagnostics) {
+  const findings = diagnostics?.findings?.filter((f) => f.severity === 'high') ?? [];
+  const actions = findings.length
+    ? findings.slice(0, 3).map((f, i) => `${i + 1}. **${f.where}** — ${f.cause} ${f.fix}`)
+    : [
+        '1. Check the agent status panel: an empty week is more often a collection failure than a quiet market.',
+        '2. Review the per-query yield table in the dashboard — it shows which searches returned nothing.',
+        '3. Re-run the pipeline manually before treating this as a true read on the market.',
+      ];
+
   return `# Signal Bureau — Week of ${weekLabel}
 
 ## This Week's Headline
 No signals cleared verification this week.
 
-## Funding & Investment (0 signals)
-No signals this week.
-
-## Product & Platform (0 signals)
-No signals this week.
-
-## Competitive Moves (0 signals)
-No signals this week.
-
-## BD Opportunities (0 signals)
-No signals this week.
+${CATEGORIES.map(({ heading }) => `## ${heading} (0 signals)\nNo signals this week.`).join('\n\n')}
 
 ## Connections Worth Noting
 None — nothing to connect.
 
 ## Recommended Actions This Week
-1. Check the agent status panel: an empty week is more often a collection failure than a quiet market.
-2. Review the collector queries in \`server/agents/collector-*.js\` — a seven-day window with no qualifying events usually means the queries are too narrow.
-3. Re-run the pipeline manually before treating this as a true read on the market.
+${actions.join('\n')}
 `;
 }

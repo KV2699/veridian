@@ -13,7 +13,7 @@
 import { completeJSON, MODELS } from '../lib/nebius.js';
 import { log } from '../lib/log.js';
 
-const SCORE_FLOOR = 6;
+const DEFAULT_FLOOR = 6;
 
 const SYSTEM = `You are the quality assurance layer of a BD intelligence pipeline for the AI infrastructure market.
 
@@ -44,8 +44,9 @@ Include every input id exactly once in "verified". For a duplicate, set duplicat
 
 // `deps` exists so the verification logic can be tested against a scripted
 // model response without reaching Nebius. Production callers omit it.
-export default async function qaVerify({ signals }, deps = {}) {
+export default async function qaVerify({ signals, profile }, deps = {}) {
   const ask = deps.completeJSON ?? completeJSON;
+  const floor = profile?.scoring?.floor ?? DEFAULT_FLOOR;
   if (!signals?.length) {
     log.warn('no signals to verify');
     return { signals: [], connections: [], assessment: 'No signals collected this week.', summary: '0 verified' };
@@ -66,7 +67,7 @@ export default async function qaVerify({ signals }, deps = {}) {
     temperature: 0.2,
     maxTokens: 4000,
     system: SYSTEM,
-    user: buildPrompt(unique),
+    user: buildPrompt(unique, profile),
   });
 
   const verdicts = new Map(
@@ -85,7 +86,7 @@ export default async function qaVerify({ signals }, deps = {}) {
     // silently dropped — but it is flagged, because it was never verified.
     if (!v) {
       unjudged++;
-      if ((s.relevance_score ?? 0) >= SCORE_FLOOR) {
+      if ((s.relevance_score ?? 0) >= floor) {
         kept.push({ ...s, needs_review: true, review_reason: 'Not returned by the verification pass — unverified', verified: false });
         flagged++;
       } else dropped++;
@@ -94,7 +95,7 @@ export default async function qaVerify({ signals }, deps = {}) {
     if (v.duplicate_of && v.duplicate_of !== s.id) { dupes++; continue; }
 
     const score = clamp(v.relevance_score, s.relevance_score);
-    if (score < SCORE_FLOOR) { dropped++; continue; }
+    if (score < floor) { dropped++; continue; }
 
     const needsReview = Boolean(v.needs_review) || !s.date;
     if (needsReview) flagged++;
@@ -118,7 +119,7 @@ export default async function qaVerify({ signals }, deps = {}) {
     }))
     .slice(0, 5);
 
-  log.ok(`${kept.length} verified · ${dupes} cross-category duplicates · ${dropped} below score ${SCORE_FLOOR} · ${flagged} flagged for review`);
+  log.ok(`${kept.length} verified · ${dupes} cross-category duplicates · ${dropped} below score ${floor} · ${flagged} flagged for review`);
   if (unjudged) log.warn(`${unjudged} signals were not judged by the model and are flagged as unverified`);
   if (connections.length) log.ok(`${connections.length} cross-category connections identified`);
 
@@ -133,10 +134,10 @@ export default async function qaVerify({ signals }, deps = {}) {
   };
 }
 
-function buildPrompt(signals) {
+function buildPrompt(signals, profile) {
   const blocks = signals.map((s) => [
     `ID: ${s.id}`,
-    `CATEGORY: ${s.category}`,
+    `CATEGORY: ${s.category}${s.is_account ? ' (EXISTING ACCOUNT)' : ''}`,
     `COMPANY: ${s.company}`,
     `SIGNAL TYPE: ${s.signal_type}`,
     `DATE: ${s.date ?? 'NONE — no published date'}`,
@@ -145,7 +146,21 @@ function buildPrompt(signals) {
     `COLLECTOR SCORE: ${s.relevance_score}`,
   ].join('\n')).join('\n\n');
 
-  return `${signals.length} signals were collected this week across four categories.
+  // Scoring guidance and polarity travel with the prompt: what counts as
+  // valuable, and which way each event points, are properties of the business
+  // being served, not of the pipeline.
+  const guidance = profile?.scoring?.guidance?.length
+    ? `\nWHAT IS VALUABLE TO THIS BUSINESS (apply when scoring):\n${profile.scoring.guidance.map((g) => `- ${g}`).join('\n')}\n`
+    : '';
+  const polarity = profile?.polarity?.length
+    ? `\nHOW TO READ THESE EVENTS (this business specifically):\n${profile.polarity.map((p) => `- ${p}`).join('\n')}\n`
+    : '';
+
+  return `${signals.length} signals were collected this week.
+
+MARKET: ${profile?.name ?? 'AI infrastructure'}
+${guidance}${polarity}
+Signals in the "account" category are organisations this business ALREADY holds a relationship with. Score them on how strong a reason they are to get back in touch. Never mark one as a duplicate of a new prospect — they belong in a separate section of the briefing.
 
 ${blocks}
 

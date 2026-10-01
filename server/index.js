@@ -6,7 +6,8 @@ import cron from 'node-cron';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { runPipeline, isRunning, AGENTS, isoWeek } from './pipeline.js';
+import { runPipeline, isRunning, agentList, isoWeek } from './pipeline.js';
+import { loadProfile, listProfiles } from './profiles/index.js';
 import { getBriefings, getSignals, getRuns } from './lib/store.js';
 import { MODELS, listModels } from './lib/nebius.js';
 import { log } from './lib/log.js';
@@ -34,7 +35,7 @@ app.post('/api/run', (req, res) => {
   runPipeline({ trigger: 'dashboard', dryRun })
     .catch((err) => log.error(`background run failed — ${err.message}`));
 
-  res.status(202).json({ ok: true, started: true, dryRun, agents: AGENTS, week: isoWeek().week });
+  res.status(202).json({ ok: true, started: true, dryRun, agents: agentList(), week: isoWeek().week });
 });
 
 app.get('/api/briefings', async (_req, res) => {
@@ -83,11 +84,13 @@ app.get('/api/status', async (_req, res) => {
         started_at: last.started_at, duration_ms: last.duration_ms,
         signal_count: last.signal_count ?? 0, error: last.error ?? null,
       },
-      agents: AGENTS.map((a) => {
+      agents: agentList().map((a) => {
         const s = last?.agents?.find((x) => x.index === a.number);
         return { ...a, status: isRunning() ? 'running' : s?.status ?? 'idle', duration_ms: s?.duration_ms ?? null, detail: s?.detail ?? null, error: s?.error ?? null };
       }),
       totals: { briefings: briefings.length, signals: signals.length },
+      profile: (() => { const p = loadProfile(); return { key: p.key, name: p.name, accounts: p.roster?.length ?? 0 }; })(),
+      diagnostics: last?.diagnostics ?? null,
       models: { ultra: MODELS.ultra, fast: MODELS.fast },
       schedule: { cron: CRON_SCHEDULE, enabled: process.env.CRON_ENABLED !== 'false' },
     });
@@ -108,16 +111,52 @@ app.get('/api/models', async (_req, res) => {
   } catch (err) { fail(res, err); }
 });
 
+// A key that is still the .env.example placeholder is worse than a missing one:
+// it reports as configured and fails later as a confusing 401.
+const keySet = (name) => {
+  const v = (process.env[name] ?? '').trim();
+  if (!v) return 'missing';
+  if (/^your_|_key$|^<.*>$|changeme/i.test(v)) return 'placeholder';
+  return 'set';
+};
+
+// What this deployment is configured to sell, and to whom. The profile is the
+// strategy — exposing it makes the configuration auditable from outside.
+app.get('/api/profiles', (_req, res) => {
+  try {
+    const active = loadProfile();
+    res.json({ ok: true, active: active.key, profiles: listProfiles(), detail: {
+      key: active.key, name: active.name, description: active.description,
+      polarity: active.polarity, roster: active.roster, exclusions: active.exclusions,
+      collectors: active.collectors.map(({ key, name, focus, queries, windowDays }) =>
+        ({ key, name, focus, queries, windowDays })),
+      scoring: active.scoring,
+    } });
+  } catch (err) { fail(res, err); }
+});
+
+// The yield diagnosis for the most recent run: where signals were lost, and
+// the named cause of each collapse.
+app.get('/api/diagnostics', async (_req, res) => {
+  try {
+    const last = (await getRuns())[0];
+    if (!last) return res.status(404).json({ ok: false, error: 'No runs yet' });
+    res.json({ ok: true, week: last.week, status: last.status, diagnostics: last.diagnostics ?? null });
+  } catch (err) { fail(res, err); }
+});
+
 app.get('/api/health', (_req, res) => {
+  const nebius = keySet('NEBIUS_API_KEY');
+  const tavily = keySet('TAVILY_API_KEY');
   res.json({
     ok: true,
-    status: 'healthy',
+    status: nebius === 'set' && tavily === 'set' ? 'healthy' : 'not configured',
     uptime_s: Math.round(process.uptime()),
     running: isRunning(),
     week: isoWeek().week,
     config: {
-      nebius_key: Boolean(process.env.NEBIUS_API_KEY),
-      tavily_key: Boolean(process.env.TAVILY_API_KEY),
+      nebius_key: nebius,
+      tavily_key: tavily,
       dry_run: process.env.DRY_RUN === 'true',
       models: { ultra: MODELS.ultra, fast: MODELS.fast },
     },
