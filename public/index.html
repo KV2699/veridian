@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signal Bureau — AI Infrastructure BD Intelligence</title>
+<style>
+  :root {
+    --bg: #0f172a; --panel: #16203a; --panel-2: #1c2746; --line: #273458;
+    --text: #e8ecf7; --muted: #94a3c4; --dim: #64748b;
+    --accent: #6366f1; --accent-soft: rgba(99,102,241,.14);
+    --ok: #34d399; --warn: #fbbf24; --err: #f87171;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: #a5b4fc; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  header {
+    border-bottom: 1px solid var(--line); padding: 20px 28px;
+    display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+    background: linear-gradient(180deg, #16203a, #0f172a);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand h1 { margin: 0; font-size: 19px; letter-spacing: -.2px; }
+  .brand span { color: var(--dim); font-size: 12px; font-family: var(--mono); }
+  .spacer { flex: 1; }
+  .meta { color: var(--muted); font-size: 12.5px; font-family: var(--mono); text-align: right; line-height: 1.5; }
+
+  button {
+    font: 600 14px/1 inherit; color: #fff; background: var(--accent);
+    border: 0; border-radius: 8px; padding: 11px 18px; cursor: pointer;
+    transition: filter .15s, opacity .15s;
+  }
+  button:hover:not(:disabled) { filter: brightness(1.12); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  button.ghost { background: transparent; border: 1px solid var(--line); color: var(--muted); }
+
+  main { display: grid; grid-template-columns: 310px 1fr; gap: 24px; padding: 24px 28px 64px; max-width: 1480px; }
+  @media (max-width: 940px) { main { grid-template-columns: 1fr; } }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-bottom: 18px; }
+  .card h2 { margin: 0 0 14px; font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+
+  /* Agent status panel */
+  .agent { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(39,52,88,.5); font-size: 13.5px; }
+  .agent:last-child { border-bottom: 0; }
+  .agent .n { font-family: var(--mono); color: var(--dim); font-size: 11px; width: 16px; flex: none; }
+  .agent .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .agent .t { font-family: var(--mono); font-size: 11px; color: var(--dim); flex: none; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); flex: none; }
+  .dot.success { background: var(--ok); }
+  .dot.error { background: var(--err); }
+  .dot.running { background: var(--accent); animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.8); } }
+  .tier { font-family: var(--mono); font-size: 9.5px; padding: 2px 5px; border-radius: 4px; background: var(--accent-soft); color: #a5b4fc; flex: none; }
+
+  /* Signal bar chart */
+  .bars { display: grid; gap: 10px; }
+  .bar-row { display: grid; grid-template-columns: 76px 1fr 28px; align-items: center; gap: 10px; font-size: 12.5px; }
+  .bar-row .lbl { color: var(--muted); }
+  .bar-track { display: block; height: 7px; background: var(--panel-2); border-radius: 4px; overflow: hidden; }
+  /* display:block — an inline span ignores width percentages and fixed height. */
+  .bar-fill { display: block; height: 100%; min-width: 2px; background: var(--accent); border-radius: 4px; transition: width .4s ease; }
+  .bar-row .val { font-family: var(--mono); color: var(--text); text-align: right; }
+
+  /* History */
+  .hist { display: flex; flex-direction: column; gap: 2px; }
+  .hist button {
+    background: transparent; border: 0; border-radius: 7px; padding: 9px 10px;
+    text-align: left; color: var(--muted); font-weight: 500; font-size: 13.5px;
+    display: flex; justify-content: space-between; gap: 8px; width: 100%;
+  }
+  .hist button:hover { background: var(--panel-2); color: var(--text); }
+  .hist button[aria-current="true"] { background: var(--accent-soft); color: #c7d2fe; font-weight: 600; }
+  .hist .c { font-family: var(--mono); font-size: 11px; color: var(--dim); flex: none; }
+
+  /* Briefing */
+  .briefing { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 32px 38px; }
+  .briefing h1 { font-size: 25px; margin: 0 0 6px; letter-spacing: -.4px; }
+  .briefing h2 {
+    font-size: 12px; letter-spacing: .09em; text-transform: uppercase; color: #a5b4fc;
+    margin: 32px 0 12px; padding-bottom: 7px; border-bottom: 1px solid var(--line); font-weight: 700;
+  }
+  .briefing h1 + h2 { margin-top: 26px; }
+  .briefing ul, .briefing ol { padding-left: 22px; margin: 0; }
+  .briefing li { margin: 9px 0; }
+  .briefing p { margin: 10px 0; }
+  .briefing code { font-family: var(--mono); font-size: .88em; background: var(--panel-2); padding: 2px 5px; border-radius: 4px; }
+  .briefing em { color: var(--warn); font-style: normal; }
+
+  .pill { display: inline-block; font-family: var(--mono); font-size: 11px; padding: 3px 9px; border-radius: 99px; background: var(--panel-2); color: var(--muted); margin-right: 6px; }
+  .empty { color: var(--dim); padding: 40px 0; text-align: center; }
+  .log { font-family: var(--mono); font-size: 11.5px; color: var(--muted); max-height: 136px; overflow-y: auto; white-space: pre-wrap; }
+  .err { color: var(--err); font-size: 12px; margin-top: 8px; font-family: var(--mono); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1>Signal Bureau</h1>
+    <span id="week">—</span>
+  </div>
+  <div class="spacer"></div>
+  <div class="meta" id="meta">loading…</div>
+  <button class="ghost" id="refresh">Refresh</button>
+  <button id="run">Run pipeline</button>
+</header>
+
+<main>
+  <aside>
+    <div class="card">
+      <h2>Agent status</h2>
+      <div id="agents"></div>
+      <div class="err" id="runError" hidden></div>
+    </div>
+
+    <div class="card">
+      <h2>Signals by category</h2>
+      <div class="bars" id="bars"></div>
+    </div>
+
+    <div class="card">
+      <h2>Past briefings</h2>
+      <div class="hist" id="history"></div>
+    </div>
+
+    <div class="card">
+      <h2>Run log</h2>
+      <div class="log" id="log">Idle.</div>
+    </div>
+  </aside>
+
+  <section>
+    <div class="briefing" id="briefing">
+      <div class="empty">Loading…</div>
+    </div>
+  </section>
+</main>
+
+<script>
+const CATEGORIES = [
+  ['funding', 'Funding'], ['product', 'Product'],
+  ['competitive', 'Competitive'], ['opportunity', 'Opportunity'],
+];
+
+let briefings = [];
+let selected = null;
+let poll = null;
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const secs = (ms) => (ms == null ? '' : `${(ms / 1000).toFixed(1)}s`);
+
+function logLine(msg) {
+  const el = $('log');
+  const stamp = new Date().toTimeString().slice(0, 8);
+  el.textContent = `${stamp}  ${msg}\n${el.textContent === 'Idle.' ? '' : el.textContent}`;
+}
+
+// ── Minimal markdown renderer. Only the subset the briefing format uses. ─────
+function renderMarkdown(md) {
+  const lines = String(md).split('\n');
+  const out = [];
+  let list = null;
+
+  const closeList = () => { if (list) { out.push(`</${list}>`); list = null; } };
+  const inline = (t) => esc(t)
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\(unconfirmed\)/gi, '<em>(unconfirmed)</em>');
+
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    if (!line.trim()) { closeList(); continue; }
+
+    const h = line.match(/^(#{1,4})\s+(.*)$/);
+    if (h) { closeList(); out.push(`<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`); continue; }
+
+    const ul = line.match(/^\s*[-*]\s+(.*)$/);
+    if (ul) {
+      if (list !== 'ul') { closeList(); out.push('<ul>'); list = 'ul'; }
+      out.push(`<li>${inline(ul[1])}</li>`); continue;
+    }
+    const ol = line.match(/^\s*\d+[.)]\s+(.*)$/);
+    if (ol) {
+      if (list !== 'ol') { closeList(); out.push('<ol>'); list = 'ol'; }
+      out.push(`<li>${inline(ol[1])}</li>`); continue;
+    }
+    closeList();
+    out.push(`<p>${inline(line)}</p>`);
+  }
+  closeList();
+  return out.join('\n');
+}
+
+// ── Rendering ────────────────────────────────────────────────────────────────
+function drawAgents(agents, running) {
+  $('agents').innerHTML = agents.map((a) => {
+    const tier = a.kind === 'nemotron-ultra' ? '<span class="tier">ULTRA</span>' : '';
+    const state = running ? 'running' : a.status;
+    return `<div class="agent" title="${esc(a.error || a.detail || '')}">
+      <span class="n">${a.number}</span>
+      <span class="dot ${esc(state)}"></span>
+      <span class="nm">${esc(a.name)}</span>
+      ${tier}
+      <span class="t">${secs(a.duration_ms)}</span>
+    </div>`;
+  }).join('');
+}
+
+function drawBars(counts = {}) {
+  const max = Math.max(1, ...CATEGORIES.map(([k]) => counts[k] ?? 0));
+  $('bars').innerHTML = CATEGORIES.map(([k, label]) => {
+    const n = counts[k] ?? 0;
+    return `<div class="bar-row">
+      <span class="lbl">${label}</span>
+      <span class="bar-track"><span class="bar-fill" style="width:${(n / max) * 100}%"></span></span>
+      <span class="val">${n}</span>
+    </div>`;
+  }).join('');
+}
+
+function drawHistory() {
+  if (!briefings.length) { $('history').innerHTML = '<div class="empty" style="padding:14px 0">No briefings yet.</div>'; return; }
+  $('history').innerHTML = briefings.map((b) => `
+    <button data-week="${esc(b.week)}" aria-current="${b.week === selected}">
+      <span>${esc(b.week_label || b.week)}</span>
+      <span class="c">${b.signal_count ?? 0}</span>
+    </button>`).join('');
+
+  for (const btn of $('history').querySelectorAll('button')) {
+    btn.onclick = () => { selected = btn.dataset.week; drawHistory(); drawBriefing(); };
+  }
+}
+
+function drawBriefing() {
+  const b = briefings.find((x) => x.week === selected);
+  const el = $('briefing');
+  if (!b) {
+    el.innerHTML = `<div class="empty">No briefing yet. Press <strong>Run pipeline</strong> to generate this week's.</div>`;
+    drawBars({});
+    return;
+  }
+
+  const pills = [
+    `${b.signal_count ?? 0} signals`,
+    b.flagged_count ? `${b.flagged_count} flagged` : null,
+    b.trend ? `${b.trend.delta >= 0 ? '+' : ''}${b.trend.delta} vs ${b.trend.previous_week}` : null,
+    b.models?.ultra ? `ultra: ${b.models.ultra}` : null,
+  ].filter(Boolean);
+
+  el.innerHTML = `<div style="margin-bottom:18px">${pills.map((p) => `<span class="pill">${esc(p)}</span>`).join('')}</div>`
+    + renderMarkdown(b.markdown || '');
+  drawBars(b.counts);
+}
+
+// ── Data ─────────────────────────────────────────────────────────────────────
+async function get(path) {
+  const res = await fetch(path);
+  const data = await res.json().catch(() => ({ ok: false, error: `${res.status} ${res.statusText}` }));
+  if (!res.ok || data.ok === false) throw new Error(data.error || `${res.status}`);
+  return data;
+}
+
+async function loadStatus() {
+  const s = await get('/api/status');
+  $('week').textContent = s.current_week;
+  drawAgents(s.agents, s.running);
+  $('run').disabled = s.running;
+  $('run').textContent = s.running ? 'Running…' : 'Run pipeline';
+
+  const last = s.last_run;
+  $('meta').innerHTML = [
+    last ? `last run ${new Date(last.started_at).toLocaleString('en-GB')} · ${last.status}${last.dry_run ? ' · dry run' : ''}` : 'never run',
+    `${s.totals.briefings} briefings · ${s.totals.signals} signals all-time`,
+  ].join('<br>');
+
+  const errEl = $('runError');
+  if (last?.error) { errEl.hidden = false; errEl.textContent = last.error; }
+  else errEl.hidden = true;
+
+  return s;
+}
+
+async function loadBriefings(keepSelection = false) {
+  const { briefings: list } = await get('/api/briefings');
+  briefings = list;
+  if (!keepSelection || !briefings.some((b) => b.week === selected)) selected = briefings[0]?.week ?? null;
+  drawHistory();
+  drawBriefing();
+}
+
+async function refresh(keepSelection = true) {
+  try {
+    const s = await loadStatus();
+    await loadBriefings(keepSelection);
+    return s;
+  } catch (err) {
+    logLine(`error: ${err.message}`);
+  }
+}
+
+function startPolling() {
+  if (poll) return;
+  poll = setInterval(async () => {
+    const s = await refresh();
+    if (s && !s.running) {
+      clearInterval(poll); poll = null;
+      logLine(`run finished — ${s.last_run?.status ?? 'unknown'}, ${s.last_run?.signal_count ?? 0} signals in ${secs(s.last_run?.duration_ms)}`);
+    }
+  }, 2000);
+}
+
+$('run').onclick = async () => {
+  $('run').disabled = true;
+  $('run').textContent = 'Starting…';
+  try {
+    const res = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'failed to start');
+    logLine(`pipeline started${data.dryRun ? ' (dry run)' : ''} — 7 agents`);
+    startPolling();
+  } catch (err) {
+    logLine(`could not start: ${err.message}`);
+    $('run').disabled = false;
+    $('run').textContent = 'Run pipeline';
+  }
+};
+
+$('refresh').onclick = () => { logLine('refreshed'); refresh(); };
+
+(async () => {
+  const s = await refresh(false);
+  if (s?.running) startPolling();
+})();
+</script>
+</body>
+</html>

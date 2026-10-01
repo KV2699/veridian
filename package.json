@@ -1,0 +1,24 @@
+{
+  "name": "signal-bureau",
+  "version": "1.0.0",
+  "description": "Seven-agent BD intelligence pipeline for the AI infrastructure market. Nebius Token Factory + NVIDIA Nemotron + Tavily.",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "pipeline": "node server/pipeline.js",
+    "pipeline:dry": "DRY_RUN=true node server/pipeline.js",
+    "models": "node server/lib/list-models.js",
+    "test": "node test/run-all.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "node-cron": "^3.0.3",
+    "dotenv": "^16.4.5"
+  },
+  "license": "MIT"
+}
