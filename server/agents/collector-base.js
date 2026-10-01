@@ -29,11 +29,13 @@ OUTPUT FORMAT — this is strict:
 Your entire reply must be a single JSON object. Do not reason out loud, do not explain your thinking, do not write a preamble, do not use a code fence. The first character you output must be {.
 
 Reply with JSON only, in this exact shape:
-{"signals":[{"company":"string","signal_type":"string","summary":"string","url":"string","date":"YYYY-MM-DD or null","relevance_score":0,"practice_areas":["key"],"org_scale":"large|mid|small|unknown"}]}
+{"signals":[{"company":"string","signal_type":"string","summary":"string","url":"string","date":"YYYY-MM-DD or null","relevance_score":0,"practice_areas":["key"],"org_scale":"large|mid|small|unknown","value_level":"string"}]}
 
 relevance_score is 0-10 for how directly this matters to the stated BD focus. Be strict: 8+ means a named buying, building or partnering event.
 
 practice_areas: the keys of every offering this signal opens a genuine conversation for. Use ONLY the keys listed under PRACTICE AREAS below. Include an area only if the signal gives a real reason to discuss it — do not pad the list, and do not include an area just because the company could theoretically buy it one day. An empty list is correct when the signal opens nothing specific.
+
+value_level: how much commercial value this signal implies, using ONLY the levels defined under COMMERCIAL VALUE below. Base it strictly on figures the source actually states. If the source gives no size, use the unknown level — never estimate.
 
 org_scale: the size of the organisation named — "large" (major enterprise, hyperscaler, government, or household name), "mid", "small" (startup, small institution), or "unknown" when the source does not say. Never guess "large" to inflate a signal.
 If nothing in the results qualifies, return {"signals":[]}.`;
@@ -46,7 +48,7 @@ If nothing in the results qualifies, return {"signals":[]}.`;
 const BATCH = Number(process.env.EXTRACTION_BATCH) || 4;
 
 export async function runCollector(
-  { key, name, category, focus, signalTypes, queries, windowDays = 7, polarity = [], practiceAreas = [] },
+  { key, name, category, focus, signalTypes, queries, windowDays = 7, polarity = [], practiceAreas = [], valueFactor = null },
   ctx = {},
   deps = {},
 ) {
@@ -95,10 +97,10 @@ export async function runCollector(
         maxTokens: 4000,
         expectKey: 'signals',
         system: SYSTEM,
-        user: buildPrompt({ focus, signalTypes, batch, polarity, practiceAreas }),
+        user: buildPrompt({ focus, signalTypes, batch, polarity, practiceAreas, valueFactor }),
       });
       signals.push(...normalise(data?.signals, {
-        batch, category, practiceAreas,
+        batch, category, practiceAreas, valueFactor,
         onDrop: ({ company, reason }) => { ungrounded++; log.warn(`dropped "${company}" — ${reason}`); },
       }));
     } catch (err) {
@@ -120,7 +122,7 @@ export async function runCollector(
 
 const freshPerQuery = (fresh, query) => fresh.filter((h) => h.found_via === query).length;
 
-function buildPrompt({ focus, signalTypes, batch, polarity = [], practiceAreas = [] }) {
+function buildPrompt({ focus, signalTypes, batch, polarity = [], practiceAreas = [], valueFactor = null }) {
   const results = batch.map((h, i) => [
     `--- RESULT ${i + 1} ---`,
     `TITLE: ${h.title}`,
@@ -140,7 +142,11 @@ function buildPrompt({ focus, signalTypes, batch, polarity = [], practiceAreas =
     ? `\nPRACTICE AREAS (the offerings this business sells — map each signal to the ones it opens):\n${practiceAreas.map((a) => `- ${a.key}: ${a.name} — ${a.description}`).join('\n')}\n`
     : '';
 
-  return `BD FOCUS: ${focus}${areasBlock}
+  const valueBlock = valueFactor?.guidance?.length
+    ? `\nCOMMERCIAL VALUE — set value_level to one of: ${Object.keys(valueFactor.points ?? {}).join(' | ')}\n${valueFactor.guidance.map((g) => `- ${g}`).join('\n')}\n`
+    : '';
+
+  return `BD FOCUS: ${focus}${areasBlock}${valueBlock}
 
 SIGNAL TYPES TO LOOK FOR:
 ${signalTypes.map((t) => `- ${t}`).join('\n')}
@@ -155,8 +161,9 @@ Extract the qualifying signals as JSON.`;
 
 // The model's output is never trusted as-is: urls must match a supplied result,
 // dates must be real and in-window-shaped, scores must be numbers 0-10.
-export function normalise(raw, { batch, category, practiceAreas = [], onDrop } = {}) {
+export function normalise(raw, { batch, category, practiceAreas = [], valueFactor = null, onDrop } = {}) {
   const validAreas = new Set(practiceAreas.map((a) => a.key));
+  const validLevels = new Set(Object.keys(valueFactor?.points ?? {}));
   if (!Array.isArray(raw)) return [];
   const allowed = new Map(batch.map((h) => [canonicalUrl(h.url), h]));
   const out = [];
@@ -204,6 +211,12 @@ export function normalise(raw, { batch, category, practiceAreas = [], onDrop } =
             .filter((a) => validAreas.has(a)))]
         : [],
       org_scale: orgScale(s.org_scale),
+      // A level the profile does not define cannot score — unknown is the
+      // safe default, and unknown is worth nothing.
+      ...(valueFactor
+        ? { [valueFactor.key]: validLevels.has(String(s.value_level ?? '').toLowerCase())
+            ? String(s.value_level).toLowerCase() : 'unknown' }
+        : {}),
       category,
       source_title: source.title,
       found_via: source.found_via,
@@ -212,6 +225,10 @@ export function normalise(raw, { batch, category, practiceAreas = [], onDrop } =
       // source only partly supports, rather than presenting it as settled.
       grounding_note: grounding.reason || null,
       weak_source: grounding.weakSource,
+      // False when the organisation is only mentioned in passing — the single
+      // most common way a plausible-looking claim gets attached to the wrong
+      // article.
+      source_is_about_company: grounding.subject !== false,
     });
   }
   return out;

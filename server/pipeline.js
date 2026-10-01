@@ -86,7 +86,7 @@ export async function runPipeline({
       // ── Agents 1-N: discovery collectors + Account Watch, concurrently ────
       const collectorRuns = await Promise.all([
         ...profile.collectors.map((cfg, i) =>
-          timed(i + 1, cfg.name, () => runCollector({ ...cfg, category: cfg.key, polarity: profile.polarity, practiceAreas: profile.practiceAreas }, ctx), total)),
+          timed(i + 1, cfg.name, () => runCollector({ ...cfg, category: cfg.key, polarity: profile.polarity, practiceAreas: profile.practiceAreas, valueFactor: profile.scoring?.valueFactor }, ctx), total)),
         timed(profile.collectors.length + 1, 'Account Watch', () => accountWatch({ profile }, ctx), total),
       ]);
       statuses.push(...collectorRuns.map(toStatus));

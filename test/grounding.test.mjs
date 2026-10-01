@@ -61,5 +61,24 @@ check('weak domains recognised, real ones not',
   isWeakDomain('https://www.linkedin.com/posts/x') && isWeakDomain('https://facebook.com/y')
   && !isWeakDomain('https://www.reuters.com/z'));
 
+// The miss the first version let through: the company IS named in the body,
+// but the article is about something else entirely.
+const passingMention = checkGrounding(
+  { company: 'SK Telecom', summary: 'SK Telecom announced a 15 GW AI data center buildout.', url: 'https://www.hpcwire.com/a' },
+  { title: 'HPE teams with NVIDIA to bring secure agentic AI into enterprise production',
+    content: 'HPE announced a new agentic AI platform with NVIDIA at its annual event. '.repeat(8)
+      + 'Separately, analysts noted that operators such as SK Telecom continue to expand regional capacity.' },
+);
+check('company named only deep in the body is flagged, not silently accepted',
+  passingMention.ok === true && passingMention.subject === false, passingMention.reason);
+
+// The company IS the subject — must pass clean.
+const realSubject = checkGrounding(
+  { company: 'Samsung', summary: 'Samsung invested $1 billion in Helix Digital Infrastructure.', url: 'https://www.techbuzz.ai/a' },
+  { title: "Samsung Invests $1B in KKR's AI Infrastructure Play",
+    content: 'Samsung today confirmed a $1 billion investment into Helix Digital Infrastructure, the KKR-backed AI infrastructure provider.' },
+);
+check('company in the headline passes clean', realSubject.ok === true && realSubject.subject === true && !realSubject.reason);
+
 console.log(failed ? `\n✗ ${failed} check(s) failed\n` : '\n✓ all checks passed\n');
 process.exit(failed ? 1 : 0);

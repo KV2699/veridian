@@ -11,7 +11,7 @@
 // malformed or sub-threshold signal through.
 
 import { completeJSON, MODELS } from '../lib/nebius.js';
-import { scoreAll } from '../lib/score.js';
+import { scoreAll, valueFactorFor } from '../lib/score.js';
 import { log } from '../lib/log.js';
 
 const DEFAULT_FLOOR = 6;
@@ -45,11 +45,13 @@ For every signal, judge:
    - Three or more should be rare and should only happen when the source explicitly describes a programme spanning them.
    - If you cannot write the sentence "this event means they need to talk to us about X" for an area, remove it.
 
-   GROUNDING NOTES: some signals arrive with a note saying a figure could not be found in the source, or that the source is a social-media post rather than reporting. Treat both as reasons to set needs_review, and never score such a signal in the top band.
+   GROUNDING NOTES: some signals arrive with a note saying the organisation is only mentioned in passing, that a figure could not be found in the source, or that the source is a social-media post rather than reporting. Treat every one of these as a reason to set needs_review, and never score such a signal in the top band. A claim attached to an article that is not about that organisation is the most common way a wrong fact reaches a briefing.
 
    Padding this list is the single easiest way to corrupt this briefing, because a second area moves a signal a whole priority band. When in doubt, drop the area.
-4. ORGANISATION SCALE — confirm or correct the size of the named organisation. "large" means a major enterprise, hyperscaler, government or household name. Use "unknown" when the source does not establish it. Never guess "large" because the sector is large — the organisation must be.
-5. REVIEW FLAG — set needs_review true when the claim is high-stakes but thinly sourced, a figure or date looks implausible, the company attribution is ambiguous, or the signal is an inference rather than a stated fact. Say why in review_reason.
+4. COMMERCIAL VALUE — confirm or correct value_level using ONLY figures the source actually states. The unknown level is the correct answer whenever no size is given; do not estimate from the company's reputation or the sector's size. Overstating this is the fastest way to make every signal look urgent.
+
+5. ORGANISATION SCALE — confirm or correct the size of the named organisation. "large" means a major enterprise, hyperscaler, government or household name. Use "unknown" when the source does not establish it. Never guess "large" because the sector is large — the organisation must be.
+6. REVIEW FLAG — set needs_review true when the claim is high-stakes but thinly sourced, a figure or date looks implausible, the company attribution is ambiguous, or the signal is an inference rather than a stated fact. Say why in review_reason.
 
 SCORING DISCIPLINE — this matters more than coverage:
 - Do not inflate. If most signals in a batch score 8+, you are scoring the batch's internal ranking rather than real BD value. A normal week has a handful of 8s and a long tail of 6s and below.
@@ -60,7 +62,7 @@ SCORING DISCIPLINE — this matters more than coverage:
 Then identify CONNECTIONS: non-obvious links across categories where two or more signals together mean more than they do apart (a funding round plus a competitor's capacity constraint; a model release plus a stated procurement). Only real links present in the signals. If there are none, return an empty array.
 
 Reply with JSON only:
-{"verified":[{"id":"the id given","relevance_score":0,"practice_areas":["key"],"org_scale":"large|mid|small|unknown","needs_review":false,"review_reason":"","duplicate_of":null}],
+{"verified":[{"id":"the id given","relevance_score":0,"practice_areas":["key"],"org_scale":"large|mid|small|unknown","value_level":"string","needs_review":false,"review_reason":"","duplicate_of":null}],
  "connections":[{"observation":"one sentence","signal_ids":["id","id"]}],
  "assessment":"one sentence on the overall quality of this week's collection"}
 
@@ -71,6 +73,8 @@ Include every input id exactly once in "verified". For a duplicate, set duplicat
 export default async function qaVerify({ signals, profile }, deps = {}) {
   const ask = deps.completeJSON ?? completeJSON;
   const floor = profile?.scoring?.floor ?? DEFAULT_FLOOR;
+  const factor = valueFactorFor(profile);
+  const validLevels = new Set(Object.keys(factor.points ?? {}));
   if (!signals?.length) {
     log.warn('no signals to verify');
     return { signals: [], connections: [], assessment: 'No signals collected this week.', summary: '0 verified' };
@@ -164,7 +168,8 @@ export default async function qaVerify({ signals, profile }, deps = {}) {
     const score = clamp(v.relevance_score, s.relevance_score);
     if (score < floor) { dropped++; continue; }
 
-    const needsReview = Boolean(v.needs_review) || !s.date || Boolean(s.grounding_note) || Boolean(s.weak_source);
+    const needsReview = Boolean(v.needs_review) || !s.date
+      || Boolean(s.grounding_note) || Boolean(s.weak_source) || s.source_is_about_company === false;
     if (needsReview) flagged++;
 
     // The verifier's corrected mapping wins over the collector's proposal, but
@@ -180,6 +185,9 @@ export default async function qaVerify({ signals, profile }, deps = {}) {
       org_scale: ['large', 'mid', 'small'].includes(String(v.org_scale ?? '').toLowerCase())
         ? String(v.org_scale).toLowerCase()
         : s.org_scale ?? 'unknown',
+      [factor.key]: validLevels.has(String(v.value_level ?? '').toLowerCase())
+        ? String(v.value_level).toLowerCase()
+        : s[factor.key] ?? 'unknown',
       relevance_score: score,
       collector_score: s.relevance_score,
       needs_review: needsReview,
@@ -196,10 +204,11 @@ export default async function qaVerify({ signals, profile }, deps = {}) {
   // Priority score is arithmetic over the four factors, computed here — never
   // taken from the model. Ranking is by that score, not by the model's own
   // relevance view, which is kept alongside it for audit.
-  const scored = scoreAll(kept);
+  const scored = scoreAll(kept, { valueFactor: factor });
   scored.sort((a, b) => b.priority_score - a.priority_score || (b.date ?? '').localeCompare(a.date ?? ''));
 
   const multi = scored.filter((s) => s.multi_service).length;
+  const bands = scored.reduce((a, s) => { a[s.priority_band] = (a[s.priority_band] ?? 0) + 1; return a; }, {});
   const critical = scored.filter((s) => s.priority_band === 'Critical').length;
 
   const connections = (Array.isArray(data?.connections) ? data.connections : [])
@@ -211,7 +220,7 @@ export default async function qaVerify({ signals, profile }, deps = {}) {
     .slice(0, 5);
 
   log.ok(`${scored.length} verified · ${dupes} cross-category duplicates · ${dropped} below score ${floor} · ${flagged} flagged for review`);
-  log.ok(`${critical} Critical · ${multi} multi-service (2+ practice areas)`);
+  log.ok(`bands: ${Object.entries(bands).map(([b, n]) => `${n} ${b}`).join(' · ')} · ${multi} multi-service`);
   if (unjudged) log.warn(`${unjudged} signals were not judged by the model and are flagged as unverified`);
   if (connections.length) log.ok(`${connections.length} cross-category connections identified`);
 
@@ -231,6 +240,9 @@ export default async function qaVerify({ signals, profile }, deps = {}) {
 }
 
 function buildPrompt(signals, profile) {
+  const factor = valueFactorFor(profile);
+  const factorKey = factor.key;
+  const factorName = factor.name ?? factor.key;
   const blocks = signals.map((s) => [
     `ID: ${s.id}`,
     `CATEGORY: ${s.category}${s.is_account ? ' (EXISTING ACCOUNT)' : ''}`,
@@ -243,7 +255,9 @@ function buildPrompt(signals, profile) {
     `PRACTICE AREAS PROPOSED: ${(s.practice_areas ?? []).join(', ') || 'none'}`,
     s.grounding_note ? `GROUNDING CONCERN: ${s.grounding_note}` : null,
     s.weak_source ? 'SOURCE TYPE: social media post, not reporting' : null,
+    s.source_is_about_company === false ? 'SOURCE SUBJECT: this article is not about that organisation' : null,
     `ORG SCALE PROPOSED: ${s.org_scale ?? 'unknown'}`,
+    `${factorName.toUpperCase()} PROPOSED: ${s[factorKey] ?? 'unknown'}`,
   ].join('\n')).join('\n\n');
 
   // Scoring guidance and polarity travel with the prompt: what counts as
@@ -260,10 +274,14 @@ function buildPrompt(signals, profile) {
     ? `\nPRACTICE AREAS THIS BUSINESS SELLS (use ONLY these keys):\n${profile.practiceAreas.map((a) => `- ${a.key}: ${a.name} — ${a.description}`).join('\n')}\n`
     : '';
 
+  const valueBlock = factor.guidance?.length
+    ? `\nCOMMERCIAL VALUE — ${factorName}. Set value_level to one of: ${Object.keys(factor.points ?? {}).join(' | ')}\n${factor.guidance.map((g) => `- ${g}`).join('\n')}\n`
+    : '';
+
   return `${signals.length} signals were collected this week.
 
 MARKET: ${profile?.name ?? 'AI infrastructure'}
-${areas}
+${areas}${valueBlock}
 ${guidance}${polarity}
 Signals in the "account" category are organisations this business ALREADY holds a relationship with. Score them on how strong a reason they are to get back in touch. Never mark one as a duplicate of a new prospect — they belong in a separate section of the briefing.
 

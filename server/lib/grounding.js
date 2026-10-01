@@ -14,9 +14,20 @@
 // to whichever result was nearest. A wrong fact in front of a BD team is not
 // recoverable, so this is checked in code rather than asked for in a prompt.
 //
-// Two tests, with deliberately different consequences:
-//   company not found in the source  → DROP. The attribution is wrong.
-//   figures not found in the source  → FLAG. The claim may be paraphrased.
+// Three tiers, because "is the company mentioned" turned out to be too weak a
+// test. A long article mentions many companies; only one is its subject. A
+// claim about SK Telecom's 15GW buildout survived the first version because the
+// word "SK Telecom" appeared somewhere inside a piece about an unrelated HPE
+// launch.
+//
+//   company absent entirely        → DROP. The attribution is wrong.
+//   company only deep in the body  → FLAG. Probably a passing mention.
+//   company in the title or lead   → PASS. The article is about them.
+//
+// Figures that do not appear in the source are flagged separately.
+
+// How much of the content counts as the lead — a subject is named early.
+const LEAD_CHARS = 400;
 
 // Domains that carry real reporting rarely, and passing mentions often.
 const WEAK_DOMAINS = [
@@ -37,32 +48,38 @@ const STOP = new Set([
  * @returns {{ok:boolean, reason:string, weakSource:boolean, ungroundedFigures:string[]}}
  */
 export function checkGrounding({ company, summary, url }, source) {
-  const haystack = normalise(`${source?.title ?? ''} ${source?.content ?? ''}`);
+  const title = normalise(source?.title ?? '');
+  const content = normalise(source?.content ?? '');
+  const lead = `${title} ${content.slice(0, LEAD_CHARS)}`;
+  const haystack = `${title} ${content}`;
   const weakSource = isWeakDomain(url);
 
   // Not enough source text to judge — do not drop on no evidence, but say so.
-  if (haystack.length < 60) {
-    return { ok: true, reason: 'source text too short to verify', weakSource, ungroundedFigures: [] };
+  if (haystack.trim().length < 60) {
+    return { ok: true, reason: 'source text too short to verify', weakSource, ungroundedFigures: [], subject: false };
   }
 
   const tokens = distinctiveTokens(company);
-  if (tokens.length && !tokens.some((t) => haystack.includes(t))) {
-    return {
-      ok: false,
-      reason: `source does not mention "${company}"`,
-      weakSource,
-      ungroundedFigures: [],
-    };
+  const mentioned = !tokens.length || tokens.some((t) => haystack.includes(t));
+  if (!mentioned) {
+    return { ok: false, reason: `source does not mention "${company}"`, weakSource, ungroundedFigures: [], subject: false };
   }
 
+  const subject = !tokens.length || tokens.some((t) => lead.includes(t));
   const ungroundedFigures = figuresIn(summary).filter((f) => !haystack.includes(f.digits));
+
+  const notes = [];
+  if (!subject) notes.push(`"${company}" is mentioned only in passing, not in the headline or opening of this source`);
+  if (ungroundedFigures.length) {
+    notes.push(`figure${ungroundedFigures.length > 1 ? 's' : ''} not found in source: ${ungroundedFigures.map((f) => f.text).join(', ')}`);
+  }
+
   return {
     ok: true,
-    reason: ungroundedFigures.length
-      ? `figure${ungroundedFigures.length > 1 ? 's' : ''} not found in source: ${ungroundedFigures.map((f) => f.text).join(', ')}`
-      : '',
+    reason: notes.join('; '),
     weakSource,
     ungroundedFigures: ungroundedFigures.map((f) => f.text),
+    subject,
   };
 }
 

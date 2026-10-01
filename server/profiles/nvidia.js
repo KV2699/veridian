@@ -14,23 +14,57 @@ export default {
   description:
     'BD intelligence for selling into, alongside, or in service of the NVIDIA AI infrastructure ecosystem — GPU cloud, sovereign AI programmes, enterprise AI buildouts, and the supply chain underneath them.',
 
-  // ── Practice areas — what you can actually sell ────────────────────────────
-  // The heart of the scoring. Every signal is mapped to the product lines it
-  // opens a conversation for, and a signal that opens TWO or more is worth
-  // materially more than one that opens a single line: a multi-service account
-  // is stickier, larger, and cheaper to serve than two single-service ones.
+  // ── Practice areas — grouped by where the money actually comes from ───────
+  // These are revenue lines, not a product catalogue. That distinction decides
+  // whether the scoring works at all.
   //
-  // Keep these to things a buyer would recognise as a separate purchase.
+  // An earlier version split accelerated compute, networking and managed cloud
+  // into three areas. They are overwhelmingly sold in the same deal — the
+  // interconnect is part of the cluster, and managed cloud is that same
+  // capacity bought a different way — so almost every infrastructure signal
+  // ticked all three, scored the multi-service bonus, and landed in the top
+  // band. Two thirds of one live week came out "Critical", which makes the
+  // ranking useless.
+  //
+  // Grouped this way, "multi-service" means what it should: a genuine
+  // cross-sell into a different budget, signed by a different person. The most
+  // valuable of those is infrastructure plus software — the recurring, high
+  // margin attach on top of a hardware deal.
+  //
+  // NOTE: partner and ecosystem programmes are deliberately NOT listed here.
+  // They are a route to a conversation, not a thing anyone buys, and counting
+  // them as an area inflated every score they touched.
   practiceAreas: [
-    { key: 'compute', name: 'Accelerated Compute', description: 'GPU systems and instances — DGX, HGX, cloud capacity' },
-    { key: 'networking', name: 'Networking', description: 'InfiniBand, Spectrum-X Ethernet, NVLink, BlueField DPUs — often where a deal is actually won or lost' },
-    { key: 'software', name: 'AI Enterprise Software', description: 'Per-GPU software licensing, NIM microservices, inference runtime — the recurring-revenue line' },
-    { key: 'cloud', name: 'Managed AI Cloud', description: 'DGX Cloud and managed capacity for buyers who do not want to operate hardware' },
-    { key: 'foundry', name: 'AI Foundry & Models', description: 'Custom model building, NeMo, and model-tuning services' },
-    { key: 'omniverse', name: 'Omniverse & Digital Twin', description: 'Simulation, digital twin, and industrial visualisation' },
-    { key: 'edge', name: 'Edge & Embedded', description: 'Jetson, IGX, and on-device inference deployments' },
-    { key: 'automotive', name: 'Automotive', description: 'DRIVE platform and in-vehicle compute' },
-    { key: 'partner', name: 'Partner Programmes', description: 'Inception, cloud partner and reseller routes — an entry point rather than a product' },
+    {
+      key: 'compute',
+      name: 'Accelerated Compute',
+      description: 'GPU systems, instances and managed capacity — DGX, HGX, DGX Cloud. The single largest revenue line. Almost every infrastructure signal points here.',
+    },
+    {
+      key: 'networking',
+      name: 'Networking',
+      description: 'InfiniBand, Spectrum-X Ethernet, NVLink and BlueField DPUs. A separately reported revenue line with its own competitors — count it when the signal concerns cluster scale, interconnect or fabric, not merely because GPUs are involved.',
+    },
+    {
+      key: 'software',
+      name: 'AI Enterprise Software',
+      description: 'Per-GPU licensing, NIM microservices, NeMo and model-building services. A separate budget and a separate signature from the hardware, bought as a recurring subscription — the highest-value cross-sell on top of an infrastructure deal.',
+    },
+    {
+      key: 'omniverse',
+      name: 'Omniverse & Digital Twin',
+      description: 'Simulation, digital twin and industrial visualisation. Bought by manufacturing and engineering teams, not by the infrastructure buyer.',
+    },
+    {
+      key: 'automotive',
+      name: 'Automotive',
+      description: 'DRIVE platform and in-vehicle compute. An entirely separate buyer on a multi-year design cycle.',
+    },
+    {
+      key: 'edge',
+      name: 'Edge & Embedded',
+      description: 'Jetson and IGX for on-device inference. Separate buyer, typically robotics, medical devices or industrial systems.',
+    },
   ],
 
   // ── Signal polarity ────────────────────────────────────────────────────────
@@ -48,15 +82,24 @@ export default {
     'A competitor silicon win (Trainium, TPU, MTIA, Maia, AMD Instinct) at a named account is a DEFENSIVE signal — that account is at risk, flag it rather than celebrating the market news.',
   ],
 
-  // ── Accounts you already hold (Agent 5 — Account Watch) ───────────────────
+  // ── Accounts you already hold (Account Watch) ─────────────────────────────
   // Your Tab 1. These are never returned as new prospects; they are swept
-  // separately for fresh reasons to make contact.
+  // separately each week for a fresh reason to make contact.
   //
-  // REPLACE THESE with your real roster before the first real run.
+  // ⚠️  DEMONSTRATION ROSTER — replace before relying on this.
+  // These are publicly announced NVIDIA ecosystem companies, chosen because
+  // their partnerships are a matter of public record. They are NOT anyone's
+  // real client list, and nothing confidential was used to build it. Swap in
+  // your own accounts and this becomes a real relationship tracker; leave it
+  // and it is watching strangers who happen to be in the right market.
   roster: [
+    // Neoclouds — GPU capacity as a business
     'CoreWeave', 'Nebius', 'Lambda Labs', 'Crusoe Energy',
+    // Hyperscalers
     'Microsoft Azure', 'Oracle Cloud Infrastructure',
-    'Dell Technologies', 'Supermicro', 'Hewlett Packard Enterprise',
+    // Systems and channel
+    'Dell Technologies', 'Supermicro', 'Hewlett Packard Enterprise', 'Lenovo',
+    // Colocation and power
     'Equinix', 'Digital Realty',
   ],
 
@@ -173,8 +216,27 @@ export default {
   // numeric floor is enforced in code, the judgement is enforced by instruction.
   scoring: {
     floor: 6,
+
+    // The 25-point commercial-value factor. The original methodology measures
+    // breadth — could this prospect buy more than one service? Here revenue is
+    // concentrated in one line, so breadth separates almost nothing; measured
+    // on a live week it put a 2GW campus and a 4.5MW site on the same score.
+    // Deal scale is what actually decides how much money is in a signal.
+    valueFactor: {
+      key: 'deal_scale',
+      name: 'Deal Scale',
+      points: { mega: 25, large: 15, standard: 5, unknown: 0 },
+      guidance: [
+        'mega — the source states something at the scale of a gigawatt or more of capacity, tens of thousands of accelerators, or a commitment above roughly $1bn.',
+        'large — hundreds of megawatts, thousands of accelerators, or a commitment in the hundreds of millions.',
+        'standard — a named deployment, site or purchase smaller than that, or one whose size is given but modest.',
+        'unknown — the source states no size at all. Use this rather than guessing; an unstated size scores nothing.',
+      ],
+    },
     guidance: [
-      'Deal size and compute scale dominate. A signal implying thousands of GPUs outranks a well-written story about a small deployment.',
+      'Revenue potential decides everything. A signal implying thousands of GPUs outranks a well-written story about a small deployment, every time.',
+      'AI Infrastructure is where the money is — treat a credible infrastructure signal as more valuable than an equally well-sourced signal in any other area.',
+      'A signal that reaches software on top of infrastructure is the most valuable kind there is: it is recurring revenue attached to a deal that is already happening. Say so when you see one.',
       'A capital, power or supply commitment outranks a product announcement, because it implies a purchase decision that has already been funded.',
       'A named organisation taking a dated action always outranks a market trend, however well sourced the trend is.',
       'A defensive signal (competitor win at a held account) scores as highly as an offensive one — losing an account costs more than winning a small one.',
