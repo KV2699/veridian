@@ -89,6 +89,24 @@ const RULES = [
     fix: 'Known failure mode: inside a narrow topic everything looks maximally relevant. The scores are ranking within the batch rather than measuring real BD value. Tighten the scoring guidance in the profile before trusting this week\'s priorities.',
   },
   {
+    id: 'unverified-majority',
+    stage: 'verify',
+    severity: 'high',
+    test: null,
+    scope: 'run',
+    cause: 'A large share of signals were never judged by the verification pass.',
+    fix: 'The verifier returned no verdict for these, so they carry their collector score unchecked — their practice areas, scale and duplicates were never corrected. Usually the verification reply was truncated: lower VERIFY_CHUNK, or raise VERIFY_MAX_TOKENS.',
+  },
+  {
+    id: 'multi-service-inflation',
+    stage: 'verify',
+    severity: 'high',
+    test: null,
+    scope: 'run',
+    cause: 'Most signals were tagged as opening two or more practice areas.',
+    fix: 'A second practice area moves a signal a whole priority band, so this inflates everything downstream. Either the mapping is being padded, or the practice areas in the profile overlap so heavily that most events genuinely implicate several — in which case merge the overlapping ones into a single area rather than loosening the scoring.',
+  },
+  {
     id: 'band-inflation',
     stage: 'verify',
     severity: 'high',
@@ -163,13 +181,18 @@ export function diagnose({ collectors = [], signals = [], rawCount = 0 }) {
     // Band inflation is measured on the computed priority band, not on the
     // model's own relevance view — the two can disagree, and the band is what
     // the reader acts on.
+    const unverified = signals.filter((s) => s.verified === false).length;
+    if (unverified / signals.length > 0.25) {
+      add(byId['unverified-majority'], 'whole run', `${unverified} of ${signals.length} unjudged`);
+    }
+
     const top = signals.filter((s) => s.priority_band === 'Critical').length;
     if (top / signals.length > 0.5) {
       add(byId['band-inflation'], 'whole run', `${top} of ${signals.length} Critical`);
     }
     const multi = signals.filter((s) => s.multi_service).length;
     if (signals.length >= 10 && multi / signals.length > 0.6) {
-      add(byId['band-inflation'], 'practice-area mapping', `${multi} of ${signals.length} tagged multi-service`);
+      add(byId['multi-service-inflation'], 'practice-area mapping', `${multi} of ${signals.length} tagged multi-service`);
     }
 
     const undated = signals.filter((s) => !s.date).length;

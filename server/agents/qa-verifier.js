@@ -24,7 +24,7 @@ const VERIFY_MAX_TOKENS = Number(process.env.VERIFY_MAX_TOKENS) || 16000;
 // Above this, signals are verified in chunks. Cross-category deduplication is
 // strongest in a single pass, so the chunk size is kept generous and only a
 // genuinely large week is split.
-const VERIFY_CHUNK = Number(process.env.VERIFY_CHUNK) || 45;
+const VERIFY_CHUNK = Number(process.env.VERIFY_CHUNK) || 20;
 
 const SYSTEM = `You are the quality assurance layer of a BD intelligence pipeline for the AI infrastructure market.
 
@@ -98,23 +98,39 @@ export default async function qaVerify({ signals, profile }, deps = {}) {
   let model = MODELS.ultra;
   let usage = null;
 
+  // A truncated pass is retried on halves rather than accepted partially.
+  async function verifyGroup(group, depth = 0) {
+    try {
+      const res = await ask({
+        tier: 'ultra',
+        temperature: 0.2,
+        maxTokens: VERIFY_MAX_TOKENS,
+        expectKey: 'verified',
+        system: SYSTEM,
+        user: buildPrompt(group, profile),
+      });
+      model = res.model;
+      usage = res.usage;
+      for (const v of Array.isArray(res.data?.verified) ? res.data.verified : []) {
+        if (v && typeof v.id === 'string') verdicts.set(v.id, v);
+      }
+      if (Array.isArray(res.data?.connections)) rawConnections.push(...res.data.connections);
+      if (res.data?.assessment) assessments.push(String(res.data.assessment).trim());
+    } catch (err) {
+      if (err.truncated && group.length > 4 && depth < 3) {
+        const half = Math.ceil(group.length / 2);
+        log.warn(`verification truncated on ${group.length} signals — retrying as ${half} + ${group.length - half}`);
+        await verifyGroup(group.slice(0, half), depth + 1);
+        await verifyGroup(group.slice(half), depth + 1);
+        return;
+      }
+      throw err;
+    }
+  }
+
   for (const [i, group] of chunks.entries()) {
     if (chunks.length > 1) log.step(`verification pass ${i + 1}/${chunks.length} (${group.length} signals)`);
-    const res = await ask({
-      tier: 'ultra',
-      temperature: 0.2,
-      maxTokens: VERIFY_MAX_TOKENS,
-      expectKey: 'verified',
-      system: SYSTEM,
-      user: buildPrompt(group, profile),
-    });
-    model = res.model;
-    usage = res.usage;
-    for (const v of Array.isArray(res.data?.verified) ? res.data.verified : []) {
-      if (v && typeof v.id === 'string') verdicts.set(v.id, v);
-    }
-    if (Array.isArray(res.data?.connections)) rawConnections.push(...res.data.connections);
-    if (res.data?.assessment) assessments.push(String(res.data.assessment).trim());
+    await verifyGroup(group);
   }
 
   const data = {
@@ -123,7 +139,10 @@ export default async function qaVerify({ signals, profile }, deps = {}) {
     assessment: assessments.join(' '),
   };
 
-  log.step(`Ultra returned verdicts for ${verdicts.size}/${unique.length} signals`);
+  const coverage = verdicts.size / unique.length;
+  (coverage < 0.9 ? log.warn : log.step)(
+    `Ultra returned verdicts for ${verdicts.size}/${unique.length} signals (${Math.round(coverage * 100)}%)`,
+  );
 
   const kept = [];
   let dropped = 0, dupes = 0, flagged = 0, unjudged = 0;

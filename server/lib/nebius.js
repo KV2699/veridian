@@ -107,7 +107,7 @@ export async function complete({
           : 'usually throttling under concurrency — lower NEBIUS_CONCURRENCY';
         throw new Error(`Nebius returned an empty completion (finish_reason=${choice?.finish_reason ?? 'none'}) — ${why}`);
       }
-      return { text, model, usage: data.usage ?? null };
+      return { text, model, usage: data.usage ?? null, finishReason: choice?.finish_reason ?? null };
     } catch (err) {
       if (err.fatal) throw err;
       lastErr = err;
@@ -128,8 +128,19 @@ export async function complete({
  *      only. Cheaper and far more reliable than failing the batch.
  */
 export async function completeJSON(opts) {
-  const { text, model, usage } = await complete({ ...opts, json: true });
+  const { text, model, usage, finishReason } = await complete({ ...opts, json: true });
   const expect = opts.expectKey;
+
+  // Truncated output is the dangerous case: it often still contains a smaller
+  // well-formed fragment, which a lenient parser will happily accept as the
+  // whole answer. A live run silently lost 46 of 79 verification verdicts that
+  // way. Refuse it, and let the caller retry with a smaller workload.
+  if (finishReason === 'length') {
+    throw Object.assign(
+      new Error('Nebius reply was truncated at max_tokens — the result is incomplete and cannot be trusted'),
+      { truncated: true },
+    );
+  }
 
   try {
     return { data: extractJSON(text, expect), model, usage, raw: text, repaired: false };
