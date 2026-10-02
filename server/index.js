@@ -23,7 +23,7 @@ app.use(express.static(join(ROOT, 'public')));
 
 const fail = (res, err) => {
   console.error(err);
-  res.status(err.code === 'BUSY' ? 409 : 500).json({ ok: false, error: err.message });
+  res.status(['BUSY', 'LOCKED'].includes(err.code) ? 409 : 500).json({ ok: false, error: err.message });
 };
 
 // ── Pipeline ─────────────────────────────────────────────────────────────────

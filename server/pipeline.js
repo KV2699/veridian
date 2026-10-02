@@ -21,6 +21,7 @@ import { MODELS } from './lib/nebius.js';
 import { diagnose, report } from './lib/diagnostics.js';
 import { loadProfile } from './profiles/index.js';
 import { updateRegister, registerStats, recordQuiet } from './lib/register.js';
+import { acquire } from './lib/lock.js';
 
 import { runCollector } from './agents/collector-base.js';
 import accountWatch from './agents/account-watch.js';
@@ -65,6 +66,13 @@ export async function runPipeline({
   resume = process.env.RESUME === 'true',
 } = {}) {
   if (running) throw Object.assign(new Error('A pipeline run is already in progress'), { code: 'BUSY' });
+
+  // The in-process flag above only guards this process. The lock guards against
+  // a second one — a manual run overlapping a scheduled one, or a run left
+  // alive by a closed session. Two concurrent runs silently lose register
+  // entries, because each merges into the register it read and the last write
+  // wins.
+  const lock = await acquire({ trigger });
   running = true;
 
   const started = Date.now();
@@ -196,6 +204,7 @@ export async function runPipeline({
     throw err;
   } finally {
     running = false;
+    await lock.release().catch(() => {});
   }
 }
 
