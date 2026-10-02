@@ -56,12 +56,23 @@ export async function runCollector(
   const find = deps.searchMany ?? searchMany;
   const ask = deps.completeJSON ?? completeJSON;
 
-  // A tracker has to be populated before it can be maintained. BACKFILL widens
-  // every window for one run, so the first sweep builds a register rather than
-  // reporting a single quiet week.
-  const backfillX = Number(process.env.BACKFILL_MULTIPLIER) || 6;
-  const days = process.env.BACKFILL === 'true' ? windowDays * backfillX : windowDays;
-  const maxResults = process.env.BACKFILL === 'true' ? 20 : 10;
+  // Window and result cap are both levers, and they do different things.
+  //
+  // Widening the window alone does less than expected: maxResults caps each
+  // query, so a 30-day window returns the 30 most RELEVANT results rather than
+  // adding older ones to the recent set — it can crowd recent items out. Volume
+  // comes from raising both.
+  //
+  // Thirty days is the default because discovery and urgency are separate
+  // questions. A funding round from three weeks ago is still a live lead; the
+  // scoring already decays it (25 points inside a week, 15 inside a month,
+  // 5 inside a quarter), so excluding it from search as well penalises it
+  // twice and loses the lead entirely. A wide window also self-heals: a failed
+  // run no longer means a permanently missing week.
+  const backfillX = Number(process.env.BACKFILL_MULTIPLIER) || 3;
+  const backfill = process.env.BACKFILL === 'true';
+  const days = backfill ? windowDays * backfillX : windowDays;
+  const maxResults = Number(process.env.MAX_RESULTS) || (backfill ? 30 : 20);
 
   log.step(`Running ${queries.length} Tavily searches (${days}-day window${days !== windowDays ? ', backfill' : ''})`);
   const { results, stats } = await find(queries, { days, maxResults });

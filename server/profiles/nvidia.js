@@ -155,7 +155,7 @@ export default {
         'AI infrastructure acquisition acquired data center operator',
         'private credit debt facility GPU financing announced',
       ],
-      windowDays: 7,
+      windowDays: 30,
     },
     {
       key: 'infrastructure',
@@ -179,7 +179,7 @@ export default {
         'nuclear SMR power agreement data center signed',
         'colocation operator AI capacity expansion lease signed',
       ],
-      windowDays: 14,
+      windowDays: 30,
     },
     {
       key: 'competitive',
@@ -203,7 +203,7 @@ export default {
         'company switching GPU vendor migration announced',
         'AI networking ethernet infiniband deployment win announced',
       ],
-      windowDays: 14,
+      windowDays: 30,
     },
     {
       key: 'opportunity',
@@ -227,9 +227,20 @@ export default {
         'healthcare pharma AI compute cluster deployment announced',
         'automotive manufacturer AI compute platform partnership announced',
       ],
-      windowDays: 7,
+      windowDays: 30,
     },
   ],
+
+  // ── Roster sweep (enumerated coverage) ─────────────────────────────────────
+  // Walks the organisations already in the register and reports a result for
+  // every one, including "no signal found". This is what makes coverage
+  // auditable: after a sweep you know which names were checked and which are
+  // quiet, rather than only what happened to surface.
+  rosterSweep: {
+    batchSize: 8,
+    windowDays: 30,
+    maxOrganisations: 120,
+  },
 
   // ── Official feeds (zero-hallucination discovery) ──────────────────────────
   // Publisher-written headlines with their own urls and dates. Nothing here is
@@ -239,7 +250,7 @@ export default {
     // Wider than the search window on purpose: feeds are cheap, carry no
     // hallucination risk, and a three-week view builds the prospect register
     // far faster than a seven-day one.
-    days: 21,
+    days: 30,
     sources: [
       { name: 'NVIDIA Newsroom', url: 'https://nvidianews.nvidia.com/releases.xml' },
       { name: 'NVIDIA Blog', url: 'https://blogs.nvidia.com/feed/' },
@@ -263,7 +274,7 @@ export default {
   // A buyer stating in public, in writing, what they intend to spend and by
   // when. Every field is copied from the notice; no model supplies a fact.
   tenders: {
-    days: 30,
+    days: 60,
     maxPages: 10,
   },
 
@@ -281,7 +292,7 @@ export default {
     // The roster is swept in batches rather than one query per account, so the
     // cost stays flat as the roster grows.
     batchSize: 4,
-    windowDays: 14,
+    windowDays: 30,
   },
 
   // ── Scoring ────────────────────────────────────────────────────────────────

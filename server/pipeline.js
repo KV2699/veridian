@@ -20,12 +20,13 @@ import { knownUrlKeys, saveRun, saveCollection, getCollection } from './lib/stor
 import { MODELS } from './lib/nebius.js';
 import { diagnose, report } from './lib/diagnostics.js';
 import { loadProfile } from './profiles/index.js';
-import { updateRegister, registerStats } from './lib/register.js';
+import { updateRegister, registerStats, recordQuiet } from './lib/register.js';
 
 import { runCollector } from './agents/collector-base.js';
 import accountWatch from './agents/account-watch.js';
 import collectFeeds from './agents/collector-feeds.js';
 import collectTenders from './agents/collector-tenders.js';
+import rosterSweep from './agents/roster-sweep.js';
 import qaVerify from './agents/qa-verifier.js';
 import writeBriefing from './agents/briefing-writer.js';
 import updateDashboard from './agents/dashboard-updater.js';
@@ -35,6 +36,9 @@ export function agentList(profile = loadProfile()) {
   const collectors = profile.collectors.map((c, i) => ({ number: i + 1, name: c.name, kind: 'collector' }));
   let n = collectors.length;
   const extra = [];
+  // The sweep runs first in the listing because it is the one agent whose
+  // coverage is auditable: it reports on every name it was given.
+  if (profile.rosterSweep !== false) extra.push({ number: ++n, name: 'Roster Sweep', kind: 'enumerated' });
   if (profile.feeds?.sources?.length) extra.push({ number: ++n, name: 'Feed Collector', kind: 'feeds' });
   if (profile.tenders) extra.push({ number: ++n, name: 'Tender Collector', kind: 'procurement' });
   extra.push({ number: ++n, name: 'Account Watch', kind: 'collector' });
@@ -76,7 +80,7 @@ export async function runPipeline({
   try {
     if (dryRun) return await dryRunPipeline({ profile, agents, week, weekLabel, started, statuses, trigger });
 
-    let signals, telemetry;
+    let signals, telemetry, quietNames = [];
 
     const checkpoint = resume ? await getCollection() : null;
     if (checkpoint?.signals?.length) {
@@ -97,6 +101,7 @@ export async function runPipeline({
       const collectorRuns = await Promise.all([
         ...profile.collectors.map((cfg, i) =>
           timed(i + 1, cfg.name, () => runCollector({ ...cfg, category: cfg.key, polarity: profile.polarity, practiceAreas: profile.practiceAreas, valueFactor: profile.scoring?.valueFactor }, ctx), total)),
+        ...(profile.rosterSweep !== false ? [timed(++slot, 'Roster Sweep', () => rosterSweep({ profile, week }, ctx), total)] : []),
         ...(profile.feeds?.sources?.length ? [timed(++slot, 'Feed Collector', () => collectFeeds({ profile }, ctx), total)] : []),
         ...(profile.tenders ? [timed(++slot, 'Tender Collector', () => collectTenders({ profile }, ctx), total)] : []),
         timed(++slot, 'Account Watch', () => accountWatch({ profile }, ctx), total),
@@ -109,6 +114,8 @@ export async function runPipeline({
       if (failed.length === collectorRuns.length) throw new Error('every collector failed — check NEBIUS_API_KEY and TAVILY_API_KEY');
       if (failed.length) log.warn(`${failed.length} of ${collectorRuns.length} collectors failed; continuing with ${signals.length} signals`);
       log.ok(`collection complete — ${signals.length} raw signals`);
+
+      quietNames = collectorRuns.flatMap((c) => c.quiet ?? []);
 
       // Checkpoint before anything downstream can fail.
       await saveCollection({ week, collected_at: new Date().toISOString(), profile: profile.key, signals, telemetry });
@@ -140,6 +147,15 @@ export async function runPipeline({
     // The register is the accumulating prospect list — the system's own
     // sourced equivalent of a client roster, grown week by week.
     const reg = await updateRegister(qa.signals, { week, roster: profile.roster ?? [], exclusions: profile.exclusions ?? [], aliases: profile.aliases ?? {} });
+
+    // Recorded AFTER the register knows this week's signals, so an
+    // organisation that another collector found is never marked quiet — the
+    // sweep only saw its own batch.
+    if (quietNames.length) {
+      const { quiet } = await recordQuiet(quietNames, { week });
+      log.step(`${quiet} organisations checked and quiet this week`);
+    }
+
     log.ok(`organisation register — ${reg.total} organisations tracked (${reg.added} new this run, ${reg.updated} returning${reg.skipped ? `, ${reg.skipped} skipped as excluded or joint announcements` : ''})`);
 
     const saved = await timed(total, 'Dashboard Updater', () => updateDashboard({

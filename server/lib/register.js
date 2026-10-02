@@ -113,13 +113,47 @@ export async function updateRegister(signals, { week, roster = [], exclusions = 
   return { total: Object.keys(register).length, added: newNames.length, updated, skipped, newNames };
 }
 
+/**
+ * Record that an organisation was swept and had nothing this week.
+ *
+ * "Checked and quiet" is a different fact from "not looked at", and only the
+ * first is useful: an account quiet for several consecutive sweeps is a BD
+ * signal in its own right. A topic search can never produce this, because it
+ * does not know what it failed to find.
+ */
+export async function recordQuiet(names, { week } = {}) {
+  if (!names?.length) return { quiet: 0 };
+  const register = await getRegister();
+  let touched = 0;
+
+  for (const name of names) {
+    const entry = register[keyFor(name)];
+    if (!entry) continue;
+    entry.last_checked = week;
+    if (!Array.isArray(entry.quiet_weeks)) entry.quiet_weeks = [];
+
+    // An organisation another collector found this week is not quiet, however
+    // little the sweep's own batch turned up.
+    if (entry.last_seen === week) { entry.quiet_streak = 0; touched++; continue; }
+
+    if (!entry.quiet_weeks.includes(week)) entry.quiet_weeks.push(week);
+    // Consecutive quiet weeks since the last one that produced a signal.
+    entry.quiet_streak = entry.quiet_weeks.filter((w) => w > (entry.last_seen ?? '')).length;
+    touched++;
+  }
+
+  await writeJSON(REGISTER_FILE, register);
+  return { quiet: touched };
+}
+
 /** The register as a sorted list, best prospects first. */
-export async function listRegister({ status, band, minScore = 0, limit } = {}) {
+export async function listRegister({ status, band, minScore = 0, limit, quietFor } = {}) {
   const register = await getRegister();
   let rows = Object.values(register);
   if (status) rows = rows.filter((r) => r.status === status);
   if (band) rows = rows.filter((r) => r.best_band === band);
   if (minScore) rows = rows.filter((r) => r.best_score >= minScore);
+  if (quietFor) rows = rows.filter((r) => (r.quiet_streak ?? 0) >= Number(quietFor));
   rows.sort((a, b) => b.best_score - a.best_score || b.weeks_tracked - a.weeks_tracked || a.name.localeCompare(b.name));
   return limit ? rows.slice(0, Number(limit)) : rows;
 }
@@ -134,6 +168,7 @@ export async function registerStats() {
     accounts: rows.filter((r) => r.status === 'account').length,
     multi_service: rows.filter((r) => r.multi_service).length,
     returning: rows.filter((r) => r.weeks_tracked > 1).length,
+    quiet_2plus: rows.filter((r) => (r.quiet_streak ?? 0) >= 2).length,
     bands,
   };
 }

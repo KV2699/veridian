@@ -62,6 +62,30 @@ await writeJSON(REGISTER_FILE, {});
 await updateRegister([sig('CoreWeave'), sig('Nebius'), sig('CoreWeave Inc.')], { week: '2026-W40', roster: ['Nebius'] });
 await updateRegister([sig('CoreWeave', { priority_score: 90, priority_band: 'Critical', practice_areas: ['software'] })], { week: '2026-W41' });
 
+// "Checked and quiet" is a different fact from "never looked at", and only the
+// first is useful — an account quiet several weeks running is a BD signal.
+const { recordQuiet } = await import('../server/lib/register.js');
+await writeJSON(REGISTER_FILE, {});
+await updateRegister([sig('CoreWeave'), sig('Nebius')], { week: '2026-W40' });
+await recordQuiet(['CoreWeave', 'Nebius'], { week: '2026-W40' });
+let q = (await listRegister()).find((x) => x.name === 'CoreWeave');
+check('an organisation seen this week is never marked quiet', q.quiet_streak === 0);
+
+await recordQuiet(['CoreWeave'], { week: '2026-W41' });
+await recordQuiet(['CoreWeave'], { week: '2026-W42' });
+q = (await listRegister()).find((x) => x.name === 'CoreWeave');
+check('consecutive quiet weeks accumulate into a streak', q.quiet_streak === 2, `streak ${q.quiet_streak}`);
+check('quiet organisations are filterable', (await listRegister({ quietFor: 2 })).length === 1);
+
+await updateRegister([sig('CoreWeave')], { week: '2026-W43' });
+await recordQuiet(['Nebius'], { week: '2026-W43' });
+q = (await listRegister()).find((x) => x.name === 'CoreWeave');
+check('a fresh signal resets the streak', q.quiet_streak === 0 || q.last_seen === '2026-W43');
+
+await writeJSON(REGISTER_FILE, {});
+await updateRegister([sig('CoreWeave'), sig('Nebius'), sig('CoreWeave Inc.')], { week: '2026-W40', roster: ['Nebius'] });
+await updateRegister([sig('CoreWeave', { priority_score: 90, priority_band: 'Critical', practice_areas: ['software'] })], { week: '2026-W41' });
+
 const stats = await registerStats();
 check('stats report returning organisations', stats.returning === 1 && stats.total === 2, JSON.stringify(stats.bands));
 check('ranked best first', (await listRegister())[0].best_score === 90);
