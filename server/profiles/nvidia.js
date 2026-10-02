@@ -148,7 +148,7 @@ export default {
       queries: [
         'GPU cloud AI infrastructure funding round raised billion',
         'sovereign AI national programme government compute investment announced',
-        'hyperscaler capital expenditure guidance AI infrastructure data center spending',
+        'Microsoft OR Google OR AWS OR Meta announces new data center investment billion country',
         'NVIDIA investment stake AI infrastructure company announced',
         'neocloud Series B Series C raised AI compute capacity',
         'national AI factory supercomputer government funding announced',
@@ -197,7 +197,6 @@ export default {
         'company deploying Trainium TPU MTIA custom AI chip at scale',
         'AMD Instinct MI deployment enterprise win announced',
         'custom AI accelerator programme expanded cancelled company',
-        'AI chip export controls restriction policy decision announced',
         'inference chip startup deployment enterprise customer announced',
         'hyperscaler custom silicon tape out production announced',
         'company switching GPU vendor migration announced',
@@ -223,7 +222,7 @@ export default {
         'RFP tender AI compute GPU procurement notice published',
         'national lab university funded AI supercomputer programme announced',
         'bank insurer manufacturer AI infrastructure investment announced',
-        'telecom operator AI data center edge compute programme',
+        'telecom operator announces AI data centre investment megawatt',
         'healthcare pharma AI compute cluster deployment announced',
         'automotive manufacturer AI compute platform partnership announced',
       ],
@@ -266,6 +265,22 @@ export default {
       { name: 'EuroHPC', domain: 'eurohpc-ju.europa.eu', terms: 'call procurement supercomputer access allocation deadline' },
     ],
   },
+
+  // ── Domains worth never reading ────────────────────────────────────────────
+  // Measured across all 32 collector queries: these produced no usable signal
+  // in any of them. Market-research sites are the worst offenders — SEO-tuned,
+  // superficially on topic, never a lead. Excluding at the search is far
+  // cheaper than filtering later, because every result that comes back has to
+  // be read by a model before it can be discarded.
+  //
+  // Kept deliberately short. An aggressive list cut one test query from ten
+  // results to one.
+  excludeDomains: [
+    'precedenceresearch.com', 'igtps.com', 'indexbox.io', 'marketgrowthreports.com',
+    'grandviewresearch.com', 'marketsandmarkets.com', 'mordorintelligence.com',
+    'marketbeat.com', 'simplywall.st', 'seekingalpha.com', 'fool.com', '247wallst.com',
+    'facebook.com', 'instagram.com', 'reddit.com', 'youtube.com',
+  ],
 
   // ── Roster sweep (enumerated coverage) ─────────────────────────────────────
   // Walks the organisations already in the register and reports a result for

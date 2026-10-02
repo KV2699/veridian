@@ -110,7 +110,7 @@ export async function runPipeline({
       let slot = profile.collectors.length;
       const collectorRuns = await Promise.all([
         ...profile.collectors.map((cfg, i) =>
-          timed(i + 1, cfg.name, () => runCollector({ ...cfg, category: cfg.key, polarity: profile.polarity, practiceAreas: profile.practiceAreas, valueFactor: profile.scoring?.valueFactor }, ctx), total)),
+          timed(i + 1, cfg.name, () => runCollector({ ...cfg, category: cfg.key, polarity: profile.polarity, practiceAreas: profile.practiceAreas, valueFactor: profile.scoring?.valueFactor, excludeDomains: profile.excludeDomains }, ctx), total)),
         ...(profile.rosterSweep !== false ? [timed(++slot, 'Roster Sweep', () => rosterSweep({ profile, week }, ctx), total)] : []),
         ...(profile.regulators?.bodies?.length ? [timed(++slot, 'Regulator Sweep', () => regulatorSweep({ profile, week }, ctx), total)] : []),
         ...(profile.feeds?.sources?.length ? [timed(++slot, 'Feed Collector', () => collectFeeds({ profile }, ctx), total)] : []),
