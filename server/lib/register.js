@@ -152,6 +152,10 @@ export function keyFor(name) {
     // suffix list below sees "nv" as one word.
     .replace(/\b([a-z])\s+(?=[a-z]\b)/g, '$1')
     .replace(/\b(inc|incorporated|ltd|limited|llc|plc|corp|corporation|company|co|group|holdings|technologies|technology|gmbh|sa|nv|bv|ag|ab|as|oyj|pte|pty|sarl|spa)\b/g, ' ')
+    // A trailing "AI" is a branding suffix in this market, not an identity:
+    // "Mistral AI" and "Mistral" are one company, as are "PaleBlueDot AI" and
+    // "PaleBlueDot". Only stripped at the end, so "AI21" or "Open AI" survive.
+    .replace(/\s+ai\s*$/, ' ')
     .replace(/\s+/g, '')
     .trim();
 }

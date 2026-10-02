@@ -1,0 +1,100 @@
+3 E Network Technology Group Limited
+AMD
+AlertMedia
+Aligned Data Centers
+Alpha Compute
+Amazon
+Amazon Web Services
+Anthropic
+Applied Digital
+Argonne National Laboratory
+Axe Compute
+BTC Digital Ltd.
+BlackRock
+Blackstone
+Bristol Myers Squibb
+Centersquare
+Compal Electronics
+CoreWeave
+Crusoe
+DTE Energy
+DarkNX
+Dell Technologies
+Department of Energy
+DriveNets
+Empire AI
+Energy Dome
+European Commission
+European Union
+Expedia
+Fermi America
+Firmus Technologies
+GMI Cloud
+Google
+Government of Canada
+Government of Rajasthan
+HIVE Digital Technologies
+Hewlett Packard Enterprise
+Hopwood Hall College
+Humain
+Hut 8
+Hyundai Motor Group
+IPB
+IREN
+IndiaAI Mission
+Israel
+Jabil
+James Wise
+Lambda
+Lilly
+Meta
+Microsoft
+Mistral AI
+Mousterian
+NESO
+National eGovernance Division
+Nationwide
+Nebius
+Nokia
+Nscale
+Oak Ridge National Laboratory
+OpenAI
+Oracle
+PaleBlueDot AI
+Pantheon Atlas
+PhotonAI
+Port of Long Beach
+Pure Data Centres
+Qualcomm
+Rackspace Technology
+Riot Platforms
+Roche
+SK Group
+SambaNova
+Samsung
+Schneider Electric
+Sharon AI
+SoftBank
+SpaceX
+Spectro Cloud
+Stagwell
+Start Campus
+Supermicro
+Taiwan Semiconductor Manufacturing Company
+Tesla
+Trinity Biotech
+Trump Administration
+U.S. Department of Defense
+U.S. Department of Energy
+UK National Supercomputer (Edinburgh)
+UK Sovereign AI
+UK government
+US Government
+University of Texas at Austin
+Vanguard
+Vast Data
+Verda
+Vertical Data
+Vertiv
+Volta
+xAI
