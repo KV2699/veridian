@@ -20,9 +20,12 @@ import { knownUrlKeys, saveRun, saveCollection, getCollection } from './lib/stor
 import { MODELS } from './lib/nebius.js';
 import { diagnose, report } from './lib/diagnostics.js';
 import { loadProfile } from './profiles/index.js';
+import { updateRegister, registerStats } from './lib/register.js';
 
 import { runCollector } from './agents/collector-base.js';
 import accountWatch from './agents/account-watch.js';
+import collectFeeds from './agents/collector-feeds.js';
+import collectTenders from './agents/collector-tenders.js';
 import qaVerify from './agents/qa-verifier.js';
 import writeBriefing from './agents/briefing-writer.js';
 import updateDashboard from './agents/dashboard-updater.js';
@@ -30,13 +33,16 @@ import updateDashboard from './agents/dashboard-updater.js';
 /** The agent roster for a profile — drives the dashboard status panel. */
 export function agentList(profile = loadProfile()) {
   const collectors = profile.collectors.map((c, i) => ({ number: i + 1, name: c.name, kind: 'collector' }));
-  const n = collectors.length;
+  let n = collectors.length;
+  const extra = [];
+  if (profile.feeds?.sources?.length) extra.push({ number: ++n, name: 'Feed Collector', kind: 'feeds' });
+  if (profile.tenders) extra.push({ number: ++n, name: 'Tender Collector', kind: 'procurement' });
+  extra.push({ number: ++n, name: 'Account Watch', kind: 'collector' });
   return [
-    ...collectors,
-    { number: n + 1, name: 'Account Watch', kind: 'collector' },
-    { number: n + 2, name: 'QA Verifier', kind: 'nemotron-ultra' },
-    { number: n + 3, name: 'Briefing Writer', kind: 'nemotron-ultra' },
-    { number: n + 4, name: 'Dashboard Updater', kind: 'persistence' },
+    ...collectors, ...extra,
+    { number: ++n, name: 'QA Verifier', kind: 'nemotron-ultra' },
+    { number: ++n, name: 'Briefing Writer', kind: 'nemotron-ultra' },
+    { number: ++n, name: 'Dashboard Updater', kind: 'persistence' },
   ];
 }
 
@@ -76,18 +82,24 @@ export async function runPipeline({
     if (checkpoint?.signals?.length) {
       ({ signals, telemetry } = checkpoint);
       log.warn(`RESUME — reusing ${signals.length} signals collected at ${checkpoint.collected_at}; no searches will run`);
-      for (const [i, a] of agents.slice(0, profile.collectors.length + 1).entries()) {
+      for (const [i, a] of agents.slice(0, agents.length - 3).entries()) {
         statuses.push({ agent: a.name, index: i + 1, status: 'success', duration_ms: 0, detail: 'resumed from checkpoint' });
       }
     } else {
       const ctx = { knownUrlKeys: await knownUrlKeys() };
       log.step(`${ctx.knownUrlKeys.size} URLs already in the signal log will be excluded`);
 
-      // ── Agents 1-N: discovery collectors + Account Watch, concurrently ────
+      // ── Collection: search, feeds, procurement and account watch ──────────
+      // Three independent discovery routes with different failure modes: web
+      // search finds the most and invents the most, feeds cannot invent at all,
+      // and procurement notices are the buyer's own words with a closing date.
+      let slot = profile.collectors.length;
       const collectorRuns = await Promise.all([
         ...profile.collectors.map((cfg, i) =>
           timed(i + 1, cfg.name, () => runCollector({ ...cfg, category: cfg.key, polarity: profile.polarity, practiceAreas: profile.practiceAreas, valueFactor: profile.scoring?.valueFactor }, ctx), total)),
-        timed(profile.collectors.length + 1, 'Account Watch', () => accountWatch({ profile }, ctx), total),
+        ...(profile.feeds?.sources?.length ? [timed(++slot, 'Feed Collector', () => collectFeeds({ profile }, ctx), total)] : []),
+        ...(profile.tenders ? [timed(++slot, 'Tender Collector', () => collectTenders({ profile }, ctx), total)] : []),
+        timed(++slot, 'Account Watch', () => accountWatch({ profile }, ctx), total),
       ]);
       statuses.push(...collectorRuns.map(toStatus));
 
@@ -125,7 +137,13 @@ export async function runPipeline({
     if (briefing.status === 'error') throw new Error(`Briefing writing failed — ${briefing.error}`);
 
     // ── Dashboard Updater ───────────────────────────────────────────────────
+    // The register is the accumulating prospect list — the system's own
+    // sourced equivalent of a client roster, grown week by week.
+    const reg = await updateRegister(qa.signals, { week, roster: profile.roster ?? [] });
+    log.ok(`organisation register — ${reg.total} organisations tracked (${reg.added} new this run, ${reg.updated} returning)`);
+
     const saved = await timed(total, 'Dashboard Updater', () => updateDashboard({
+      register: reg,
       week, weekLabel, markdown: briefing.markdown, signals: qa.signals,
       connections: qa.connections, counts: briefing.counts, assessment: qa.assessment,
       qaStats: qa.stats, diagnostics, profile: { key: profile.key, name: profile.name },
@@ -171,17 +189,17 @@ async function dryRunPipeline({ profile, agents, week, weekLabel, started, statu
   const signals = fixtureSignals(profile);
   const total = agents.length;
 
-  for (const [i, cfg] of profile.collectors.entries()) {
-    const mine = signals.filter((s) => s.category === cfg.key);
-    statuses.push(toStatus(await timed(i + 1, cfg.name, async () => {
-      log.step('dry run — skipping Tavily and Nemotron');
+  // Every collection agent the profile defines, in the same order the live run
+  // uses, so the dry run is a faithful rehearsal of the demo.
+  for (const [i, a] of agents.slice(0, agents.length - 3).entries()) {
+    const key = { 'Feed Collector': 'feed', 'Tender Collector': 'tender', 'Account Watch': 'account' }[a.name]
+      ?? profile.collectors[i]?.key;
+    const mine = signals.filter((s) => s.category === key);
+    statuses.push(toStatus(await timed(i + 1, a.name, async () => {
+      log.step('dry run — skipping all network calls');
       return { summary: `${mine.length} fixture signals` };
     }, total)));
   }
-  statuses.push(toStatus(await timed(profile.collectors.length + 1, 'Account Watch', async () => {
-    log.step('dry run — skipping Tavily and Nemotron');
-    return { summary: `${signals.filter((s) => s.category === 'account').length} fixture signals` };
-  }, total)));
   statuses.push(toStatus(await timed(total - 2, 'QA Verifier', async () => {
     log.step('dry run — skipping Nemotron Ultra verification');
     return { summary: `${signals.length} fixture signals passed through` };
@@ -196,11 +214,12 @@ async function dryRunPipeline({ profile, agents, week, weekLabel, started, statu
 
   const diagnostics = diagnose({ collectors: [], signals, rawCount: signals.length });
   report(diagnostics, log);
+  const reg = await updateRegister(signals, { week, roster: profile.roster ?? [] });
   statuses.push(toStatus(await timed(total, 'Dashboard Updater', () => updateDashboard({
     week, weekLabel, markdown, signals, connections: [], counts,
     assessment: 'Dry run — no verification performed.',
     qaStats: { input: signals.length, unique: signals.length, kept: signals.length, duplicates: 0, dropped: 0, flagged: 0 },
-    diagnostics, profile: { key: profile.key, name: profile.name },
+    diagnostics, profile: { key: profile.key, name: profile.name }, register: reg,
     models: { ultra: 'dry-run', fast: 'dry-run' },
   }), total)));
 

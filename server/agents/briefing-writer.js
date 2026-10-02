@@ -20,6 +20,7 @@ VOICE:
 - Write what the signal means for the reader when it is not obvious, in the same sentence. One clause, not a paragraph.
 - Where a signal opens a conversation across TWO OR MORE of this business's offerings, say so explicitly and name them — a multi-service opening is the most valuable thing in the briefing and must never be left implicit.
 - Lead each section with its highest-priority signal. Priority bands are given; treat Critical as needing contact this week.
+- A signal with a closing date is time-limited. Always state the date, and never bury it mid-sentence.
 
 HARD RULES:
 - Use ONLY the supplied signals. Never add a company, number, date or event from your own knowledge. If a section has no signals, write "No signals this week." under it.
@@ -36,7 +37,9 @@ Output GitHub-flavoured markdown in exactly the given structure. No preamble, no
 function sectionsFor(profile) {
   return [
     { key: 'account', heading: 'Your Accounts' },
+    { key: 'tender', heading: 'Open Tenders' },
     ...profile.collectors.map((c) => ({ key: c.key, heading: c.name.replace(/ Collector$/, '') })),
+    { key: 'feed', heading: 'From the Trade Press' },
   ];
 }
 
@@ -89,6 +92,15 @@ function buildPrompt({ signals, connections, assessment, weekLabel, counts, CATE
     return `### ${heading} — ${rows.length} signals\n${body}`;
   }).join('\n\n');
 
+  // A closing date is the only thing in a briefing that expires. It leads.
+  const closing = signals
+    .filter((s) => s.deadline)
+    .sort((a, b) => a.deadline.localeCompare(b.deadline))
+    .slice(0, 8);
+  const closingBlock = closing.length
+    ? `\nCLOSING SOON — these have a stated deadline and expire whether or not anyone acts:\n${closing.map((s) => `- ${s.deadline}: ${s.company} — ${s.summary}${s.contract_value ? ` (${s.contract_currency} ${Number(s.contract_value).toLocaleString('en-GB')})` : ''}`).join('\n')}\n`
+    : '';
+
   const multi = signals.filter((s) => s.multi_service);
   const multiBlock = multi.length
     ? `\nMULTI-SERVICE OPENINGS (${multi.length}) — these open two or more offerings and are the highest-value items this week:\n${multi.map((s) => `- ${s.company}: ${s.practice_areas.join(' + ')}`).join('\n')}\n`
@@ -112,7 +124,7 @@ VERIFIED SIGNALS (${signals.length} total — ${CATEGORIES.map(({ key, heading }
 
 ${sections}
 
-${multiBlock}
+${closingBlock}${multiBlock}
 CONNECTIONS IDENTIFIED BY THE VERIFICATION PASS:
 ${conn}
 
@@ -124,7 +136,10 @@ Produce exactly this structure:
 
 ## This Week's Headline
 [One sentence: the single most important thing that happened, naming the organisation.]
-
+${closing.length ? `
+## Closing Soon
+[Every item from CLOSING SOON above, earliest first, each as "**[date]** — [who] — [what], [value if given]" ending with [source](url). These expire; do not omit any.]
+` : ''}
 ${structure}
 
 ## Connections Worth Noting

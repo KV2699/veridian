@@ -194,6 +194,42 @@ export default {
     },
   ],
 
+  // ── Official feeds (zero-hallucination discovery) ──────────────────────────
+  // Publisher-written headlines with their own urls and dates. Nothing here is
+  // scraped and nothing is inferred, which is why this path has never produced
+  // a misattributed claim. All verified reachable; a feed that fails is skipped.
+  feeds: {
+    // Wider than the search window on purpose: feeds are cheap, carry no
+    // hallucination risk, and a three-week view builds the prospect register
+    // far faster than a seven-day one.
+    days: 21,
+    sources: [
+      { name: 'NVIDIA Newsroom', url: 'https://nvidianews.nvidia.com/releases.xml' },
+      { name: 'NVIDIA Blog', url: 'https://blogs.nvidia.com/feed/' },
+      { name: 'HPCwire', url: 'https://www.hpcwire.com/feed/' },
+      { name: 'Data Center Dynamics', url: 'https://www.datacenterdynamics.com/en/rss/' },
+      { name: 'Data Center Knowledge', url: 'https://www.datacenterknowledge.com/rss.xml' },
+      { name: 'The Register', url: 'https://www.theregister.com/headlines.atom' },
+      { name: 'ESG Dive', url: 'https://www.esgdive.com/feeds/news/' },
+      { name: 'Trellis', url: 'https://trellis.net/feed/' },
+    ],
+    // Applied to headline and standfirst before anything reaches a model, so a
+    // general-tech feed costs nothing when it is carrying unrelated news.
+    terms: [
+      'ai', 'gpu', 'nvidia', 'data cent', 'datacent', 'compute', 'inference',
+      'accelerat', 'supercomput', 'hpc', 'cluster', 'megawatt', 'gigawatt',
+      'model', 'training', 'hbm', 'cuda', 'sovereign', 'neocloud',
+    ],
+  },
+
+  // ── Government procurement portals ─────────────────────────────────────────
+  // A buyer stating in public, in writing, what they intend to spend and by
+  // when. Every field is copied from the notice; no model supplies a fact.
+  tenders: {
+    days: 30,
+    maxPages: 10,
+  },
+
   // ── Account Watch (Agent 5) ────────────────────────────────────────────────
   accountWatch: {
     focus:

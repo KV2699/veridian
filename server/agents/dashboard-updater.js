@@ -7,7 +7,7 @@
 import { saveBriefing, appendSignals, getBriefings, getSignals } from '../lib/store.js';
 import { log } from '../lib/log.js';
 
-export default async function updateDashboard({ week, weekLabel, markdown, signals, connections, counts, assessment, qaStats, models, diagnostics, profile }) {
+export default async function updateDashboard({ week, weekLabel, markdown, signals, connections, counts, assessment, qaStats, models, diagnostics, profile, register }) {
   // Trend compares against the most recent DIFFERENT week. Re-running the same
   // week replaces its briefing, so without the week filter a re-run would
   // report a delta against itself and always read "+0".
@@ -24,6 +24,14 @@ export default async function updateDashboard({ week, weekLabel, markdown, signa
     top_signals: signals.slice(0, 5).map(({ company, signal_type, summary, url, date, relevance_score, category, priority_score, priority_band, practice_areas, multi_service }) =>
       ({ company, signal_type, summary, url, date, relevance_score, category, priority_score, priority_band, practice_areas, multi_service })),
     multi_service_count: signals.filter((s) => s.multi_service).length,
+    register: register ?? null,
+    // Dated commitments the reader has to act before — the one thing in a
+    // briefing that expires if it is read late.
+    deadlines: signals
+      .filter((s) => s.deadline)
+      .map(({ company, deadline, summary, url, contract_value, contract_currency, priority_band }) =>
+        ({ company, deadline, summary, url, value: contract_value, currency: contract_currency, band: priority_band }))
+      .sort((a, b) => a.deadline.localeCompare(b.deadline)),
     critical_count: signals.filter((s) => s.priority_band === 'Critical').length,
     // Which offerings this week's signals actually open — the cross-sell view.
     practice_area_coverage: signals.reduce((acc, s) => {

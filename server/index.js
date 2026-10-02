@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 import { runPipeline, isRunning, agentList, isoWeek } from './pipeline.js';
 import { loadProfile, listProfiles } from './profiles/index.js';
+import { listRegister, registerStats } from './lib/register.js';
 import { getBriefings, getSignals, getRuns } from './lib/store.js';
 import { MODELS, listModels } from './lib/nebius.js';
 import { log } from './lib/log.js';
@@ -88,7 +89,7 @@ app.get('/api/status', async (_req, res) => {
         const s = last?.agents?.find((x) => x.index === a.number);
         return { ...a, status: isRunning() ? 'running' : s?.status ?? 'idle', duration_ms: s?.duration_ms ?? null, detail: s?.detail ?? null, error: s?.error ?? null };
       }),
-      totals: { briefings: briefings.length, signals: signals.length },
+      totals: { briefings: briefings.length, signals: signals.length, organisations: (await registerStats()).total },
       profile: (() => { const p = loadProfile(); return { key: p.key, name: p.name, accounts: p.roster?.length ?? 0 }; })(),
       diagnostics: last?.diagnostics ?? null,
       models: { ultra: MODELS.ultra, fast: MODELS.fast },
@@ -132,6 +133,35 @@ app.get('/api/profiles', (_req, res) => {
         ({ key, name, focus, queries, windowDays })),
       scoring: active.scoring,
     } });
+  } catch (err) { fail(res, err); }
+});
+
+// The prospect list the system has built for itself — deduplicated
+// organisations, accumulating week by week.
+app.get('/api/organisations', async (req, res) => {
+  try {
+    const { status, band, minScore, limit } = req.query;
+    const [rows, stats] = await Promise.all([
+      listRegister({ status, band, minScore: Number(minScore) || 0, limit }),
+      registerStats(),
+    ]);
+    res.json({ ok: true, stats, count: rows.length, organisations: rows });
+  } catch (err) { fail(res, err); }
+});
+
+// Everything with a stated closing date, soonest first.
+app.get('/api/deadlines', async (_req, res) => {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const all = (await getSignals()).filter((s) => s.deadline && s.deadline >= today);
+    const seen = new Set();
+    const rows = all
+      .filter((s) => !seen.has(s.url_key) && seen.add(s.url_key))
+      .sort((a, b) => a.deadline.localeCompare(b.deadline))
+      .map(({ company, deadline, summary, url, contract_value, contract_currency, priority_band }) =>
+        ({ company, deadline, summary, url, value: contract_value, currency: contract_currency, band: priority_band,
+          days_left: Math.ceil((new Date(deadline) - new Date(today)) / 864e5) }));
+    res.json({ ok: true, count: rows.length, deadlines: rows });
   } catch (err) { fail(res, err); }
 });
 

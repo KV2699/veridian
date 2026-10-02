@@ -17,5 +17,8 @@ export function fixtureSignals(profile) {
     ...profile.collectors.map((c) =>
       make(c.key, 'Example Corp', 'Fixture Signal', `example ${c.key} signal for the ${profile.name} profile.`)),
     { ...make('account', profile.roster?.[0] ?? 'Example Account', 'Fixture Signal', 'example account signal.'), is_account: true },
+    make('feed', 'Example Publisher Co', 'Fixture Signal', 'example signal sourced from an official feed.'),
+    { ...make('tender', 'Example Public Body', 'Published Tender', 'example tender with a closing date.'),
+      deadline: new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10), contract_value: 1000000, contract_currency: 'GBP' },
   ];
 }
