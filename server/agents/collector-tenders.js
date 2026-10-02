@@ -30,7 +30,8 @@ export default async function collectTenders({ profile }, ctx = {}, deps = {}) {
   const fetchAll = deps.fetchPortals ?? fetchPortals;
   const ask = deps.completeJSON ?? completeJSON;
   const cfg = profile?.tenders ?? {};
-  const { days = 30, maxPages = 10, terms, portals = PORTALS } = cfg;
+  const { maxPages = 10, terms, portals = PORTALS } = cfg;
+  const days = process.env.BACKFILL === 'true' ? (cfg.days ?? 30) * 3 : (cfg.days ?? 30);
 
   const known = ctx.knownUrlKeys ?? new Set();
   const valueFactor = profile?.scoring?.valueFactor;

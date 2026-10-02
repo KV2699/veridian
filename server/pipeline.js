@@ -139,8 +139,8 @@ export async function runPipeline({
     // ── Dashboard Updater ───────────────────────────────────────────────────
     // The register is the accumulating prospect list — the system's own
     // sourced equivalent of a client roster, grown week by week.
-    const reg = await updateRegister(qa.signals, { week, roster: profile.roster ?? [] });
-    log.ok(`organisation register — ${reg.total} organisations tracked (${reg.added} new this run, ${reg.updated} returning)`);
+    const reg = await updateRegister(qa.signals, { week, roster: profile.roster ?? [], exclusions: profile.exclusions ?? [], aliases: profile.aliases ?? {} });
+    log.ok(`organisation register — ${reg.total} organisations tracked (${reg.added} new this run, ${reg.updated} returning${reg.skipped ? `, ${reg.skipped} skipped as excluded or joint announcements` : ''})`);
 
     const saved = await timed(total, 'Dashboard Updater', () => updateDashboard({
       register: reg,
@@ -214,7 +214,7 @@ async function dryRunPipeline({ profile, agents, week, weekLabel, started, statu
 
   const diagnostics = diagnose({ collectors: [], signals, rawCount: signals.length });
   report(diagnostics, log);
-  const reg = await updateRegister(signals, { week, roster: profile.roster ?? [] });
+  const reg = await updateRegister(signals, { week, roster: profile.roster ?? [], exclusions: profile.exclusions ?? [], aliases: profile.aliases ?? {} });
   statuses.push(toStatus(await timed(total, 'Dashboard Updater', () => updateDashboard({
     week, weekLabel, markdown, signals, connections: [], counts,
     assessment: 'Dry run — no verification performed.',

@@ -24,20 +24,37 @@ export const getRegister = () => readJSON(REGISTER_FILE, {});
  * Fold a week's verified signals into the register.
  * @returns {{total:number, added:number, updated:number, newNames:string[]}}
  */
-export async function updateRegister(signals, { week, roster = [] } = {}) {
+export async function updateRegister(signals, { week, roster = [], exclusions = [], aliases = {} } = {}) {
   const register = await getRegister();
   const rosterKeys = new Set(roster.map(keyFor));
+  // The business running this is never its own prospect. The profile has
+  // always declared exclusions; nothing was enforcing them, so NVIDIA appeared
+  // in its own prospect list.
+  const excluded = new Set(exclusions.map(keyFor));
+  // Acronyms a key cannot resolve on its own: "AWS" and "Amazon Web Services"
+  // normalise differently but are one organisation.
+  const aliasMap = new Map(Object.entries(aliases).map(([from, to]) => [keyFor(from), keyFor(to)]));
+  const canonical = new Map(Object.entries(aliases).map(([from, to]) => [keyFor(from), to]));
+
   const newNames = [];
-  let updated = 0;
+  let updated = 0, skipped = 0;
 
   for (const s of signals) {
-    const key = keyFor(s.company);
+    const raw = String(s.company ?? '').trim();
+    // A joint announcement is not one organisation. Splitting it reliably is
+    // guesswork, so it is skipped rather than registered under a merged name.
+    if (/\s[/&]\s|\sand\s.+\sand\s/.test(raw)) { skipped++; continue; }
+
+    let key = keyFor(raw);
     if (!key) continue;
+    if (aliasMap.has(key)) key = aliasMap.get(key);
+    if (excluded.has(key)) { skipped++; continue; }
 
     const existing = register[key];
+    const name = canonical.get(keyFor(raw)) ?? raw;
     const entry = existing ?? {
       key,
-      name: s.company,
+      name,
       aliases: [],
       first_seen: week,
       weeks_seen: [],
@@ -54,11 +71,11 @@ export async function updateRegister(signals, { week, roster = [] } = {}) {
 
     // Keep the longest spelling seen — "Microsoft" and "Microsoft Azure"
     // collapse to one organisation, and the fuller name is the useful one.
-    if (s.company.length > entry.name.length) {
+    if (name.length > entry.name.length) {
       if (!entry.aliases.includes(entry.name)) entry.aliases.push(entry.name);
-      entry.name = s.company;
-    } else if (s.company !== entry.name && !entry.aliases.includes(s.company)) {
-      entry.aliases.push(s.company);
+      entry.name = name;
+    } else if (name !== entry.name && !entry.aliases.includes(name)) {
+      entry.aliases.push(name);
     }
 
     entry.last_seen = week;
@@ -93,7 +110,7 @@ export async function updateRegister(signals, { week, roster = [] } = {}) {
   }
 
   await writeJSON(REGISTER_FILE, register);
-  return { total: Object.keys(register).length, added: newNames.length, updated, newNames };
+  return { total: Object.keys(register).length, added: newNames.length, updated, skipped, newNames };
 }
 
 /** The register as a sorted list, best prospects first. */

@@ -12,7 +12,8 @@
     "models": "node server/lib/list-models.js",
     "test": "node test/run-all.mjs",
     "verify": "node scripts/verify-nemotron.mjs",
-    "pipeline:resume": "RESUME=true node server/pipeline.js"
+    "pipeline:resume": "RESUME=true node server/pipeline.js",
+    "backfill": "BACKFILL=true node server/pipeline.js"
   },
   "engines": {
     "node": ">=18"

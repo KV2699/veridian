@@ -44,6 +44,24 @@ check('practice areas union across weeks reveals a cross-sell',
   cw.practice_areas.includes('compute') && cw.practice_areas.includes('software') && cw.multi_service === true);
 check('signal history kept per organisation', cw.signals.length === 3);
 
+// The business running this is never its own prospect, and a joint
+// announcement is not one organisation.
+await writeJSON(REGISTER_FILE, {});
+r = await updateRegister(
+  [sig('NVIDIA'), sig('OpenAI / SB Energy / NVIDIA'), sig('AWS'), sig('Amazon Web Services'), sig('CoreWeave')],
+  { week: '2026-W40', exclusions: ['NVIDIA'], aliases: { AWS: 'Amazon Web Services' } },
+);
+const names = (await listRegister()).map((x) => x.name);
+check('the excluded organisation never enters the register', !names.includes('NVIDIA'), names.join(', '));
+check('a joint announcement is skipped rather than merged', !names.some((n) => n.includes('/')));
+check('an acronym registers under its parent, not twice',
+  names.filter((n) => /amazon/i.test(n)).length === 1 && !names.includes('AWS'));
+check('skipped entries are reported', r.skipped === 2, `${r.skipped} skipped`);
+
+await writeJSON(REGISTER_FILE, {});
+await updateRegister([sig('CoreWeave'), sig('Nebius'), sig('CoreWeave Inc.')], { week: '2026-W40', roster: ['Nebius'] });
+await updateRegister([sig('CoreWeave', { priority_score: 90, priority_band: 'Critical', practice_areas: ['software'] })], { week: '2026-W41' });
+
 const stats = await registerStats();
 check('stats report returning organisations', stats.returning === 1 && stats.total === 2, JSON.stringify(stats.bands));
 check('ranked best first', (await listRegister())[0].best_score === 90);

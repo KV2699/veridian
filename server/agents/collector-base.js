@@ -56,8 +56,15 @@ export async function runCollector(
   const find = deps.searchMany ?? searchMany;
   const ask = deps.completeJSON ?? completeJSON;
 
-  log.step(`Running ${queries.length} Tavily searches (${windowDays}-day window)`);
-  const { results, stats } = await find(queries, { days: windowDays, maxResults: 10 });
+  // A tracker has to be populated before it can be maintained. BACKFILL widens
+  // every window for one run, so the first sweep builds a register rather than
+  // reporting a single quiet week.
+  const backfillX = Number(process.env.BACKFILL_MULTIPLIER) || 6;
+  const days = process.env.BACKFILL === 'true' ? windowDays * backfillX : windowDays;
+  const maxResults = process.env.BACKFILL === 'true' ? 20 : 10;
+
+  log.step(`Running ${queries.length} Tavily searches (${days}-day window${days !== windowDays ? ', backfill' : ''})`);
+  const { results, stats } = await find(queries, { days, maxResults });
 
   const fresh = results.filter((h) => !known.has(canonicalUrl(h.url)));
   log.step(`${results.length} unique results, ${fresh.length} not seen in a previous week`);

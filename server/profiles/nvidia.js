@@ -103,8 +103,29 @@ export default {
     'Equinix', 'Digital Realty',
   ],
 
-  // Organisations never worth returning as prospects, for any reason.
-  exclusions: ['NVIDIA'],
+  // Never registered as prospects. The business running this is not its own
+  // lead, and a competitor is intelligence rather than an opportunity.
+  exclusions: ['NVIDIA', 'NVIDIA Corporation'],
+
+  // Names a normaliser cannot reconcile on its own — acronyms and brands that
+  // belong to a parent. Left side is what the press writes; right side is the
+  // organisation it should register under.
+  aliases: {
+    AWS: 'Amazon Web Services',
+    'Amazon Web Services (AWS)': 'Amazon Web Services',
+    GCP: 'Google Cloud',
+    'Google Cloud Platform': 'Google Cloud',
+    'Microsoft Azure': 'Microsoft',
+    Azure: 'Microsoft',
+    Alphabet: 'Google',
+    'Meta Platforms': 'Meta',
+    HPE: 'Hewlett Packard Enterprise',
+    'Oracle Cloud Infrastructure': 'Oracle',
+    OCI: 'Oracle',
+    TSMC: 'Taiwan Semiconductor Manufacturing Company',
+    SMCI: 'Supermicro',
+    'Super Micro Computer': 'Supermicro',
+  },
 
   // ── Collectors ─────────────────────────────────────────────────────────────
   // Four discovery collectors. Queries are deliberately event-shaped: each one
@@ -129,6 +150,10 @@ export default {
         'sovereign AI national programme government compute investment announced',
         'hyperscaler capital expenditure guidance AI infrastructure data center spending',
         'NVIDIA investment stake AI infrastructure company announced',
+        'neocloud Series B Series C raised AI compute capacity',
+        'national AI factory supercomputer government funding announced',
+        'AI infrastructure acquisition acquired data center operator',
+        'private credit debt facility GPU financing announced',
       ],
       windowDays: 7,
     },
@@ -149,6 +174,10 @@ export default {
         'new AI data center campus gigawatt site announced operator',
         'HBM CoWoS advanced packaging capacity supply agreement allocation',
         'AI server production order ODM manufacturing expansion announced',
+        'data centre grid connection substation approval AI campus',
+        'liquid cooling contract AI data center deployment announced',
+        'nuclear SMR power agreement data center signed',
+        'colocation operator AI capacity expansion lease signed',
       ],
       windowDays: 14,
     },
@@ -169,6 +198,10 @@ export default {
         'AMD Instinct MI deployment enterprise win announced',
         'custom AI accelerator programme expanded cancelled company',
         'AI chip export controls restriction policy decision announced',
+        'inference chip startup deployment enterprise customer announced',
+        'hyperscaler custom silicon tape out production announced',
+        'company switching GPU vendor migration announced',
+        'AI networking ethernet infiniband deployment win announced',
       ],
       windowDays: 14,
     },
@@ -189,6 +222,10 @@ export default {
         'appointed chief AI officer head of AI infrastructure VP compute',
         'RFP tender AI compute GPU procurement notice published',
         'national lab university funded AI supercomputer programme announced',
+        'bank insurer manufacturer AI infrastructure investment announced',
+        'telecom operator AI data center edge compute programme',
+        'healthcare pharma AI compute cluster deployment announced',
+        'automotive manufacturer AI compute platform partnership announced',
       ],
       windowDays: 7,
     },

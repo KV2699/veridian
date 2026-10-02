@@ -35,7 +35,8 @@ export default async function collectFeeds({ profile }, ctx = {}, deps = {}) {
   const fetchAll = deps.fetchFeeds ?? fetchFeeds;
   const ask = deps.completeJSON ?? completeJSON;
   const cfg = profile?.feeds ?? {};
-  const { sources = [], days = 7, terms = [] } = cfg;
+  const { sources = [], terms = [] } = cfg;
+  const days = process.env.BACKFILL === 'true' ? (cfg.days ?? 7) * 4 : (cfg.days ?? 7);
 
   if (!sources.length) {
     log.warn('no feeds configured in the profile');

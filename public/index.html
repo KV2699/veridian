@@ -154,6 +154,12 @@
     </div>
 
     <div class="card">
+      <h2>Prospect register</h2>
+      <div id="regstats" style="font-size:12.5px;color:var(--muted);margin-bottom:10px"></div>
+      <div id="reglist" class="hist" style="max-height:260px;overflow-y:auto"></div>
+    </div>
+
+    <div class="card">
       <h2>Practice area coverage</h2>
       <div class="bars" id="areas"></div>
       <div id="multi" style="margin-top:12px;font-size:12.5px;color:var(--muted)"></div>
@@ -389,6 +395,24 @@ async function get(path) {
   return data;
 }
 
+// The prospect list the system has sourced for itself — the thing that grows
+// week on week, as opposed to the briefing, which is one week's slice.
+async function loadRegister() {
+  try {
+    const { stats, organisations } = await get('/api/organisations?limit=40');
+    $('regstats').innerHTML = `<strong style="color:var(--text);font-size:15px">${stats.total}</strong> organisations sourced`
+      + `<br>${stats.prospects} prospects · ${stats.accounts} accounts · ${stats.multi_service} multi-service`
+      + (stats.returning ? `<br>${stats.returning} seen in more than one week` : '');
+    $('reglist').innerHTML = organisations.map((o) => `
+      <button title="${esc(o.practice_areas.join(', '))} · ${o.signal_count} signal(s)" style="cursor:default">
+        <span>${esc(o.name)}</span>
+        <span class="c">${o.best_score}</span>
+      </button>`).join('');
+  } catch (err) {
+    $('regstats').textContent = 'No register yet.';
+  }
+}
+
 async function loadStatus() {
   const s = await get('/api/status');
   $('week').textContent = s.current_week;
@@ -423,7 +447,7 @@ async function loadBriefings(keepSelection = false) {
 async function refresh(keepSelection = true) {
   try {
     const s = await loadStatus();
-    await loadBriefings(keepSelection);
+    await Promise.all([loadBriefings(keepSelection), loadRegister()]);
     return s;
   } catch (err) {
     logLine(`error: ${err.message}`);
