@@ -30,7 +30,13 @@ function requireKey() {
  * @param {{days?:number, maxResults?:number, depth?:'basic'|'advanced', topic?:'general'|'news'}} opts
  * @returns {Promise<Array<{title:string,url:string,content:string,score:number,published_date:string|null}>>}
  */
-export async function search(query, { days = 7, maxResults = 10, depth = defaultDepth(), topic = 'news' } = {}) {
+export async function search(query, {
+  days = 7, maxResults = 10, depth = defaultDepth(), topic = 'news',
+  // Domain targeting is the cheapest precision lever available: it filters at
+  // the search, before anything is read, so a page that was never going to
+  // qualify costs nothing downstream.
+  includeDomains = [], excludeDomains = [],
+} = {}) {
   const key = requireKey();
   // Tavily has shipped both a Bearer header and a body api_key field across
   // versions; sending both keeps this working either way.
@@ -46,6 +52,8 @@ export async function search(query, { days = 7, maxResults = 10, depth = default
       topic,
       include_answer: false,
       include_raw_content: false,
+      ...(includeDomains.length ? { include_domains: includeDomains } : {}),
+      ...(excludeDomains.length ? { exclude_domains: excludeDomains } : {}),
     }),
     signal: AbortSignal.timeout(60_000),
   });

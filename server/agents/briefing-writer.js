@@ -21,6 +21,7 @@ VOICE:
 - Where a signal opens a conversation across TWO OR MORE of this business's offerings, say so explicitly and name them — a multi-service opening is the most valuable thing in the briefing and must never be left implicit.
 - Lead each section with its highest-priority signal. Priority bands are given; treat Critical as needing contact this week.
 - A signal with a closing date is time-limited. Always state the date, and never bury it mid-sentence.
+- A regulatory obligation is compulsory work with a deadline, not a possibility. State WHO must act, WHAT they must do and BY WHEN — in that order.
 
 HARD RULES:
 - Use ONLY the supplied signals. Never add a company, number, date or event from your own knowledge. If a section has no signals, write "No signals this week." under it.
@@ -37,7 +38,9 @@ Output GitHub-flavoured markdown in exactly the given structure. No preamble, no
 function sectionsFor(profile) {
   return [
     { key: 'account', heading: 'Your Accounts' },
+    { key: 'regulatory', heading: 'Regulatory Obligations' },
     { key: 'tender', heading: 'Open Tenders' },
+    { key: 'roster', heading: 'Movement on Tracked Organisations' },
     ...profile.collectors.map((c) => ({ key: c.key, heading: c.name.replace(/ Collector$/, '') })),
     { key: 'feed', heading: 'From the Trade Press' },
   ];
@@ -86,6 +89,9 @@ function buildPrompt({ signals, connections, assessment, weekLabel, counts, CATE
           `  SOURCE URL: ${s.url}`,
           `  PRIORITY: ${s.priority_score}/100 ${s.priority_band}${s.multi_service ? ' · MULTI-SERVICE' : ''}`,
           (s.practice_areas ?? []).length ? `  OPENS: ${s.practice_areas.join(', ')}` : null,
+          s.obligation ? `  OBLIGATION: ${s.obligation}${s.deadline ? ` (compliance by ${s.deadline})` : ''}` : null,
+          s.demand_created ? `  WORK THIS CREATES: ${s.demand_created}` : null,
+          s.contact_role ? `  APPROACH: ${s.contact_role}` : null,
           s.needs_review ? `  FLAGGED FOR REVIEW: ${s.review_reason || 'thinly sourced'}` : null,
         ].filter(Boolean).join('\n')).join('\n')
       : '  (none)';

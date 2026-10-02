@@ -118,7 +118,7 @@ export async function runCollector(
         user: buildPrompt({ focus, signalTypes, batch, polarity, practiceAreas, valueFactor }),
       });
       signals.push(...normalise(data?.signals, {
-        batch, category, practiceAreas, valueFactor,
+        batch, category, practiceAreas, valueFactor, windowDays: days,
         onDrop: ({ company, reason }) => { ungrounded++; log.warn(`dropped "${company}" — ${reason}`); },
       }));
     } catch (err) {
@@ -179,7 +179,7 @@ Extract the qualifying signals as JSON.`;
 
 // The model's output is never trusted as-is: urls must match a supplied result,
 // dates must be real and in-window-shaped, scores must be numbers 0-10.
-export function normalise(raw, { batch, category, practiceAreas = [], valueFactor = null, onDrop } = {}) {
+export function normalise(raw, { batch, category, practiceAreas = [], valueFactor = null, windowDays = null, onDrop } = {}) {
   const validAreas = new Set(practiceAreas.map((a) => a.key));
   const validLevels = new Set(Object.keys(valueFactor?.points ?? {}));
   if (!Array.isArray(raw)) return [];
@@ -220,6 +220,18 @@ export function normalise(raw, { batch, category, practiceAreas = [], valueFacto
       url: source.url,
       url_key: key,
       date: isoDate(s.date) ?? isoDate(source.published_date),
+      // Measured: Tavily honours its `days` filter at narrow windows and leaks
+      // badly at wide ones — a 90-day request returned items seven months old.
+      // So the window is re-checked here rather than trusted, and an
+      // out-of-window signal is flagged rather than scored as current.
+      ...(() => {
+        const dt = isoDate(s.date) ?? isoDate(source.published_date);
+        if (!windowDays || !dt) return {};
+        const age = Math.floor((Date.now() - new Date(dt).getTime()) / 864e5);
+        return age > windowDays
+          ? { out_of_window: true, window_note: `${age} days old, outside the ${windowDays}-day search window` }
+          : {};
+      })(),
       relevance_score: clamp(s.relevance_score),
       // Only practice areas this profile actually sells survive — a model that
       // invents an offering must not be able to inflate the multi-service score.

@@ -116,6 +116,15 @@ const RULES = [
     fix: 'A normal week has a handful of top-band signals, not a majority. The usual cause is over-generous practice-area mapping: a second area moves a signal a whole band, so padding that list inflates everything. Check the practice-area discipline in the verifier, and whether organisation scale is being set to "large" by default.',
   },
   {
+    id: 'window-leak',
+    stage: 'extract',
+    severity: 'medium',
+    test: null,
+    scope: 'run',
+    cause: 'A large share of signals are older than the window that was searched for.',
+    fix: 'Measured behaviour: the search API honours its date filter at narrow windows and leaks at wide ones — a 90-day request returned items seven months old. Narrow the collector windows (30 days holds reliably) rather than relying on the filter.',
+  },
+  {
     id: 'undated-heavy',
     stage: 'extract',
     severity: 'medium',
@@ -193,6 +202,11 @@ export function diagnose({ collectors = [], signals = [], rawCount = 0 }) {
     const multi = signals.filter((s) => s.multi_service).length;
     if (signals.length >= 10 && multi / signals.length > 0.6) {
       add(byId['multi-service-inflation'], 'practice-area mapping', `${multi} of ${signals.length} tagged multi-service`);
+    }
+
+    const stale = signals.filter((s) => s.out_of_window).length;
+    if (signals.length >= 10 && stale / signals.length > 0.25) {
+      add(byId['window-leak'], 'whole run', `${stale} of ${signals.length} older than the window searched`);
     }
 
     const undated = signals.filter((s) => !s.date).length;

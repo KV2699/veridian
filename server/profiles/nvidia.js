@@ -231,6 +231,42 @@ export default {
     },
   ],
 
+  // ── Regulators and public bodies ───────────────────────────────────────────
+  // The strongest buying trigger in the system, because the resulting work is
+  // compulsory. A company weighing an AI buildout may or may not proceed; a
+  // licensee that must submit a new reporting pack by a stated date has no
+  // such choice.
+  //
+  // For this market the binding constraints are power and permission: grid
+  // connection reform decides whether a data centre can be built at all, data
+  // residency rules decide whether compute must sit in-country, and export
+  // controls decide which markets can be sold to. The lead is never the
+  // regulator — it is whoever the decision obliges.
+  regulators: {
+    windowDays: 30,
+    maxResults: 10,
+    // Deliberately weighted to POWER, SITING and TRADE rather than AI policy.
+    // The first live run was pointed at AI governance regulators and returned
+    // seven EU AI Act duties on bodies like "Member States" — all real, none
+    // of them a reason to buy compute. What gates this market is whether a
+    // data centre can get a grid connection, planning permission and an export
+    // licence, so those are the bodies swept.
+    terms: 'data centre connection decision determination direction licence condition deadline capacity allocation',
+    bodies: [
+      // Grid and power — decides whether capacity can be built at all
+      { name: 'Ofgem', domain: 'ofgem.gov.uk', terms: 'data centre demand connection decision direction grid queue reform' },
+      { name: 'National Energy System Operator', domain: 'neso.energy', terms: 'connections reform data centre large load decision' },
+      { name: 'FERC', domain: 'ferc.gov', terms: 'order interconnection large load co-located data center decision' },
+      // Siting and planning — decides whether it can be built there
+      { name: 'UK Planning Inspectorate', domain: 'infrastructure.planninginspectorate.gov.uk', terms: 'data centre application decision nationally significant infrastructure' },
+      // Trade — decides which markets can be sold to
+      { name: 'US Bureau of Industry and Security', domain: 'bis.doc.gov', terms: 'rule export control advanced computing semiconductor licence requirement' },
+      // Public compute programmes with application deadlines
+      { name: 'UK DSIT', domain: 'gov.uk', terms: 'AI research resource compute allocation funding application deadline' },
+      { name: 'EuroHPC', domain: 'eurohpc-ju.europa.eu', terms: 'call procurement supercomputer access allocation deadline' },
+    ],
+  },
+
   // ── Roster sweep (enumerated coverage) ─────────────────────────────────────
   // Walks the organisations already in the register and reports a result for
   // every one, including "no signal found". This is what makes coverage

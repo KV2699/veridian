@@ -169,7 +169,8 @@ export default async function qaVerify({ signals, profile }, deps = {}) {
     if (score < floor) { dropped++; continue; }
 
     const needsReview = Boolean(v.needs_review) || !s.date
-      || Boolean(s.grounding_note) || Boolean(s.weak_source) || s.source_is_about_company === false;
+      || Boolean(s.grounding_note) || Boolean(s.weak_source)
+      || s.source_is_about_company === false || Boolean(s.out_of_window);
     if (needsReview) flagged++;
 
     // The verifier's corrected mapping wins over the collector's proposal, but
@@ -194,6 +195,7 @@ export default async function qaVerify({ signals, profile }, deps = {}) {
       review_reason: String(
         v.review_reason
         || s.grounding_note
+        || s.window_note
         || (s.weak_source ? 'Source is a social media post, not reporting' : '')
         || (!s.date ? 'No published date on source' : ''),
       ).trim(),
@@ -256,6 +258,7 @@ function buildPrompt(signals, profile) {
     s.grounding_note ? `GROUNDING CONCERN: ${s.grounding_note}` : null,
     s.weak_source ? 'SOURCE TYPE: social media post, not reporting' : null,
     s.source_is_about_company === false ? 'SOURCE SUBJECT: this article is not about that organisation' : null,
+    s.out_of_window ? `AGE: ${s.window_note}` : null,
     `ORG SCALE PROPOSED: ${s.org_scale ?? 'unknown'}`,
     `${factorName.toUpperCase()} PROPOSED: ${s[factorKey] ?? 'unknown'}`,
   ].join('\n')).join('\n\n');

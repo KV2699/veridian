@@ -22,6 +22,16 @@ const modelOutput = [
 ];
 
 const out = normalise(modelOutput, { batch, category: 'funding' });
+
+// Tavily leaks its own date filter at wide windows, so age is re-checked here.
+const old = normalise(
+  [{ company: 'Old Co', signal_type: 'Funding', summary: 'raised money', url: 'https://real.com/story', date: new Date(Date.now() - 120 * 864e5).toISOString().slice(0, 10), relevance_score: 8 }],
+  { batch, category: 'funding', windowDays: 30 },
+);
+const recent = normalise(
+  [{ company: 'New Co', signal_type: 'Funding', summary: 'raised money', url: 'https://real.com/story', date: new Date(Date.now() - 5 * 864e5).toISOString().slice(0, 10), relevance_score: 8 }],
+  { batch, category: 'funding', windowDays: 30 },
+);
 const by = Object.fromEntries(out.map((s) => [s.company, s]));
 
 let failed = 0;
@@ -38,6 +48,10 @@ check('malformed rows (string, null) skipped without throwing', out.length === 3
 check('url_key set on every signal for cross-week dedup', out.every((s) => Boolean(s.url_key)));
 check('category stamped from the collector, not the model', out.every((s) => s.category === 'funding'));
 check('non-array input returns empty rather than throwing', normalise(undefined, { batch, category: 'x' }).length === 0);
+
+check('a signal older than the searched window is flagged, not silently scored',
+  old[0]?.out_of_window === true, old[0]?.window_note ?? 'not flagged');
+check('a signal inside the window is not flagged', recent[0]?.out_of_window === undefined);
 
 console.log(failed ? `\n✗ ${failed} check(s) failed\n` : '\n✓ all checks passed\n');
 process.exit(failed ? 1 : 0);

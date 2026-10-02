@@ -27,6 +27,7 @@ import accountWatch from './agents/account-watch.js';
 import collectFeeds from './agents/collector-feeds.js';
 import collectTenders from './agents/collector-tenders.js';
 import rosterSweep from './agents/roster-sweep.js';
+import regulatorSweep from './agents/regulator-sweep.js';
 import qaVerify from './agents/qa-verifier.js';
 import writeBriefing from './agents/briefing-writer.js';
 import updateDashboard from './agents/dashboard-updater.js';
@@ -39,6 +40,7 @@ export function agentList(profile = loadProfile()) {
   // The sweep runs first in the listing because it is the one agent whose
   // coverage is auditable: it reports on every name it was given.
   if (profile.rosterSweep !== false) extra.push({ number: ++n, name: 'Roster Sweep', kind: 'enumerated' });
+  if (profile.regulators?.bodies?.length) extra.push({ number: ++n, name: 'Regulator Sweep', kind: 'enumerated' });
   if (profile.feeds?.sources?.length) extra.push({ number: ++n, name: 'Feed Collector', kind: 'feeds' });
   if (profile.tenders) extra.push({ number: ++n, name: 'Tender Collector', kind: 'procurement' });
   extra.push({ number: ++n, name: 'Account Watch', kind: 'collector' });
@@ -102,6 +104,7 @@ export async function runPipeline({
         ...profile.collectors.map((cfg, i) =>
           timed(i + 1, cfg.name, () => runCollector({ ...cfg, category: cfg.key, polarity: profile.polarity, practiceAreas: profile.practiceAreas, valueFactor: profile.scoring?.valueFactor }, ctx), total)),
         ...(profile.rosterSweep !== false ? [timed(++slot, 'Roster Sweep', () => rosterSweep({ profile, week }, ctx), total)] : []),
+        ...(profile.regulators?.bodies?.length ? [timed(++slot, 'Regulator Sweep', () => regulatorSweep({ profile, week }, ctx), total)] : []),
         ...(profile.feeds?.sources?.length ? [timed(++slot, 'Feed Collector', () => collectFeeds({ profile }, ctx), total)] : []),
         ...(profile.tenders ? [timed(++slot, 'Tender Collector', () => collectTenders({ profile }, ctx), total)] : []),
         timed(++slot, 'Account Watch', () => accountWatch({ profile }, ctx), total),
