@@ -158,26 +158,24 @@ Collection is checkpointed to `data/last_collection.json` before verification ru
 
 ---
 
-## 8. Change log — what happened, in order
+## 8. What happened, and when
 
-Every entry below was a live-run discovery, not a design decision. The pattern is worth noticing: almost nothing here was found by reading code.
+The full record is in [CHANGELOG.md](CHANGELOG.md) — read it before changing
+anything in section 3, because almost every decision there was forced by a live
+run rather than chosen on design grounds.
 
-| Commit | Change | Why it happened |
-|---|---|---|
-| `7ab9544` | Initial seven-agent pipeline | Built to the brief |
-| `fa90a70` | Profiles, Account Watch, yield diagnostics | Target market became a config file; Account Watch filled the predecessor system's own documented biggest gap (nothing swept existing relationships) |
-| `be29216` | Practice areas, multi-service scoring; extraction fixes | **First live run: 182 search hits → 0 signals.** `Nemotron-3_5-Lightning` reasons until its budget is gone and never answers. Measured all four Nemotron models and switched. Also found Nebius throttles with empty HTTP 200s under concurrency |
-| `943648f` | Grounding checks | Top-five leads included a national-laboratory claim sourced to a Facebook post about a university physicist. The URL guard proved the link existed; nothing proved the link said this |
-| `386c009` | Refuse truncated replies; adaptive chunking | Verification silently lost 46 of 79 verdicts — a truncated reply contained a smaller valid fragment the parser accepted as the whole answer, and the run reported success |
-| `919bc7a` | Profile-defined value factor; grounding by subject | Scores collapsed onto two values; a 2GW campus tied with a 4.5MW site. Breadth measures nothing when revenue sits in one line. Grounding tightened from "is the company mentioned" to "is the article about them" |
-| `baf4353` | RSS feeds, procurement portals, organisation register | The system was handed a roster; it now sources its own |
-| `cd83c47` | Exclusions enforced, acronyms merged, backfill mode | **NVIDIA was in its own prospect list** — the profile had declared exclusions from the start and nothing read them |
-| `7c630a8` | Benchmark prompts | For testing other tools head-to-head |
-| `eeb3f9f` `3928179` `7ce93a4` | Roster Sweep, Regulator Sweep, Query Lab | Enumeration instead of topic search only; 32 queries tested live, 72% usable |
-| `ffa2282` | Roster Sweep, 30-day windows, cross-process lock | **The register went backwards, 123 → 78, silently.** Two overlapping runs |
-| `97170c7` | maxResults settled by measurement | Resolved a disagreement between two sessions with an A/B rather than an argument |
+The one-line version: **nothing important in this system was found by reading
+code.** The first live run returned 182 search hits and zero signals. The
+verification stage silently discarded 46 of 79 verdicts while reporting success.
+The register went backwards by 45 organisations with no error anywhere. NVIDIA
+appeared in its own prospect list. Every one of those surfaced only by running
+it and looking at the output.
 
-**Two sessions have been working this repo concurrently.** History is linear and nothing was lost, but the register data loss above was caused by it. The lock now prevents a recurrence.
+**Two sessions have worked this repo concurrently.** History is linear and
+nothing has been lost, but the register data loss was caused by exactly that,
+and the run lock in section 3 exists because of it. If a second session is
+active, check `git log` before editing shared files — `profiles/nvidia.js` and
+`collector-base.js` are the contended ones.
 
 ---
 
