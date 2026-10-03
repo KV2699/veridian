@@ -17,7 +17,7 @@ import { pathToFileURL } from 'node:url';
 
 import { timed, log } from './lib/log.js';
 import { knownUrlKeys, saveRun, saveCollection, getCollection } from './lib/store.js';
-import { MODELS } from './lib/nebius.js';
+import { MODELS, tokens, resetTokens } from './lib/nebius.js';
 import { diagnose, report } from './lib/diagnostics.js';
 import { loadProfile } from './profiles/index.js';
 import { updateRegister, registerStats, recordQuiet } from './lib/register.js';
@@ -76,6 +76,7 @@ export async function runPipeline({
   running = true;
 
   const started = Date.now();
+  resetTokens();
   const profile = loadProfile(profileKey);
   const agents = agentList(profile);
   const total = agents.length;
@@ -189,7 +190,9 @@ export async function runPipeline({
       signal_count: qa.signals.length, raw_count: signals.length,
       counts: briefing.counts, agents: statuses, diagnostics,
       models: { ultra: MODELS.ultra, fast: MODELS.fast },
+      tokens: { ...tokens, byTier: { ...tokens.byTier } },
     };
+    log.step(`Nebius spend this run: ${tokens.calls} calls · ${tokens.prompt.toLocaleString()} in · ${tokens.completion.toLocaleString()} out`);
     await saveRun(run);
     return { ...run, markdown: briefing.markdown };
   } catch (err) {

@@ -25,6 +25,27 @@ export const MODELS = {
 //
 // Raise NEBIUS_CONCURRENCY if your account has more headroom; lower it if you
 // still see empty completions.
+// Running total of what this process has spent at Nebius. Inference is metered
+// and there is no usage endpoint on an inference key, so unless the system
+// counts its own tokens the only record is a bill at the end of the month —
+// and no way to tell which part of the pipeline caused it.
+export const tokens = { prompt: 0, completion: 0, calls: 0, byTier: {} };
+
+export function recordUsage(tier, usage) {
+  if (!usage) return;
+  tokens.calls++;
+  tokens.prompt += usage.prompt_tokens ?? 0;
+  tokens.completion += usage.completion_tokens ?? 0;
+  const t = (tokens.byTier[tier] ??= { prompt: 0, completion: 0, calls: 0 });
+  t.calls++;
+  t.prompt += usage.prompt_tokens ?? 0;
+  t.completion += usage.completion_tokens ?? 0;
+}
+
+export const resetTokens = () => {
+  tokens.prompt = 0; tokens.completion = 0; tokens.calls = 0; tokens.byTier = {};
+};
+
 const MAX_CONCURRENT = Math.max(1, Number(process.env.NEBIUS_CONCURRENCY) || 2);
 let active = 0;
 const waiting = [];
@@ -107,6 +128,7 @@ export async function complete({
           : 'usually throttling under concurrency — lower NEBIUS_CONCURRENCY';
         throw new Error(`Nebius returned an empty completion (finish_reason=${choice?.finish_reason ?? 'none'}) — ${why}`);
       }
+      recordUsage(tier, data.usage);
       return { text, model, usage: data.usage ?? null, finishReason: choice?.finish_reason ?? null };
     } catch (err) {
       if (err.fatal) throw err;
