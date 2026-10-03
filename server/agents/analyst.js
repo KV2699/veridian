@@ -52,7 +52,9 @@ LIMIT — how many to return. "Top 5" means 5. Default 10.
 
 UNANSWERABLE — set it to a short reason, and leave filters empty, when the question asks for something the data does not hold. The data records WHAT HAPPENED and HOW IT SCORED. It does not know revenue, headcount, contact names, who will convert, win probability, or anything about a company not in it. Never invent a filter to make an unanswerable question look answered.
 
-OUTPUT FORMAT — strict: your entire reply is one JSON object. No reasoning, no explanation, no code fence. First character is {.`;
+VAGUE QUESTIONS — "what should I look at", "what's the biggest lead", "anything interesting" are answerable: they mean the highest-scoring records. Return an empty filter set sorted by score with a small limit. Do not mark these unanswerable, and do not deliberate — pick the obvious interpretation and return it.
+
+OUTPUT FORMAT — strict: your entire reply is one JSON object. No reasoning, no explanation, no code fence. First character is {. Answer immediately; do not think step by step.`;
 
 const NARRATE_SYSTEM = `You are a business development analyst briefing a colleague. You are given the EXACT records that answer their question, already filtered and ranked.
 
@@ -77,16 +79,30 @@ export default async function ask(question, deps = {}) {
 
   // ── 1. Translate ─────────────────────────────────────────────────────────
   const [organisations, signals] = await Promise.all([loadOrgs({}), loadSignals()]);
-  const { data: spec } = await translate({
-    tier: 'ultra', temperature: 0, maxTokens: 700, expectKey: 'filters',
-    system: TRANSLATE_SYSTEM,
-    user: buildTranslatePrompt(asked, organisations),
-  });
+
+  // Ultra is a reasoning model: on an open-ended question it thinks at length
+  // before emitting anything. A tight budget truncates it mid-thought, and the
+  // truncation guard then — correctly — refuses the whole reply. The first
+  // version allowed 700 tokens and any question that was not a crisp filter
+  // failed outright with an internal error in the user's face.
+  let spec;
+  try {
+    ({ data: spec } = await translate({
+      tier: 'ultra', temperature: 0, maxTokens: 4000, expectKey: 'filters',
+      system: TRANSLATE_SYSTEM,
+      user: buildTranslatePrompt(asked, organisations),
+    }));
+  } catch (err) {
+    // Never show a model failure to someone asking a business question. Fall
+    // back to the most useful default — their best prospects — and say so.
+    log.warn(`could not translate "${asked}" — ${err.message}`);
+    spec = { entity: 'organisations', filters: {}, sort: 'score', limit: 5, _fallback: true };
+  }
 
   if (spec?.unanswerable) {
     log.step(`question declined: ${spec.unanswerable}`);
     return {
-      answer: `I can't answer that from this data — ${String(spec.unanswerable).trim()}. `
+      answer: `I can't answer that from this data — ${String(spec.unanswerable).trim().replace(/[.\s]+$/, '')}. `
         + 'This register records what happened to each organisation and how it scored, not commercial detail about them.',
       spec, rows: [], total: 0, declined: true,
     };
@@ -97,14 +113,23 @@ export default async function ask(question, deps = {}) {
   log.step(`"${asked}" → ${result.entity}, ${result.applied.join(' · ')} → ${result.total} match, showing ${result.rows.length}`);
 
   // ── 3. Narrate — only what was retrieved ─────────────────────────────────
-  const { text } = await narrate({
-    tier: 'ultra', temperature: 0.3, maxTokens: 900,
-    system: NARRATE_SYSTEM,
-    user: buildNarratePrompt(asked, result),
-  });
+  let text;
+  try {
+    ({ text } = await narrate({
+      tier: 'ultra', temperature: 0.3, maxTokens: 3000,
+      system: NARRATE_SYSTEM,
+      user: buildNarratePrompt(asked, result),
+    }));
+  } catch (err) {
+    // The retrieval succeeded, so there is a real answer to give even if the
+    // model could not write it. Render the rows plainly rather than failing.
+    log.warn(`could not narrate "${asked}" — ${err.message}`);
+    text = plainAnswer(result);
+  }
 
   return {
-    answer: text.trim(),
+    answer: (spec?._fallback ? `I wasn't sure exactly what you meant, so here are your highest-scoring prospects.\n\n` : '') + text.trim(),
+    fallback: Boolean(spec?._fallback),
     spec,
     rows: result.rows,
     total: result.total,
@@ -113,6 +138,21 @@ export default async function ask(question, deps = {}) {
     entity: result.entity,
     model: MODELS.ultra,
   };
+}
+
+// A readable answer built from the rows alone, for when the narrator fails.
+// The retrieval is the valuable part; the prose is a convenience.
+function plainAnswer(result) {
+  if (!result.rows.length) return 'Nothing in the register matches that.';
+  return result.rows
+    .map((r, i) => {
+      const n = forNarration(r, result.entity);
+      const bits = [n.band && `${n.band} ${n.score ?? ''}`.trim(), (n.practice_areas ?? []).join(', '), n.deadline && `closes ${n.deadline}`]
+        .filter(Boolean).join(' · ');
+      const name = n.name ?? n.company;
+      return `${i + 1}. ${n.url ? `[${name}](${n.url})` : name}${bits ? ` — ${bits}` : ''}`;
+    })
+    .join('\n');
 }
 
 function buildTranslatePrompt(question, organisations) {
