@@ -15,6 +15,71 @@ Lab verdicts: **≥70% GOOD · 40–69% MIXED · <40% POOR**
 
 ---
 
+## Round 3 — 3 October 2026 · the result cap, and why it overturns the 30-day change
+
+### The finding
+
+`max_results` is a **ranking cap, not a date cap**. One search with a 28-day
+window returns the 10 results Tavily judges best *across the whole month* — so a
+busy week crowds a quiet one out entirely. Asking four times, once per week,
+gives each week its own top 10.
+
+Measured — same query, same 28 days, one wide search against four weekly slices:
+
+| Query | Wide (1×28d) | Sliced (4×7d) | New | Overlap |
+|---|---|---|---|---|
+| GPU cloud funding | 10 | **38** | 32 | 6/10 |
+| Data centre power | 10 | **24** | 21 | 3/10 |
+| `"has appointed"` AI leader | 10 | **38** | 30 | 8/10 |
+| **Total unique** | **30** | **100** | **83** | — |
+
+**3.3× the unique results for 4× the Tavily credits**, and 83 of the 100 were
+invisible to the wide search. Tavily accepts explicit `start_date` / `end_date`,
+so true slicing works — this is not limited to "last N days".
+
+### ⚠️ PITFALL — this overturns the 30-day window change
+
+Widening the collector windows from 7 to 30 days was reasoned from evidence but
+the reasoning missed a step. **A system that runs weekly is already slicing.**
+
+- **7-day window, run weekly** — each run takes that week's top 10. Four runs a
+  month accumulate four slices: roughly 40 unique results.
+- **30-day window, run weekly** — every run returns the top 10 of the *same*
+  rolling month. Runs overlap heavily, URL dedup discards the repeats, and the
+  month yields closer to 10–15 unique.
+
+The 30-day window helps a **one-off** run and hurts a **recurring** one. The
+weekly cadence was already doing the slicing for free, and widening the window
+took that away.
+
+**Recommendation:** 7 days for scheduled weekly runs; explicit week-by-week
+slicing for backfill, where a month of history is wanted in a single pass. The
+30-day ceiling finding still stands — it is about where Tavily *leaks*, which is
+a separate question from where recall is best.
+
+### 💰 The cost that decides where to use it
+
+Slicing multiplies results, and every result is read by a model downstream.
+31 queries × 10 results = ~310 per run today; sliced, ~1,000. At four results
+per extraction batch and two concurrent calls, that is hours, not minutes.
+
+So: **slice on backfill, where recall is the whole point. Do not slice a weekly
+run — the cadence already does it.**
+
+### 🐞 BUG — Tavily's dates do not parse
+
+Tavily returns RFC-2822: `"Fri, 02 Oct 2026 18:24:26 GMT"`. The collector's
+fallback parser matches `YYYY-MM-DD` only, so it returns **null**.
+
+The model usually supplies its own date, which is why this has mostly been
+invisible — but whenever it does not, the fallback that should rescue the signal
+fails instead. The signal becomes undated, scores **zero urgency points**, drops
+a band, and is auto-flagged for review. 8 of 117 signals in the current log.
+
+One-line fix, not applied: parse with `new Date(v)` and fall back to the regex.
+
+---
+
 ## Round 2 — 3 October 2026 · the quoted-phrase lever
 
 Testing whether quoting an exact verb phrase generalises, after it produced the
@@ -133,3 +198,6 @@ served by the feed collector than by search.
 5. **Avoid abstractions**: guidance, policy, programme, allocation, capacity. They return people discussing the topic.
 6. **Before rewriting a third time, ask whether the event is published at all.** If it is commercially confidential, no wording will find it.
 7. **Watch undated counts separately from usable percentage.** Vendor-heavy topics return undated pages that cannot be scored for urgency.
+8. **`max_results` caps ranking, not dates.** Widening a window does not add results, it exchanges them — and a busy week crowds out a quiet one.
+9. **Let the cadence do the slicing.** A weekly run on a 7-day window accumulates a month of weekly top-10s. A weekly run on a 30-day window re-reads the same month and dedup throws most of it away.
+10. **Slice explicitly only when backfilling.** 3.3× the recall, 4× the credits, and 3.3× the extraction cost — worth it once, not every week.
