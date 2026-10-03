@@ -124,6 +124,35 @@
   .qrow .n { text-align: right; color: var(--dim); }
   .qrow.zero .q, .qrow.zero .n { color: var(--err); }
   .err { color: var(--err); font-size: 12px; margin-top: 8px; font-family: var(--mono); }
+
+  /* Ask panel */
+  .ask-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .ask-row input {
+    flex: 1; min-width: 0; background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 8px; padding: 11px 13px; color: var(--text); font: inherit; font-size: 14px;
+  }
+  .ask-row input:focus { outline: none; border-color: var(--accent); }
+  .ask-row button { padding: 11px 15px; }
+  .mic { background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); font-size: 16px; }
+  .mic.on { background: var(--err); color: #fff; border-color: var(--err); animation: pulse 1.1s ease-in-out infinite; }
+  .mic[hidden] { display: none !important; }
+
+  .examples { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .examples button {
+    background: transparent; border: 1px solid var(--line); color: var(--muted);
+    border-radius: 99px; padding: 5px 11px; font-size: 12px; font-weight: 500;
+  }
+  .examples button:hover { border-color: var(--accent); color: #c7d2fe; }
+
+  .turn { border-left: 2px solid var(--line); padding: 2px 0 2px 12px; margin-bottom: 16px; }
+  .turn .q { color: var(--muted); font-size: 13px; margin-bottom: 7px; }
+  .turn .q::before { content: '❯ '; color: var(--accent); }
+  .turn .a { font-size: 14px; line-height: 1.65; }
+  .turn .a ol, .turn .a ul { padding-left: 20px; margin: 6px 0; }
+  .turn .a li { margin: 5px 0; }
+  .turn .a p { margin: 6px 0; }
+  .turn .meta { font-family: var(--mono); font-size: 10.5px; color: var(--dim); margin-top: 8px; }
+  .turn.thinking .a { color: var(--dim); }
 </style>
 </head>
 <body>
@@ -187,6 +216,17 @@
   </aside>
 
   <section>
+    <div class="card" style="margin-bottom:18px">
+      <h2>Ask the register</h2>
+      <div class="ask-row">
+        <input id="q" placeholder="e.g. top 5 multi-service prospects" autocomplete="off">
+        <button class="mic" id="mic" title="Ask by voice" hidden>🎤</button>
+        <button id="askBtn">Ask</button>
+      </div>
+      <div class="examples" id="examples"></div>
+      <div id="answers"></div>
+    </div>
+
     <div class="briefing" id="briefing">
       <div class="empty">Loading…</div>
     </div>
@@ -482,6 +522,102 @@ $('run').onclick = async () => {
 };
 
 $('refresh').onclick = () => { logLine('refreshed'); refresh(); };
+
+// ── Ask the register ────────────────────────────────────────────────────────
+// Retrieval happens on the server, in code. This only sends the question and
+// renders what comes back, so nothing here can invent a company.
+const EXAMPLES = [
+  'top 5 multi-service prospects',
+  'what is closing in the next 14 days?',
+  'which accounts have gone quiet?',
+  'critical prospects in compute',
+  'what was flagged for review?',
+];
+
+let asking = false;
+
+$('examples').innerHTML = EXAMPLES.map((e) => `<button>${esc(e)}</button>`).join('');
+for (const b of $('examples').querySelectorAll('button')) {
+  b.onclick = () => { $('q').value = b.textContent; askQuestion(); };
+}
+
+async function askQuestion() {
+  const question = $('q').value.trim();
+  if (!question || asking) return;
+  asking = true;
+  $('askBtn').disabled = true;
+  $('q').value = '';
+
+  const turn = document.createElement('div');
+  turn.className = 'turn thinking';
+  turn.innerHTML = `<div class="q">${esc(question)}</div><div class="a">Searching the register…</div>`;
+  $('answers').prepend(turn);
+
+  try {
+    const res = await fetch('/api/ask', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.ok === false) throw new Error(data.error || 'failed');
+
+    turn.className = 'turn';
+    turn.innerHTML = `<div class="q">${esc(question)}</div>`
+      + `<div class="a">${renderMarkdown(data.answer || '')}</div>`
+      + `<div class="meta">${esc(data.entity ?? '')} · ${esc((data.applied ?? []).join(' · '))}`
+      + ` · ${data.total ?? 0} matched${data.truncated ? `, showing ${data.rows?.length}` : ''}</div>`;
+    speak(data.answer);
+  } catch (err) {
+    turn.className = 'turn';
+    turn.innerHTML = `<div class="q">${esc(question)}</div><div class="a" style="color:var(--err)">${esc(err.message)}</div>`;
+  } finally {
+    asking = false;
+    $('askBtn').disabled = false;
+  }
+}
+
+$('askBtn').onclick = askQuestion;
+$('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') askQuestion(); });
+
+// ── Voice ───────────────────────────────────────────────────────────────────
+// The browser listens and speaks; every piece of reasoning still happens on
+// Nebius. Nebius serves no speech model, so this is the only way to do voice
+// without adding a third provider — and it keeps the whole AI path on Nebius.
+// Typing always works; voice is an alternative, never a requirement.
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recog = null, listening = false;
+
+if (SR) {
+  $('mic').hidden = false;
+  recog = new SR();
+  recog.lang = 'en-GB';
+  recog.interimResults = false;
+  recog.maxAlternatives = 1;
+
+  recog.onresult = (e) => { $('q').value = e.results[0][0].transcript; askQuestion(); };
+  recog.onerror = () => { listening = false; $('mic').classList.remove('on'); };
+  recog.onend = () => { listening = false; $('mic').classList.remove('on'); };
+
+  $('mic').onclick = () => {
+    if (listening) { recog.stop(); return; }
+    // Stop any answer still being read aloud, or it gets transcribed back.
+    window.speechSynthesis?.cancel();
+    try { recog.start(); listening = true; $('mic').classList.add('on'); } catch { /* already running */ }
+  };
+}
+
+function speak(text) {
+  if (!listening || !window.speechSynthesis || !text) return;   // only speak back to a spoken question
+  const plain = String(text)
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')   // links read as their label, not the url
+    .replace(/[*_`#>]/g, '')
+    .replace(/\s+/g, ' ')
+    .slice(0, 700);
+  const u = new SpeechSynthesisUtterance(plain);
+  u.lang = 'en-GB';
+  u.rate = 1.05;
+  window.speechSynthesis.speak(u);
+}
 
 (async () => {
   const s = await refresh(false);

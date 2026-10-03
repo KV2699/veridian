@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { runPipeline, isRunning, agentList, isoWeek } from './pipeline.js';
 import { loadProfile, listProfiles } from './profiles/index.js';
 import { listRegister, registerStats } from './lib/register.js';
+import ask from './agents/analyst.js';
 import { getBriefings, getSignals, getRuns } from './lib/store.js';
 import { MODELS, listModels } from './lib/nebius.js';
 import { log } from './lib/log.js';
@@ -133,6 +134,19 @@ app.get('/api/profiles', (_req, res) => {
         ({ key, name, focus, queries, windowDays })),
       scoring: active.scoring,
     } });
+  } catch (err) { fail(res, err); }
+});
+
+// Ask the register a question in plain English. Retrieval happens in code;
+// Nemotron translates the question and narrates the rows it is handed, so an
+// answer can always be traced to the records behind it.
+app.post('/api/ask', async (req, res) => {
+  const question = String(req.body?.question ?? '').trim();
+  if (!question) return res.status(400).json({ ok: false, error: 'Ask a question.' });
+  if (question.length > 500) return res.status(400).json({ ok: false, error: 'Question is too long.' });
+  try {
+    const result = await ask(question);
+    res.json({ ok: true, question, ...result });
   } catch (err) { fail(res, err); }
 });
 

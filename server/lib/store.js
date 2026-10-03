@@ -10,7 +10,15 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-export const DATA_DIR = join(ROOT, 'data');
+
+// A dry run writes to its own directory. It used to share the live store, and
+// its fixtures accumulated there alongside real signals — seven of them, one
+// carrying a deadline, which made it the system's answer to "what is closing in
+// the next 14 days?". A demo artefact presented as a real tender is the worst
+// kind of wrong, because it is confidently specific.
+export const DATA_DIR = process.env.DRY_RUN === 'true'
+  ? join(ROOT, 'data', 'dry-run')
+  : join(ROOT, 'data');
 
 export const FILES = {
   briefings: join(DATA_DIR, 'briefings.json'),
