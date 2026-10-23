@@ -652,7 +652,7 @@ by something breaking:
 | 6 | Record the 3-minute video | You + Claude | Not started — **required** |
 | 7 | Write the Devpost description | You + Claude | Not started — **required** |
 | 8 | Write the tooling feedback | Claude | Material exists |
-| 9 | Redesign the dashboard from your Figma | Claude, once you share it | **Reference built** — a populated NVIDIA-configuration console to screenshot for the designer: https://claude.ai/code/artifact/d41becf6-c0f5-4eb0-9277-4d4d0fcfb045 |
+| 9 | ~~Redesign the dashboard from your Figma~~ | Claude | **Done 23 Oct** — built from the published Figma at need-shed-66175757.figma.site |
 
 ### What the video should show
 
@@ -739,6 +739,52 @@ market will know better:
 file), the scoring is deterministic arithmetic rather than a dial in a settings
 screen, and **nobody else lets you declare that an event means the opposite thing
 for your business.** That last one is the claim to lead with.
+
+---
+
+## Part 9b — What the interface looks like, and how someone uses it
+
+The dashboard was rebuilt on 23 October from the published Figma design. Four
+things make the journey work:
+
+**1. The top bar answers "whose business is this?"** The configuration selector
+sits beside the wordmark, because switching configuration is not a filter — it
+is a different business, with its own register, its own briefings and its own
+reading of the same news.
+
+**2. `+ Add a business` sits right next to it.** That is the answer to "would
+this work for mine?", and it is one click from anywhere.
+
+**3. A numbered workflow strip** — *01 Overview, what changed · 02 Signals,
+where to act · 03 Proof, why it scored · 04 Ask, query the register*. Someone
+seeing it for the first time can follow the numbers. Someone who knows where
+they are going uses the tabs instead. Same journey, described twice.
+
+**4. It opens with a sentence, not a chart.** *"Good afternoon. Here is what
+changed."* Then the grounding badge, then four numbers, then the briefing.
+
+### Three design decisions worth knowing
+
+**No grey text anywhere.** The Figma sets secondary copy in mid-grey. Every word
+here is either the near-black ink or the green label colour, and hierarchy comes
+from **weight and size** instead. Faded type is the quickest way to make an
+interface look cheap and the fastest way to fail an accessibility check.
+
+**The page ground is a colour.** Cards are white; the surface they sit on is a
+soft neutral, so panels separate by value and a hairline rather than being white
+boxes floating on grey.
+
+**Colour means one thing each.** Green is *verified / actionable*. Lime is *the
+system is working*. Blue is *you can click this*. Amber is *the argument
+against*. Rust is *act now*. Nothing is coloured decoratively — so the colour
+itself tells you something before you have read a word.
+
+### On a phone
+
+The briefing leads; the instrument panels follow. The workflow strip scrolls
+sideways, the configuration selector and **Run pipeline** share one row, and the
+question box moves below the briefing — because on a phone you read first and
+ask second.
 
 ---
 

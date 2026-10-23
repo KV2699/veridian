@@ -11,6 +11,67 @@ except where noted.
 
 ---
 
+## 23 October — sixth batch: the interface, built from the Figma
+
+### Built from the published design
+
+The dashboard was rebuilt against the published Figma
+(`need-shed-66175757.figma.site`), taking its structure, its tokens and its
+journey: a configuration selector beside the wordmark, `+ Add a business` next
+to it, four views (Intelligence / Register / Briefings / Ask), and a numbered
+workflow strip — *01 Overview, what changed · 02 Signals, where to act ·
+03 Proof, why it scored · 04 Ask, query the register*.
+
+Tokens lifted exactly: ink `#171A1C`, lime `#D7FF28`, blue `#1557A0`, rust
+`#8D3E24`, amber `#975D00`, with Space Grotesk, Inter and IBM Plex Mono.
+
+**Two deliberate departures, both asked for:**
+
+- **No grey text.** The Figma sets secondary copy in `#6A7074`. Here every word
+  is the ink or the green label colour, and hierarchy comes from weight and
+  size. Grey type fails contrast on exactly the people who need the secondary
+  information, and reads as unfinished rather than subordinate.
+- **The page ground is a colour.** Cards are white; the surface beneath them is
+  a soft neutral, so panels separate by value and a hairline instead of being
+  white boxes on grey.
+
+### New in the interface
+
+- **Signal cards** rendered from the signal log rather than the briefing prose,
+  so each carries its own band, score, age, practice areas and counter-reading
+- **Click a signal and the right rail explains its score** — the four factors,
+  their bars, and the total. The arithmetic is the product's proof, so it is
+  one click from any row
+- **A grounding badge** in the greeting: every claim source-checked
+- **Running on** — the two Nemotron tiers, Token Factory, Tavily, the schedule
+- `?prospects=true` on `/api/signals` applies the register's guards, so a
+  country never appears as though it were an account. The unfiltered log stays
+  the audit record
+
+### Mobile
+
+The briefing leads and the instrument panels follow. The workflow strip scrolls
+sideways, the selector and **Run pipeline** share a row, and the question box
+sits below the briefing — on a phone you read first and ask second.
+
+### Three identical self-inflicted bugs, and the rule that ends them
+
+Scripted edits that replace everything between `function A` and `function B`
+broke the file three times: `loadRejections` and `drawBars` each declared
+twice, and `drawProfiles` deleted outright because it happened to sit in the
+gap between two anchors.
+
+Each one meant the browser parsed nothing and every panel read "Loading…"
+forever — and the reported error, *"Unexpected end of input"*, points at the
+last line of the file rather than the fault. The `drawProfiles` deletion was
+worse: the file parsed, the page loaded, and the only symptom was a selector
+that never populated.
+
+**`node --check` on the extracted script catches all three in seconds.** It is
+now the step after any scripted edit to a code file.
+
+---
+
 ## 23 October — fifth batch: Veridian, and configuring itself from the interface
 
 ### The product is now Veridian

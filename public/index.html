@@ -1,322 +1,630 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Veridian</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Verified signal intelligence — an autonomous BD intelligence agent on NVIDIA Nemotron and Nebius Token Factory.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap">
 <style>
+  /* ═══ VERIDIAN ═════════════════════════════════════════════════════════
+     Verified Signal Intelligence.
+
+     Built to the published Figma. Two deliberate departures from it, both
+     asked for:
+
+     1. NO GREY TEXT. The Figma sets secondary copy in #6A7074. Here every
+        word is the ink or the green label colour, and hierarchy comes from
+        WEIGHT and SIZE instead. Faded type is the quickest way to make an
+        interface look cheap and to fail a contrast check.
+     2. THE PAGE GROUND IS NOT WHITE. Cards are white; the surface they sit
+        on is a soft neutral, so panels separate by value and a hairline.
+     ══════════════════════════════════════════════════════════════════════ */
   :root {
-    --bg: #0f172a; --panel: #16203a; --panel-2: #1c2746; --line: #273458;
-    --text: #e8ecf7; --muted: #94a3c4; --dim: #64748b;
-    --accent: #6366f1; --accent-soft: rgba(99,102,241,.14);
-    --ok: #34d399; --warn: #fbbf24; --err: #f87171;
-    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --ink: #171A1C;
+    --ink-soft: #2C3134;        /* same family, for lighter weights */
+    --label: #4A5155;
+    --ground: #F2F3F1;
+    --card: #FFFFFF;
+    --card-2: #F7F8F7;
+    --line: #E3E5E3;
+    --line-soft: #EDEFED;
+
+    --lime: #D7FF28;
+    --lime-deep: #A8C800;
+    --green: #76B900;
+    --green-wash: #EEF8D8;
+    --green-ink: #46670A;
+    --blue: #1557A0;
+    --blue-wash: #E4EDF7;
+    --critical: #8D3E24;
+    --critical-wash: #F8E9E2;
+    --amber: #975D00;
+    --amber-wash: #FBF0DC;
+
+    --display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+
+    --r: 10px;
+    --r-sm: 7px;
+    --shadow: 0 1px 2px rgba(23,26,28,.05), 0 10px 28px -16px rgba(23,26,28,.18);
+    --pad: clamp(14px, 2.4vw, 26px);
   }
+
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
   body {
-    margin: 0; background: var(--bg); color: var(--text);
-    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+    margin: 0; background: var(--ground); color: var(--ink);
+    font-family: var(--sans); font-size: 14.5px; line-height: 1.55;
     -webkit-font-smoothing: antialiased;
   }
-  a { color: #a5b4fc; text-decoration: none; }
+  h1, h2, h3, h4 { margin: 0; font-family: var(--display); letter-spacing: -.015em; text-wrap: balance; }
+  a { color: var(--blue); text-decoration: none; font-weight: 500; }
   a:hover { text-decoration: underline; }
+  :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
+  button { font: inherit; font-family: var(--sans); cursor: pointer; }
 
+  .lbl, .label {
+    font-family: var(--mono); font-size: 10px; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--label);
+  }
+  .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  /* ── Top bar ───────────────────────────────────────────────────────── */
   header {
-    border-bottom: 1px solid var(--line); padding: 20px 28px;
-    display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
-    background: linear-gradient(180deg, #16203a, #0f172a);
-    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap;
+    padding: 11px var(--pad); background: var(--card);
+    border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 30;
   }
-  .brand { display: flex; align-items: baseline; gap: 10px; }
-  .brand h1 { margin: 0; font-size: 19px; letter-spacing: -.2px; }
-  .brand span { color: var(--dim); font-size: 12px; font-family: var(--mono); }
-  .spacer { flex: 1; }
-  .meta { color: var(--muted); font-size: 12.5px; font-family: var(--mono); text-align: right; line-height: 1.5; }
-
-  button {
-    font: 600 14px/1 inherit; color: #fff; background: var(--accent);
-    border: 0; border-radius: 8px; padding: 11px 18px; cursor: pointer;
-    transition: filter .15s, opacity .15s;
+  /* The header carries a lot: identity, configuration, four views and two
+     actions. Chrome goes before controls do. */
+  @media (max-width: 1540px) { .cfgbox .lbl { display: none; } }
+  @media (max-width: 1360px) { .brand .tagline { display: none; } }
+  @media (max-width: 1180px) { nav.tabs button { padding: 7px 9px; font-size: 13px; } }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand h1 {
+    font-size: 17px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .02em; display: flex; align-items: baseline;
   }
-  button:hover:not(:disabled) { filter: brightness(1.12); }
-  button:disabled { opacity: .5; cursor: not-allowed; }
-  button.ghost { background: transparent; border: 1px solid var(--line); color: var(--muted); }
-
-  main { display: grid; grid-template-columns: 310px 1fr; gap: 24px; padding: 24px 28px 64px; max-width: 1480px; }
-  @media (max-width: 940px) { main { grid-template-columns: 1fr; } }
-
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-bottom: 18px; }
-  .card h2 { margin: 0 0 14px; font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
-
-  /* Agent status panel */
-  .agent { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(39,52,88,.5); font-size: 13.5px; }
-  .agent:last-child { border-bottom: 0; }
-  .agent .n { font-family: var(--mono); color: var(--dim); font-size: 11px; width: 16px; flex: none; }
-  .agent .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .agent .t { font-family: var(--mono); font-size: 11px; color: var(--dim); flex: none; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); flex: none; }
-  .dot.success { background: var(--ok); }
-  .dot.error { background: var(--err); }
-  .dot.running { background: var(--accent); animation: pulse 1s ease-in-out infinite; }
-  @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.8); } }
-  .tier { font-family: var(--mono); font-size: 9.5px; padding: 2px 5px; border-radius: 4px; background: var(--accent-soft); color: #a5b4fc; flex: none; }
-
-  /* Signal bar chart */
-  .bars { display: grid; gap: 10px; }
-  .bar-row { display: grid; grid-template-columns: 76px 1fr 28px; align-items: center; gap: 10px; font-size: 12.5px; }
-  .bar-row .lbl { color: var(--muted); }
-  .bar-track { display: block; height: 7px; background: var(--panel-2); border-radius: 4px; overflow: hidden; }
-  /* display:block — an inline span ignores width percentages and fixed height. */
-  .bar-fill { display: block; height: 100%; min-width: 2px; background: var(--accent); border-radius: 4px; transition: width .4s ease; }
-  .bar-row .val { font-family: var(--mono); color: var(--text); text-align: right; }
-
-  /* History */
-  .hist { display: flex; flex-direction: column; gap: 2px; }
-  .hist button {
-    background: transparent; border: 0; border-radius: 7px; padding: 9px 10px;
-    text-align: left; color: var(--muted); font-weight: 500; font-size: 13.5px;
-    display: flex; justify-content: space-between; gap: 8px; width: 100%;
+  .brand h1::after {
+    content: ''; width: 5px; height: 5px; border-radius: 50%;
+    background: var(--green); margin-left: 3px;
   }
-  .hist button:hover { background: var(--panel-2); color: var(--text); }
-  .hist button[aria-current="true"] { background: var(--accent-soft); color: #c7d2fe; font-weight: 600; }
-  .hist .c { font-family: var(--mono); font-size: 11px; color: var(--dim); flex: none; }
+  .brand .tagline { padding-left: 11px; border-left: 1px solid var(--line); }
 
-  /* Briefing */
-  .briefing { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 32px 38px; }
-  .briefing h1 { font-size: 25px; margin: 0 0 6px; letter-spacing: -.4px; }
+  .cfgbox { display: flex; align-items: center; gap: 9px; }
+  .cfgbox .lbl { white-space: nowrap; }
+  select#profile {
+    font: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink);
+    padding: 7px 30px 7px 11px; border: 1px solid var(--line); border-radius: var(--r-sm);
+    background: var(--card-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23171A1C' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 11px center;
+    appearance: none; cursor: pointer; max-width: 210px;
+  }
+  .spacer { flex: 1 1 20px; }
+
+  nav.tabs { display: flex; gap: 2px; }
+  nav.tabs button {
+    background: transparent; border: 0; padding: 7px 12px; border-radius: var(--r-sm);
+    font-size: 13.5px; font-weight: 500; color: var(--ink);
+  }
+  nav.tabs button:hover { background: var(--card-2); }
+  nav.tabs button[aria-selected="true"] { background: var(--ink); color: #fff; font-weight: 600; }
+
+  .btn {
+    font-size: 13.5px; font-weight: 600; padding: 8px 15px; border-radius: var(--r-sm);
+    border: 1px solid var(--line); background: var(--card); color: var(--ink);
+  }
+  .btn:hover { background: var(--card-2); }
+  .btn.primary {
+    background: var(--lime); border-color: var(--lime-deep); color: var(--ink); font-weight: 700;
+    display: inline-flex; align-items: center; gap: 7px;
+  }
+  .btn.primary::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--ink); }
+  .btn.primary:hover { background: #E3FF5C; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .btn.dashed { border-style: dashed; }
+
+  /* ── Workflow strip — the journey, numbered ────────────────────────── */
+  .flow {
+    display: flex; gap: 0; align-items: stretch; flex-wrap: wrap;
+    background: var(--card); border-bottom: 1px solid var(--line);
+    padding: 0 var(--pad);
+  }
+  .flow .flow-lbl { display: flex; align-items: center; padding: 10px 20px 10px 0; }
+  .flow button {
+    display: flex; align-items: baseline; gap: 9px; background: transparent;
+    border: 0; border-bottom: 2px solid transparent; padding: 12px 18px;
+    text-align: left; color: var(--ink);
+  }
+  .flow button .n {
+    font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--label);
+  }
+  .flow button .t { font-size: 13.5px; font-weight: 600; }
+  .flow button .s { font-size: 12px; font-weight: 400; }
+  .flow button:hover { background: var(--card-2); }
+  .flow button[aria-selected="true"] { border-bottom-color: var(--green); }
+  .flow button[aria-selected="true"] .n { color: var(--green-ink); }
+
+  /* ── Layout ────────────────────────────────────────────────────────── */
+  main {
+    display: grid; gap: 16px; align-items: start;
+    grid-template-columns: minmax(235px, 275px) minmax(0, 1fr) minmax(250px, 300px);
+    padding: 16px var(--pad) 56px; max-width: 1680px; margin: 0 auto;
+  }
+  .rail { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .centre { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  @media (max-width: 1240px) {
+    main { grid-template-columns: minmax(0, 1fr) minmax(250px, 290px); }
+    .rail.left { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 900px) {
+    main { grid-template-columns: minmax(0, 1fr); }
+    .rail.left { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--r); box-shadow: var(--shadow); overflow: hidden;
+  }
+  .card > h2, .card > .head {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+    padding: 13px 15px 11px; font-family: var(--mono); font-size: 10px;
+    font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--label);
+  }
+  .card > h2 .c, .card > .head .c { font-size: 12px; color: var(--ink); font-weight: 700; }
+  .card > h2 + *, .card > .head + * { border-top: 1px solid var(--line-soft); }
+  .pad { padding: 14px 15px; }
+
+  /* ── Greeting + grounding ──────────────────────────────────────────── */
+  .greet { padding: 22px var(--pad) 0; }
+  .greet .when { margin-bottom: 8px; }
+  .greet-row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  .greet h2 { font-size: clamp(21px, 2.5vw, 29px); font-weight: 700; flex: 1; min-width: 240px; }
+  .ground-badge {
+    display: inline-flex; flex-direction: column; gap: 2px;
+    background: var(--green-wash); border: 1px solid var(--green);
+    border-radius: var(--r-sm); padding: 8px 13px;
+  }
+  .ground-badge .t { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .08em; color: var(--green-ink); }
+  .ground-badge .s { font-family: var(--mono); font-size: 10px; font-weight: 500; color: var(--ink); }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line-soft); }
+  @media (max-width: 620px) { .stats { grid-template-columns: 1fr 1fr; } }
+  .stat { background: var(--card); padding: 14px 15px; }
+  .stat .k { margin-bottom: 4px; }
+  .stat .v { font-family: var(--mono); font-size: 29px; font-weight: 600; letter-spacing: -.03em; line-height: 1; }
+  .stat .s { font-size: 12px; font-weight: 400; margin-top: 5px; }
+  .stat.is-critical .v { color: var(--critical); }
+  .stat.is-multi .v { color: var(--green-ink); }
+
+  /* ── Signal cards ──────────────────────────────────────────────────── */
+  .sig { padding: 17px 15px; border-bottom: 1px solid var(--line-soft); }
+  .sig:last-child { border-bottom: 0; }
+  .sig .top { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-bottom: 7px; }
+  .sig .co { font-size: 13px; font-weight: 700; }
+  .sig h3 {
+    font-size: 16.5px; font-weight: 600; margin-bottom: 6px;
+    /* A signal type can arrive as a full sentence from the extractor; two
+       lines is a headline, four is a paragraph wearing a headline's clothes. */
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .sig p { margin: 0; font-size: 14px; font-weight: 400; max-width: 70ch; }
+  .sig .src { font-family: var(--mono); font-size: 11px; margin-top: 9px; display: inline-block; }
+  .sig .areas { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 9px; }
+
+  .pill {
+    font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: .07em;
+    text-transform: uppercase; padding: 3px 7px; border-radius: 4px; white-space: nowrap;
+  }
+  .pill.critical { background: var(--critical-wash); color: var(--critical); }
+  .pill.high     { background: var(--amber-wash); color: var(--amber); }
+  .pill.medium   { background: var(--blue-wash); color: var(--blue); }
+  .pill.low      { background: var(--card-2); color: var(--label); }
+  .pill.plain    { background: var(--card-2); color: var(--label); }
+  .pill.ok       { background: var(--green-wash); color: var(--green-ink); }
+  .chip {
+    font-family: var(--mono); font-size: 10px; font-weight: 600; padding: 2px 7px;
+    border-radius: 4px; background: var(--card-2); color: var(--label); border: 1px solid var(--line-soft);
+  }
+  .chip.ms { background: var(--green-wash); color: var(--green-ink); border-color: transparent; }
+
+  .counter {
+    display: block; margin-top: 9px; padding: 8px 0 8px 12px;
+    border-left: 3px solid var(--amber); font-size: 13px; font-weight: 400; max-width: 66ch;
+  }
+  .counter b {
+    display: block; font-family: var(--mono); font-size: 9.5px; font-weight: 700;
+    letter-spacing: .08em; text-transform: uppercase; color: var(--amber); margin-bottom: 2px;
+  }
+
+  /* ── Briefing prose ────────────────────────────────────────────────── */
+  .briefing { padding: 20px 15px; }
+  .briefing h1 { font-size: clamp(19px, 2.1vw, 25px); font-weight: 700; line-height: 1.25; margin-bottom: 12px; max-width: 30ch; }
   .briefing h2 {
-    font-size: 12px; letter-spacing: .09em; text-transform: uppercase; color: #a5b4fc;
-    margin: 32px 0 12px; padding-bottom: 7px; border-bottom: 1px solid var(--line); font-weight: 700;
+    font-size: 10px; font-family: var(--mono); font-weight: 600; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--label); margin: 26px 0 9px;
+    padding-bottom: 7px; border-bottom: 1px solid var(--line-soft);
   }
-  .briefing h1 + h2 { margin-top: 26px; }
-  .briefing ul, .briefing ol { padding-left: 22px; margin: 0; }
-  .briefing li { margin: 9px 0; }
-  .briefing p { margin: 10px 0; }
-  .briefing code { font-family: var(--mono); font-size: .88em; background: var(--panel-2); padding: 2px 5px; border-radius: 4px; }
-  .briefing em { color: var(--warn); font-style: normal; }
+  .briefing h3 { font-size: 15.5px; font-weight: 600; margin: 16px 0 6px; }
+  .briefing p, .briefing li { font-size: 14.5px; max-width: 70ch; }
+  .briefing ul { padding-left: 19px; }
+  .briefing li { margin-bottom: 9px; }
+  .briefing li::marker { color: var(--green); }
+  .briefing em { font-style: normal; font-weight: 600; color: var(--amber); }
 
-  .pill { display: inline-block; font-family: var(--mono); font-size: 11px; padding: 3px 9px; border-radius: 99px; background: var(--panel-2); color: var(--muted); margin-right: 6px; }
-  .empty { color: var(--dim); padding: 40px 0; text-align: center; }
-
-  /* Onboarding — the answer to "would this work for MY business?" */
-  .sheet { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: grid; place-items: start center; padding: 40px 16px; overflow-y: auto; z-index: 50; }
-  .sheet-inner { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; width: min(620px, 100%); padding: 22px 24px 24px; }
-  .sheet h2 { margin: 0 0 4px; font-size: 17px; }
-  .sheet .sub { color: var(--muted); font-size: 12.5px; margin-bottom: 18px; }
-  .field { margin-bottom: 15px; }
-  .field label { display: block; font-size: 12.5px; font-weight: 500; margin-bottom: 5px; }
-  .field .hint { font-size: 11.5px; color: var(--dim); margin-bottom: 6px; line-height: 1.45; }
-  .field input, .field textarea {
-    width: 100%; padding: 9px 11px; border-radius: 8px; font: inherit; font-size: 13px;
-    background: var(--panel-2); border: 1px solid var(--line); color: var(--text); resize: vertical;
+  /* ── Rails ─────────────────────────────────────────────────────────── */
+  .agent { display: flex; align-items: center; gap: 9px; padding: 8px 15px; border-bottom: 1px solid var(--line-soft); }
+  .agent:last-child { border-bottom: 0; }
+  .agent .n { font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--label); min-width: 14px; }
+  .agent .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--line); flex: none; }
+  .agent .dot.success { background: var(--green); }
+  .agent .dot.error { background: var(--critical); }
+  .agent .dot.running { background: var(--lime-deep); animation: pulse 1.1s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .35; } }
+  .agent .nm { flex: 1; min-width: 0; font-size: 13px; font-weight: 500; }
+  .agent .t { font-family: var(--mono); font-size: 10.5px; font-weight: 500; white-space: nowrap; }
+  .tier {
+    font-family: var(--mono); font-size: 8.5px; font-weight: 700; letter-spacing: .08em;
+    padding: 2px 5px; border-radius: 3px; background: var(--ink); color: #fff;
   }
-  .field textarea { min-height: 112px; line-height: 1.55; }
-  .sheet-actions { display: flex; gap: 9px; justify-content: flex-end; margin-top: 18px; }
-  .buildlog { font-family: var(--mono); font-size: 11.5px; color: var(--muted); max-height: 230px; overflow-y: auto; margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
-  .buildlog div { padding: 3px 0; }
-  .buildlog div:last-child { color: var(--text); }
-  .warnbar { background: var(--panel-2); border-left: 2px solid #d99a28; padding: 9px 12px; font-size: 12px; color: var(--muted); margin-bottom: 12px; border-radius: 0 6px 6px 0; }
+  .tier.free { background: var(--green-wash); color: var(--green-ink); }
 
-  /* Configuration selector. Two profiles ship; the switch is the proof that
-     one engine serves both, so it is in the header rather than buried. */
-  .cfg { display: flex; align-items: center; gap: 8px; }
-  .cfg select {
-    font-family: inherit; font-size: 12.5px; padding: 6px 10px; border-radius: 8px;
-    background: var(--panel-2); color: var(--text); border: 1px solid var(--line); cursor: pointer;
-  }
-  .cfg .measures { font-family: var(--mono); font-size: 10.5px; color: var(--dim); }
-  .rej { font-size: 12px; border-bottom: 1px solid var(--line); padding: 7px 0; }
+  .org { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 9px 15px; border-bottom: 1px solid var(--line-soft); align-items: baseline; }
+  .org:last-child { border-bottom: 0; }
+  .org .nm { font-size: 13px; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+  .org .sc { font-family: var(--mono); font-size: 14px; font-weight: 600; }
+  .org .sub { grid-column: 1 / -1; font-family: var(--mono); font-size: 9.5px; font-weight: 500; letter-spacing: .05em; text-transform: uppercase; color: var(--label); }
+  .org.critical .sc { color: var(--critical); }
+  .org.high .sc { color: var(--amber); }
+  .org.medium .sc { color: var(--blue); }
+
+  .bandcounts { display: flex; gap: 14px; padding: 11px 15px; border-bottom: 1px solid var(--line-soft); }
+  .bandcounts span { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; }
+  .bandcounts .b { font-size: 13px; font-weight: 700; }
+
+  /* ── Score breakdown ───────────────────────────────────────────────── */
+  .bd { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; }
+  .bd .f { font-size: 12.5px; font-weight: 500; }
+  .bd .p { font-family: var(--mono); font-size: 12.5px; font-weight: 600; text-align: right; }
+  .bd .trk { grid-column: 1 / -1; height: 3px; background: var(--line-soft); border-radius: 2px; overflow: hidden; margin: 1px 0 9px; }
+  .bd .trk i { display: block; height: 100%; background: var(--green); }
+  .bd .tot { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 2px; font-weight: 700; font-size: 13px; }
+  .bd .tot-p { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 2px; font-family: var(--mono); font-weight: 700; font-size: 17px; text-align: right; }
+
+  .rej { padding: 10px 15px; border-bottom: 1px solid var(--line-soft); }
   .rej:last-child { border-bottom: 0; }
-  .rej .code { font-family: var(--mono); font-size: 10px; letter-spacing: .04em; color: var(--muted); background: var(--panel-2); padding: 2px 6px; border-radius: 4px; }
-  .rej .why { color: var(--dim); font-size: 11.5px; margin-top: 3px; }
-  .counter { font-size: 12px; color: var(--muted); border-left: 2px solid var(--line); padding-left: 9px; margin-top: 6px; }
-  .log { font-family: var(--mono); font-size: 11.5px; color: var(--muted); max-height: 136px; overflow-y: auto; white-space: pre-wrap; }
+  .code {
+    font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .07em;
+    text-transform: uppercase; padding: 2px 6px; border-radius: 3px;
+    background: var(--card-2); color: var(--label);
+  }
+  .code.ungrounded { background: var(--critical-wash); color: var(--critical); }
+  .rej .nm { font-size: 13px; font-weight: 600; margin-left: 7px; }
+  .rej .why { font-size: 12px; font-weight: 400; margin-top: 3px; }
 
-  /* Yield funnel + diagnostics */
-  .funnel { display: grid; gap: 6px; font-size: 12px; margin-bottom: 14px; }
-  .fstep { display: grid; grid-template-columns: 74px 1fr 34px; align-items: center; gap: 8px; }
-  .fstep .lbl { color: var(--muted); }
-  .fstep .val { font-family: var(--mono); text-align: right; }
-  .ftrack { display: block; height: 6px; background: var(--panel-2); border-radius: 3px; overflow: hidden; }
-  .ffill { display: block; height: 100%; min-width: 2px; background: var(--accent); border-radius: 3px; }
-  .drop { color: var(--err); }
+  .fstep, .bar-row { display: grid; grid-template-columns: 86px 1fr 40px; gap: 9px; align-items: center; }
+  .ftrack, .bar-track { height: 13px; background: var(--card-2); border: 1px solid var(--line-soft); border-radius: 3px; overflow: hidden; }
+  .ffill, .bar-fill { display: block; height: 100%; background: var(--blue); }
+  .fstep:last-of-type .ffill { background: var(--green); }
+  .fstep .val, .bar-row .val { font-family: var(--mono); font-size: 11.5px; font-weight: 600; text-align: right; }
+  .fstep .lbl, .bar-row .lbl { letter-spacing: .04em; font-size: 10px; }
+  .funnel, .bars { display: flex; flex-direction: column; gap: 8px; padding: 14px 15px; }
 
-  .finding { border-left: 2px solid var(--line); padding: 7px 0 7px 10px; margin-bottom: 9px; font-size: 12.5px; }
-  .finding.high { border-left-color: var(--err); }
-  .finding.medium { border-left-color: var(--warn); }
-  .finding.low { border-left-color: var(--dim); }
-  .finding .where { font-family: var(--mono); font-size: 10.5px; color: var(--dim); display: block; margin-bottom: 3px; word-break: break-word; }
-  .finding .cause { color: var(--text); }
-  .finding .fix { color: var(--muted); margin-top: 4px; display: block; font-size: 12px; }
-  .allgood { color: var(--ok); font-size: 12.5px; }
+  .finding { padding: 11px 15px; border-bottom: 1px solid var(--line-soft); border-left: 3px solid var(--amber); font-size: 12.5px; }
+  .finding:last-child { border-bottom: 0; }
+  .finding .where { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--label); }
+  .finding .cause { font-weight: 600; margin-top: 3px; }
+  .finding .fix { font-weight: 400; margin-top: 3px; }
+  .allgood { padding: 14px 15px; font-weight: 500; font-size: 13px; }
 
-  details.qtable { margin-top: 10px; }
-  details.qtable summary { cursor: pointer; color: var(--muted); font-size: 12px; }
-  .qrow { display: grid; grid-template-columns: 1fr 30px 30px; gap: 6px; font-family: var(--mono); font-size: 10.5px; padding: 3px 0; border-bottom: 1px solid rgba(39,52,88,.4); }
-  .qrow .q { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
-  .qrow .n { text-align: right; color: var(--dim); }
-  .qrow.zero .q, .qrow.zero .n { color: var(--err); }
-  .err { color: var(--err); font-size: 12px; margin-top: 8px; font-family: var(--mono); }
-
-  /* Ask panel */
-  .ask-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  /* ── Ask ───────────────────────────────────────────────────────────── */
+  .ask-row { display: flex; gap: 8px; padding: 13px 15px; }
   .ask-row input {
-    flex: 1; min-width: 0; background: var(--panel-2); border: 1px solid var(--line);
-    border-radius: 8px; padding: 11px 13px; color: var(--text); font: inherit; font-size: 14px;
+    flex: 1; min-width: 0; padding: 10px 13px; border-radius: var(--r-sm); font: inherit;
+    font-size: 14px; background: var(--card-2); border: 1px solid var(--line); color: var(--ink);
   }
-  .ask-row input:focus { outline: none; border-color: var(--accent); }
-  .ask-row button { padding: 11px 15px; }
-  .mic { background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); font-size: 16px; }
-  .mic.on { background: var(--err); color: #fff; border-color: var(--err); animation: pulse 1.1s ease-in-out infinite; }
-  .mic[hidden] { display: none !important; }
-
-  .examples { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .ask-row input::placeholder { color: var(--label); }
+  .examples { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 15px 13px; }
   .examples button {
-    background: transparent; border: 1px solid var(--line); color: var(--muted);
-    border-radius: 99px; padding: 5px 11px; font-size: 12px; font-weight: 500;
+    background: var(--card-2); border: 1px solid var(--line); color: var(--ink);
+    font-size: 12px; font-weight: 500; padding: 5px 10px; border-radius: 20px;
   }
-  .examples button:hover { border-color: var(--accent); color: #c7d2fe; }
+  .examples button:hover { background: var(--green-wash); border-color: var(--green); }
+  .turn { padding: 13px 15px; border-top: 1px solid var(--line-soft); }
+  .turn .q { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .turn .q::before { content: '→ '; color: var(--green-ink); }
+  .turn .a { font-size: 14px; max-width: 66ch; }
+  .turn .meta { font-family: var(--mono); font-size: 10.5px; font-weight: 500; margin-top: 8px; color: var(--label); }
 
-  .turn { border-left: 2px solid var(--line); padding: 2px 0 2px 12px; margin-bottom: 16px; }
-  .turn .q { color: var(--muted); font-size: 13px; margin-bottom: 7px; }
-  .turn .q::before { content: '❯ '; color: var(--accent); }
-  .turn .a { font-size: 14px; line-height: 1.65; }
-  .turn .a ol, .turn .a ul { padding-left: 20px; margin: 6px 0; }
-  .turn .a li { margin: 5px 0; }
-  .turn .a p { margin: 6px 0; }
-  .turn .meta { font-family: var(--mono); font-size: 10.5px; color: var(--dim); margin-top: 8px; }
-  .turn.thinking .a { color: var(--dim); }
+  .hist button {
+    display: flex; justify-content: space-between; gap: 10px; align-items: baseline;
+    width: 100%; text-align: left; padding: 9px 15px; border: 0;
+    border-bottom: 1px solid var(--line-soft); background: transparent;
+    color: var(--ink); font-size: 13px; font-weight: 500;
+  }
+  .hist button:hover { background: var(--card-2); }
+  .hist button.on { background: var(--green-wash); font-weight: 700; }
+  .hist .c { font-family: var(--mono); font-size: 12px; font-weight: 600; }
+
+  .empty { padding: 42px 15px; text-align: center; font-weight: 500; }
+  .err { margin: 0 15px 13px; padding: 10px 12px; border-radius: var(--r-sm); background: var(--critical-wash); color: var(--critical); font-size: 12.5px; font-weight: 500; }
+  .log { font-family: var(--mono); font-size: 11px; font-weight: 500; max-height: 140px; overflow-y: auto; white-space: pre-wrap; padding: 13px 15px; }
+  .qtable { padding: 0 15px 13px; }
+  .qtable summary { font-size: 12px; font-weight: 600; cursor: pointer; padding: 8px 0; }
+  .qrow { display: grid; grid-template-columns: 1fr auto; gap: 8px; font-size: 12px; padding: 6px 0; border-bottom: 1px solid var(--line-soft); }
+  .qrow .q { font-family: var(--mono); font-size: 10.5px; overflow-wrap: anywhere; }
+
+  .warnbar {
+    grid-column: 1 / -1; background: var(--amber-wash); border: 1px solid var(--amber);
+    border-left-width: 4px; border-radius: var(--r); padding: 13px 17px; font-size: 13.5px; font-weight: 400;
+  }
+  .warnbar b { font-weight: 700; }
+
+  .runon { display: flex; flex-direction: column; gap: 7px; padding: 14px 15px; }
+  .runon .r { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+  .runon .v { font-family: var(--mono); font-size: 10.5px; font-weight: 500; text-align: right; overflow-wrap: anywhere; }
+
+  /* ── Onboarding sheet ──────────────────────────────────────────────── */
+  .sheet { position: fixed; inset: 0; background: rgba(23,26,28,.45); backdrop-filter: blur(3px); display: grid; place-items: start center; padding: 4vh 16px; overflow-y: auto; z-index: 60; }
+  .sheet-inner { background: var(--card); border-radius: 14px; width: min(660px, 100%); padding: clamp(20px, 3.6vw, 30px); box-shadow: 0 28px 70px -22px rgba(23,26,28,.45); }
+  .sheet .step { display: flex; align-items: center; gap: 9px; margin-bottom: 14px; }
+  .sheet .step .n { font-family: var(--mono); font-size: 10px; font-weight: 700; background: var(--lime); padding: 3px 6px; border-radius: 4px; }
+  .sheet h2 { font-size: 25px; font-weight: 700; margin-bottom: 6px; }
+  .sheet .sub { font-size: 14px; font-weight: 400; margin: 0 0 22px; max-width: 58ch; }
+  .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 560px) { .duo { grid-template-columns: 1fr; } }
+  .field { margin-bottom: 16px; }
+  .field label { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; font-size: 10px; font-family: var(--mono); font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--label); margin-bottom: 5px; }
+  .field .req { color: var(--ink); }
+  .field .hint { font-size: 12.5px; font-weight: 400; margin-bottom: 7px; max-width: 64ch; }
+  .field input, .field textarea {
+    width: 100%; padding: 10px 12px; border-radius: var(--r-sm); font: inherit; font-size: 14px;
+    background: var(--card-2); border: 1px solid var(--line); color: var(--ink); resize: vertical;
+  }
+  .field textarea { min-height: 108px; line-height: 1.6; }
+  .field.important { background: var(--card-2); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; }
+  .field.important label { color: var(--ink); }
+  .field.important .tag { background: var(--lime); padding: 3px 7px; border-radius: 4px; letter-spacing: .07em; }
+  .promise { display: flex; gap: 10px; background: var(--green-wash); border: 1px solid var(--green); border-radius: var(--r-sm); padding: 11px 13px; font-size: 12.5px; font-weight: 400; margin-top: 4px; }
+  .promise b { font-weight: 700; }
+  .promise .tick { color: var(--green-ink); font-weight: 700; }
+  .sheet-actions { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 20px; flex-wrap: wrap; }
+  .buildlog { font-family: var(--mono); font-size: 12px; font-weight: 500; max-height: 250px; overflow-y: auto; margin-top: 18px; border-top: 1px solid var(--line); padding-top: 14px; }
+  .buildlog div { padding: 5px 0 5px 20px; position: relative; border-bottom: 1px solid var(--line-soft); }
+  .buildlog div::before { content: '✓'; position: absolute; left: 0; color: var(--green-ink); font-weight: 700; }
+  .buildlog div:last-child { font-weight: 700; border-bottom: 0; }
+
+  @media (prefers-reduced-motion: reduce) { * { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+  /* ── Mobile ────────────────────────────────────────────────────────── */
+  @media (max-width: 760px) {
+    header { gap: 8px 10px; padding: 10px 14px; }
+    .brand .tagline, nav.tabs .s { display: none; }
+    .cfgbox { width: 100%; }
+    .cfgbox .lbl { display: none; }
+    select#profile { flex: 1; max-width: none; }
+    .spacer { display: none; }
+    nav.tabs { width: 100%; overflow-x: auto; }
+    nav.tabs button { white-space: nowrap; font-size: 13px; padding: 6px 10px; }
+    header .btn { flex: 1; }
+    .flow { overflow-x: auto; flex-wrap: nowrap; padding: 0 14px; }
+    .flow .flow-lbl { display: none; }
+    .flow button { white-space: nowrap; padding: 10px 14px; }
+    .flow button .s { display: none; }
+    .greet { padding: 16px 14px 0; }
+    main { padding: 14px; gap: 14px; }
+    .fstep, .bar-row { grid-template-columns: 70px 1fr 34px; }
+    .ask-row { flex-wrap: wrap; }
+    .ask-row input { flex-basis: 100%; }
+    .ask-row .btn { flex: 1; }
+    .examples button:nth-child(n+4) { display: none; }
+    .sheet { padding: 0; }
+    .sheet-inner { border-radius: 0; min-height: 100vh; }
+
+    /* On a phone the first thing on screen is what you came to read. The
+       instrument panels follow it, not the other way round. */
+    main { display: flex; flex-direction: column; }
+    .centre { order: 1; }
+    #railLeft { order: 2; }
+    #railRight { order: 3; }
+    .warnbar { order: 0; }
+  }
 </style>
-</head>
-<body>
 
 <header>
   <div class="brand">
     <h1>Veridian</h1>
-    <span class="tagline">Verified Signal Intelligence</span>
-    <span id="week">—</span>
+    <span class="tagline lbl">Verified Signal Intelligence</span>
   </div>
-  <div class="cfg">
-    <select id="profile" title="Which business this deployment is running for"></select>
-    <button class="ghost" id="addBiz" title="Configure Veridian for a business it has never seen">+ Add a business</button>
-    <span class="measures" id="measures"></span>
+
+  <div class="cfgbox">
+    <span class="lbl">Active configuration</span>
+    <select id="profile" aria-label="Which business Veridian is configured for"></select>
+    <button class="btn dashed" id="addBiz">+ Add a business</button>
   </div>
+
   <div class="spacer"></div>
-  <div class="meta" id="meta">loading…</div>
-  <button class="ghost" id="refresh">Refresh</button>
-  <button id="run">Run pipeline</button>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button role="tab" data-view="overview" aria-selected="true">Intelligence</button>
+    <button role="tab" data-view="register" aria-selected="false">Register</button>
+    <button role="tab" data-view="briefings" aria-selected="false">Briefings</button>
+    <button role="tab" data-view="ask" aria-selected="false">Ask</button>
+  </nav>
+
+  <button class="btn" id="refresh">Refresh</button>
+  <button class="btn primary" id="run">Run pipeline</button>
+  <span id="week" hidden></span>
+  <span id="measures" hidden></span>
+  <span id="meta" hidden></span>
 </header>
+
+<div class="flow" role="tablist" aria-label="Your signal workflow">
+  <span class="flow-lbl lbl">Your signal workflow</span>
+  <button role="tab" data-view="overview" aria-selected="true"><span class="n">01</span><span><span class="t">Overview</span><br><span class="s">What changed</span></span></button>
+  <button role="tab" data-view="register" aria-selected="false"><span class="n">02</span><span><span class="t">Signals</span><br><span class="s">Where to act</span></span></button>
+  <button role="tab" data-view="briefings" aria-selected="false"><span class="n">03</span><span><span class="t">Proof</span><br><span class="s">Why it scored</span></span></button>
+  <button role="tab" data-view="ask" aria-selected="false"><span class="n">04</span><span><span class="t">Ask</span><br><span class="s">Query the register</span></span></button>
+</div>
+
+<div class="greet">
+  <div class="greet-row">
+    <div style="flex:1;min-width:240px">
+      <div class="when lbl" id="when">Monday briefing</div>
+      <h2 id="greeting">Good morning. Here is what changed.</h2>
+    </div>
+    <div class="ground-badge" id="groundBadge" hidden>
+      <span class="t">Grounding pass</span>
+      <span class="s" id="groundSub">—</span>
+    </div>
+  </div>
+</div>
 
 <div class="sheet" id="sheet" hidden>
   <div class="sheet-inner">
-    <h2>Configure Veridian for a business</h2>
-    <p class="sub">Point it at a company. It reads their own website, works out what they sell, researches which trade press and regulators matter in their market, checks every source resolves, and writes a configuration. No search credits.</p>
+    <div class="step"><span class="n">01</span><span class="lbl">New business configuration</span></div>
+    <h2>What should Veridian understand?</h2>
+    <p class="sub">Point Veridian at a business. It will learn what they sell, where demand appears and which signals deserve action.</p>
 
-    <div class="field">
-      <label for="bizKey">Short name</label>
-      <div class="hint">Used in the address bar and to keep this business's data separate from every other one.</div>
-      <input id="bizKey" placeholder="acme-search" autocomplete="off">
+    <div class="duo">
+      <div class="field">
+        <label for="bizKey">Short name <span class="req">required</span></label>
+        <input id="bizKey" placeholder="e.g. acme-search" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="bizSite">Company website <span class="req">required</span></label>
+        <input id="bizSite" placeholder="https://www.company.com" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="field important">
+      <label for="bizWins">Deals they have already won <span class="tag">The important one</span></label>
+      <div class="hint">What published event started each deal? Include deals you <b>lost</b> too — a loss teaches Veridian what a dead lead looks like. Nothing else can.</div>
+      <textarea id="bizWins" placeholder="One deal per line. Example:&#10;We won a data-centre programme after the client announced a funded capacity expansion."></textarea>
     </div>
 
     <div class="field">
-      <label for="bizSite">Their website</label>
-      <div class="hint">The homepage is enough — it follows the links to their services pages itself.</div>
-      <input id="bizSite" placeholder="https://www.example.com" autocomplete="off">
+      <label for="bizBrief">Anything else you know <span>optional</span></label>
+      <div class="hint">Clients, competitors, markets or publications they trust. Veridian only keeps what it can verify.</div>
+      <textarea id="bizBrief" style="min-height:72px" placeholder="Add useful context…"></textarea>
     </div>
 
-    <div class="field">
-      <label for="bizWins">Deals they have already won <span style="color:var(--dim);font-weight:400">— the important one</span></label>
-      <div class="hint">One per line. For each, the only thing that matters: <b>what published event started this deal?</b> Include deals you <b>lost</b> too — a loss tells the system what a dead lead looks like, and nothing else can.<br>Leave this blank and it still builds, but it will refuse to guess which way events point and will leave you questions to answer instead.</div>
-      <textarea id="bizWins" placeholder="We won a migration programme at a bank. It started when they announced an acquisition with a fixed integration timetable.&#10;&#10;We lost one at a government department — they announced they build in-house, and it never came to market."></textarea>
-    </div>
-
-    <div class="field">
-      <label for="bizBrief">Anything else you know <span style="color:var(--dim);font-weight:400">— optional</span></label>
-      <div class="hint">Clients, competitors, the publications they read. Paste freely; it takes what it can verify.</div>
-      <textarea id="bizBrief" style="min-height:72px" placeholder="Optional"></textarea>
+    <div class="promise">
+      <span class="tick">✓</span>
+      <span><b>Veridian will not invent polarity.</b> If you skip past wins, it will build everything it can research and leave the commercial direction explicitly unanswered.</span>
     </div>
 
     <div class="err" id="bizError" hidden></div>
     <div class="buildlog" id="bizLog" hidden></div>
 
     <div class="sheet-actions">
-      <button class="ghost" id="bizCancel">Cancel</button>
-      <button id="bizGo">Build it</button>
+      <button class="btn" id="bizDemo">Use NVIDIA demo</button>
+      <div style="display:flex;gap:10px">
+        <button class="btn" id="bizCancel">Cancel</button>
+        <button class="btn primary" id="bizGo">Build profile</button>
+      </div>
     </div>
   </div>
 </div>
 
 <main>
-  <div class="warnbar" id="polarityWarn" hidden style="grid-column:1/-1"></div>
-  <aside>
-    <div class="card">
-      <h2>Agent status</h2>
+  <div class="warnbar" id="polarityWarn" hidden></div>
+
+  <div class="rail left" id="railLeft">
+    <section class="card">
+      <h2>Agent activity <span class="c" id="agentState">—</span></h2>
       <div id="agents"></div>
       <div class="err" id="runError" hidden></div>
-    </div>
+    </section>
 
-    <div class="card">
-      <h2>Signals by category</h2>
-      <div class="bars" id="bars"></div>
-    </div>
+    <section class="card">
+      <h2>Prospect register <span class="c" id="regTotal">—</span></h2>
+      <div class="bandcounts" id="regbands"></div>
+      <div id="reglist"></div>
+      <div id="regstats" class="pad" style="font-size:12.5px"></div>
+    </section>
+  </div>
 
-    <div class="card">
-      <h2>Rejected, and why</h2>
-      <div id="rejstats" style="font-size:12.5px;color:var(--muted);margin-bottom:10px"></div>
-      <div id="rejlist" style="max-height:220px;overflow-y:auto"></div>
-    </div>
+  <div class="centre" id="centre">
+    <section class="card" id="statsCard">
+      <div class="stats" id="stats"></div>
+    </section>
 
-    <div class="card">
-      <h2>Prospect register</h2>
-      <div id="regstats" style="font-size:12.5px;color:var(--muted);margin-bottom:10px"></div>
-      <div id="reglist" class="hist" style="max-height:260px;overflow-y:auto"></div>
-    </div>
+    <section class="card" id="signalsCard">
+      <h2>Weekly signal briefing <span class="c" id="writtenBy">—</span></h2>
+      <div class="briefing" id="briefing"><div class="empty">Loading…</div></div>
+    </section>
 
-    <div class="card">
-      <h2>Practice area coverage</h2>
-      <div class="bars" id="areas"></div>
-      <div id="multi" style="margin-top:12px;font-size:12.5px;color:var(--muted)"></div>
-    </div>
+    <section class="card" id="topSignals" hidden>
+      <h2>Highest scoring signals <span class="c" id="topCount">—</span></h2>
+      <div id="siglist"></div>
+    </section>
 
-    <div class="card">
-      <h2>Yield diagnostics</h2>
+    <section class="card" id="askCard">
+      <h2>Ask the register <span class="c">Retrieval runs in code</span></h2>
+      <div class="ask-row">
+        <input id="q" placeholder="Query verified business intelligence" autocomplete="off">
+        <button class="btn mic" id="mic" title="Ask by voice" hidden>🎤</button>
+        <button class="btn primary" id="askBtn">Ask</button>
+      </div>
+      <div class="examples" id="examples"></div>
+      <div id="answers"></div>
+    </section>
+  </div>
+
+  <div class="rail" id="railRight">
+    <section class="card" id="bdCard" hidden>
+      <h2>Why this scored <span class="c" id="bdScore">—</span></h2>
+      <div class="pad">
+        <div class="lbl" id="bdWho" style="margin-bottom:9px">—</div>
+        <div class="bd" id="bdRows"></div>
+        <p style="margin:12px 0 0;font-size:12px;font-weight:400">No model supplied this number. The model provides the inputs; this arithmetic happens in code.</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Rejected, and why <span class="c" id="rejTotal">—</span></h2>
+      <div id="rejlist"></div>
+      <div id="rejstats" class="pad" style="font-size:12.5px"></div>
+    </section>
+
+    <section class="card">
+      <h2>Yield this run</h2>
       <div class="funnel" id="funnel"></div>
       <div id="findings"></div>
       <details class="qtable" id="qtable" hidden>
         <summary>Per-query yield</summary>
         <div id="qrows"></div>
       </details>
-    </div>
+    </section>
 
-    <div class="card">
+    <section class="card">
+      <h2>Signals by category</h2>
+      <div class="bars" id="bars"></div>
+    </section>
+
+    <section class="card">
+      <h2>Practice area coverage</h2>
+      <div class="bars" id="areas"></div>
+      <div id="multi" class="pad" style="font-size:12.5px"></div>
+    </section>
+
+    <section class="card">
+      <h2>Running on</h2>
+      <div class="runon" id="runon"></div>
+    </section>
+
+    <section class="card">
       <h2>Past briefings</h2>
       <div class="hist" id="history"></div>
-    </div>
+    </section>
 
-    <div class="card">
+    <section class="card">
       <h2>Run log</h2>
       <div class="log" id="log">Idle.</div>
-    </div>
-  </aside>
-
-  <section>
-    <div class="card" style="margin-bottom:18px">
-      <h2>Ask the register</h2>
-      <div class="ask-row">
-        <input id="q" placeholder="e.g. top 5 multi-service prospects" autocomplete="off">
-        <button class="mic" id="mic" title="Ask by voice" hidden>🎤</button>
-        <button id="askBtn">Ask</button>
-      </div>
-      <div class="examples" id="examples"></div>
-      <div id="answers"></div>
-    </div>
-
-    <div class="briefing" id="briefing">
-      <div class="empty">Loading…</div>
-    </div>
-  </section>
+    </section>
+  </div>
 </main>
-
 <script>
 // Section names come from the active profile's counts, so the chart follows
 // whatever collectors that profile defines.
@@ -379,17 +687,92 @@ function renderMarkdown(md) {
 
 // ── Rendering ────────────────────────────────────────────────────────────────
 function drawAgents(agents, running) {
+  $('agentState').textContent = running ? 'running' : `${agents.filter((a) => a.status === 'success').length}/${agents.length}`;
   $('agents').innerHTML = agents.map((a) => {
-    const tier = a.kind === 'nemotron-ultra' ? '<span class="tier">ULTRA</span>' : '';
-    const state = running ? 'running' : a.status;
+    // Which tier an agent runs on is worth showing: it is the whole Nemotron
+    // argument, and "free" says this one costs no search credits.
+    const ultra = a.kind === 'nemotron-ultra' ? '<span class="tier">ULTRA</span>' : '';
+    const free = /feed|tender/i.test(a.name) ? '<span class="tier free">FREE</span>' : '';
+    const state = running ? 'running' : (a.status ?? 'idle');
     return `<div class="agent" title="${esc(a.error || a.detail || '')}">
-      <span class="n">${a.number}</span>
+      <span class="n">${String(a.number).padStart(2, '0')}</span>
       <span class="dot ${esc(state)}"></span>
-      <span class="nm">${esc(a.name)}</span>
-      ${tier}
+      <span class="nm">${esc(a.name.replace(/ Collector$/, ''))}</span>
+      ${ultra}${free}
       <span class="t">${secs(a.duration_ms)}</span>
     </div>`;
   }).join('');
+}
+
+// ── The four headline numbers ────────────────────────────────────────────
+function drawStats(b, totals = {}) {
+  const rows = [
+    { k: 'Organisations', v: totals.organisations ?? 0, s: 'sourced with no seed list' },
+    { k: 'Verified signals', v: b?.signal_count ?? 0, s: b?.flagged_count ? `${b.flagged_count} flagged for review` : 'all grounded' },
+    { k: 'Critical', v: b?.critical_count ?? 0, s: 'approach within 7 days', cls: 'is-critical' },
+    { k: 'Multi-service', v: b?.multi_service_count ?? 0, s: 'opens two or more practices', cls: 'is-multi' },
+  ];
+  $('stats').innerHTML = rows.map((r) => `<div class="stat ${r.cls ?? ''}">
+    <div class="k lbl">${esc(r.k)}</div>
+    <div class="v">${r.v}</div>
+    <div class="s">${esc(r.s)}</div>
+  </div>`).join('');
+}
+
+// ── Signal cards — the design's centrepiece ──────────────────────────────
+// Rendered from the signal log rather than the briefing prose, so each card
+// can carry its own score, band, age, practice areas and counter-reading.
+function drawSignals(signals) {
+  const el = $('siglist');
+  if (!signals.length) { $('topSignals').hidden = true; return; }
+  $('topSignals').hidden = false;
+  $('topCount').textContent = `${signals.length} shown`;
+
+  el.innerHTML = signals.map((x, i) => {
+    const band = String(x.priority_band ?? '').toLowerCase();
+    const age = x.date ? Math.max(0, Math.round((Date.now() - new Date(x.date)) / 864e5)) : null;
+    const areas = (x.practice_areas ?? []).map((a) => `<span class="chip">${esc(a)}</span>`).join('')
+      + (x.multi_service ? '<span class="chip ms">multi-service</span>' : '');
+    return `<article class="sig" data-i="${i}">
+      <div class="top">
+        <span class="co">${esc(x.company)}</span>
+        <span class="pill ${esc(band)}">${esc(x.priority_band ?? '')}</span>
+        <span class="pill plain">Score ${x.priority_score} / 100</span>
+        ${age === null ? '' : `<span class="lbl">${age === 0 ? 'today' : age + ' days ago'}</span>`}
+      </div>
+      <h3>${esc(x.signal_type ?? 'Signal')}</h3>
+      <p>${esc(x.summary ?? '')}</p>
+      ${x.counter_reading ? `<span class="counter"><b>Counter-reading</b>${esc(x.counter_reading)}</span>` : ''}
+      <div class="areas">${areas}</div>
+      <a class="src" href="${esc(x.url)}" target="_blank" rel="noopener">${esc(hostOf(x.url))} →</a>
+    </article>`;
+  }).join('');
+
+  // Clicking a signal explains its score in the right rail. The arithmetic is
+  // the product's proof, so it should be one click from any row.
+  for (const node of el.querySelectorAll('.sig')) {
+    node.onclick = (e) => { if (e.target.closest('a')) return; drawBreakdown(signals[Number(node.dataset.i)]); };
+  }
+  drawBreakdown(signals[0]);
+}
+
+const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return 'source'; } };
+
+// ── The score, taken apart ───────────────────────────────────────────────
+function drawBreakdown(x) {
+  if (!x?.score_breakdown) { $('bdCard').hidden = true; return; }
+  $('bdCard').hidden = false;
+  $('bdScore').textContent = `${x.priority_score} / 100`;
+  $('bdWho').textContent = `${x.company} · computed in code`;
+  const max = { practice_area_fit: 30, multi_service: 25, deal_scale: 25, signal_urgency: 25, organisation_scale: 20 };
+  const nice = {
+    practice_area_fit: 'Practice area fit', multi_service: 'Multi-service', deal_scale: 'Deal scale',
+    signal_urgency: 'Signal urgency', organisation_scale: 'Organisation scale',
+  };
+  $('bdRows').innerHTML = Object.entries(x.score_breakdown).map(([k, v]) => `
+    <span class="f">${esc(nice[k] ?? k)}</span><span class="p">${v}</span>
+    <span class="trk"><i style="width:${Math.round((v / (max[k] ?? 30)) * 100)}%"></i></span>`).join('')
+    + `<span class="tot">Priority score</span><span class="tot-p">${x.priority_score}</span>`;
 }
 
 function drawBars(counts = {}) {
@@ -491,7 +874,8 @@ function drawBriefing() {
   const b = briefings.find((x) => x.week === selected);
   const el = $('briefing');
   if (!b) {
-    el.innerHTML = `<div class="empty">No briefing yet. Press <strong>Run pipeline</strong> to generate this week's.</div>`;
+    el.innerHTML = `<div class="empty">No briefing yet for this configuration.<br><strong>Run pipeline</strong> to generate one.</div>`;
+    $('writtenBy').textContent = '—';
     drawBars({});
     drawAreas({}, 0, 0);
     return;
@@ -507,8 +891,8 @@ function drawBriefing() {
     b.models?.ultra ? `ultra: ${b.models.ultra}` : null,
   ].filter(Boolean);
 
-  el.innerHTML = `<div style="margin-bottom:18px">${pills.map((p) => `<span class="pill">${esc(p)}</span>`).join('')}</div>`
-    + renderMarkdown(b.markdown || '');
+  $('writtenBy').textContent = b.models?.ultra ? `written by ${b.models.ultra.split('/').pop()}` : 'written by Nemotron Ultra';
+  el.innerHTML = renderMarkdown(b.markdown || '');
   drawBars(b.counts);
   drawAreas(b.practice_area_coverage, b.multi_service_count, b.signal_count);
   if (b.diagnostics) drawDiagnostics(b.diagnostics);
@@ -537,21 +921,35 @@ async function get(path) {
 // week on week, as opposed to the briefing, which is one week's slice.
 async function loadRegister() {
   try {
-    const { stats, organisations } = await get('/api/organisations?limit=40');
-    $('regstats').innerHTML = `<strong style="color:var(--text);font-size:15px">${stats.total}</strong> organisations sourced`
-      + `<br>${stats.prospects} prospects · ${stats.accounts} accounts · ${stats.multi_service} multi-service`
-      + (stats.returning ? `<br>${stats.returning} seen in more than one week` : '');
+    const { stats, organisations } = await get('/api/organisations?limit=12');
+    $('regTotal').textContent = stats.total;
+    const bands = stats.bands ?? {};
+    $('regbands').innerHTML = [['Critical', 'critical'], ['High', 'high'], ['Medium', 'medium']]
+      .filter(([k]) => bands[k])
+      .map(([k, c]) => `<span class="${c}"><span class="b">${bands[k]}</span> ${k}</span>`).join('');
     $('reglist').innerHTML = organisations.map((o) => `
-      <button title="${esc(o.practice_areas.join(', '))} · ${o.signal_count} signal(s)" style="cursor:default">
-        <span>${esc(o.name)}</span>
-        <span class="c">${o.best_score}</span>
-      </button>`).join('');
-  } catch (err) {
-    $('regstats').textContent = 'No register yet.';
+      <div class="org ${esc(String(o.best_band).toLowerCase())}">
+        <span class="nm">${esc(o.name)}</span>
+        <span class="sc">${o.best_score}</span>
+        <span class="sub">${esc(String(o.best_band).toLowerCase())}${o.multi_service ? ' · multi-service' : ''}</span>
+      </div>`).join('');
+    $('regstats').innerHTML = `<strong>${stats.prospects}</strong> prospects · <strong>${stats.accounts}</strong> accounts · <strong>${stats.multi_service}</strong> multi-service`;
+  } catch {
+    $('regTotal').textContent = '0';
+    $('regstats').textContent = 'No register yet — run the pipeline.';
   }
 }
 
-// Drawn from the server's own list, so adding a third profile needs no change
+// The highest-scoring signals, cleaned with the same guards the register uses
+// so a country never appears here as though it were an account.
+async function loadSignals() {
+  try {
+    const { signals } = await get('/api/signals?prospects=true&limit=8');
+    drawSignals(signals ?? []);
+  } catch { $('topSignals').hidden = true; }
+}
+
+// Drawn from the server's own list, so adding a configuration needs no change
 // here — the dropdown is whatever the loader registers.
 function drawProfiles(profiles, active) {
   const sel = $('profile');
@@ -561,18 +959,17 @@ function drawProfiles(profiles, active) {
   }
   sel.value = active.key;
   profileKey = active.key;
-  // What this configuration MEASURES is the difference worth showing: the same
-  // engine scores commercial value by deal scale for one business and by
-  // service breadth for the other.
   $('measures').innerHTML = `${active.market ? `${esc(active.market)} · ` : ''}`
     + `value = ${esc(active.value_factor ?? 'Multi-Service Potential')} · ${active.accounts} accounts`;
-  // A generated profile is a draft until someone has read its polarity. Saying
-  // so is the honest thing and it is also the most interesting thing on screen.
-  const meta = (s.profiles ?? []).find((p) => p.key === active.key) ?? {};
+
+  // A generated configuration is a draft until someone has read its polarity.
+  // Saying so is the honest thing, and it is the most interesting thing on the
+  // screen: a system that refuses to guess is making a claim about itself.
+  const meta = profiles.find((p) => p.key === active.key) ?? {};
   const warn = $('polarityWarn');
   if (meta.needs_polarity) {
     warn.hidden = false;
-    warn.innerHTML = `<b>This configuration has no polarity yet.</b> Veridian built everything it could research, and refused to guess which way events point for this business — that cannot be derived from a description, only from deals already won. It will run and it will score badly until ${meta.open_questions} question${meta.open_questions === 1 ? '' : 's'} are answered.`;
+    warn.innerHTML = `<b>This configuration has no polarity yet.</b> Veridian built everything it could research, and refused to guess which way events point for this business — that cannot be derived from a description, only from deals already won. It will run, and it will score badly, until ${meta.open_questions} question${meta.open_questions === 1 ? '' : 's'} are answered.`;
   } else warn.hidden = true;
   drawExamples(active.first_practice_area);
 }
@@ -583,16 +980,17 @@ function drawProfiles(profiles, active) {
 async function loadRejections() {
   try {
     const { total, by_code: byCode, rejections } = await get('/api/rejections?limit=25');
-    if (!total) { $('rejstats').textContent = 'Nothing rejected yet.'; $('rejlist').innerHTML = ''; return; }
-    $('rejstats').innerHTML = `<strong style="color:var(--text);font-size:15px">${total}</strong> rejected and kept on record`
-      + `<br>${Object.entries(byCode).map(([c, n]) => `${n} ${c.toLowerCase().replace(/_/g, ' ')}`).join(' · ')}`;
-    $('rejlist').innerHTML = rejections.map((r) => `
+    if (!total) { $('rejTotal').textContent = '0'; $('rejstats').textContent = 'Nothing rejected yet.'; $('rejlist').innerHTML = ''; return; }
+    $('rejstats').innerHTML = Object.entries(byCode).map(([c, n]) => `${n} ${c.toLowerCase().replace(/_/g, ' ')}`).join(' · ');
+    $('rejTotal').textContent = total;
+    $('rejlist').innerHTML = rejections.slice(0, 6).map((r) => `
       <div class="rej">
-        <span class="code">${esc(r.reason_code ?? 'UNKNOWN')}</span>
-        <span style="margin-left:7px">${esc(r.company ?? 'unnamed')}</span>
+        <span class="code ${esc(String(r.reason_code ?? '').toLowerCase())}">${esc(r.reason_code ?? 'UNKNOWN')}</span>
+        <span class="nm">${esc(r.company ?? 'unnamed')}</span>
         <div class="why">${esc(r.reason ?? '')}</div>
       </div>`).join('');
   } catch (err) {
+    $('rejTotal').textContent = '0';
     $('rejstats').textContent = 'No rejection log yet.';
   }
 }
@@ -600,6 +998,32 @@ async function loadRejections() {
 async function loadStatus() {
   const s = await get('/api/status');
   $('week').textContent = s.current_week;
+  lastStatus = s;
+
+  // A greeting dated to the run, not to the clock: this is a weekly product
+  // and the reader wants to know which week they are looking at.
+  const h = new Date().getHours();
+  $('greeting').textContent = `Good ${h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening'}. Here is what changed.`;
+  $('when').textContent = `${(s.profile?.name ?? 'Briefing')} · week ${s.current_week}`;
+
+  // Grounding is the product's claim, so it is stated up front: how many of
+  // this run's sources were actually reachable.
+  const d = s.diagnostics ?? {};
+  const live = d.funnel?.hits ?? null;
+  if (s.last_run) {
+    $('groundBadge').hidden = false;
+    $('groundSub').textContent = s.totals.signals
+      ? `${s.totals.signals} signals · every claim source-checked`
+      : 'no signals yet';
+  } else $('groundBadge').hidden = true;
+
+  $('runon').innerHTML = [
+    ['Reasoning', s.models?.ultra ?? '—'],
+    ['Extraction', s.models?.fast ?? '—'],
+    ['Inference', 'Nebius Token Factory'],
+    ['Search', 'Tavily'],
+    ['Schedule', s.schedule?.enabled ? `cron ${s.schedule.cron}` : 'manual'],
+  ].map(([k, v]) => `<div class="r"><span class="lbl">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join('');
   drawAgents(s.agents, s.running);
   $('run').disabled = s.running;
   $('run').textContent = s.running ? 'Running…' : 'Run pipeline';
@@ -626,12 +1050,13 @@ async function loadBriefings(keepSelection = false) {
   if (!keepSelection || !briefings.some((b) => b.week === selected)) selected = briefings[0]?.week ?? null;
   drawHistory();
   drawBriefing();
+  drawStats(briefings.find((x) => x.week === selected), lastStatus?.totals ?? {});
 }
 
 async function refresh(keepSelection = true) {
   try {
     const s = await loadStatus();
-    await Promise.all([loadBriefings(keepSelection), loadRegister(), loadRejections()]);
+    await Promise.all([loadBriefings(keepSelection), loadRegister(), loadRejections(), loadSignals()]);
     return s;
   } catch (err) {
     logLine(`error: ${err.message}`);
@@ -684,10 +1109,47 @@ $('profile').onchange = async (e) => {
 $('refresh').onclick = () => { logLine('refreshed'); refresh(); };
 
 
+
+// ── The four views ───────────────────────────────────────────────────────
+// Header tabs and the numbered workflow strip drive the same state, because
+// they are the same journey described twice: one for someone who knows where
+// they are going, one for someone seeing it for the first time.
+const VIEWS = {
+  overview:  { show: ['statsCard', 'signalsCard', 'topSignals', 'bdCard'], rails: true },
+  register:  { show: ['statsCard', 'topSignals', 'bdCard'], rails: true },
+  briefings: { show: ['statsCard', 'signalsCard'], rails: true },
+  ask:       { show: ['askCard'], rails: false },
+};
+let view = 'overview';
+
+function setView(next) {
+  if (!VIEWS[next]) return;
+  view = next;
+  for (const b of document.querySelectorAll('[role="tab"][data-view]')) {
+    b.setAttribute('aria-selected', String(b.dataset.view === next));
+  }
+  const cfg = VIEWS[next];
+  for (const id of ['statsCard', 'signalsCard', 'topSignals', 'askCard']) {
+    const el = $(id);
+    if (!el) continue;
+    // The question box is always reachable, but only the Ask view leads with it.
+    el.hidden = next === 'ask' ? id !== 'askCard' : !cfg.show.includes(id);
+  }
+  if ($('askCard')) $('askCard').hidden = next === 'ask' ? false : false;
+  $('railRight').hidden = !cfg.rails;
+  $('railLeft').hidden = !cfg.rails;
+  if (next === 'ask') $('q').focus();
+}
+
+for (const b of document.querySelectorAll('[role="tab"][data-view]')) {
+  b.onclick = () => setView(b.dataset.view);
+}
+
 // ── Onboarding a new business ──────────────────────────────────────────────
 // The question every judge and every prospect asks is "would this work for MY
 // business?". This is that question, answerable in the interface.
 let buildPoll = null;
+let lastStatus = null;
 
 $('addBiz').onclick = () => {
   $('sheet').hidden = false;
@@ -696,6 +1158,17 @@ $('addBiz').onclick = () => {
   $('bizKey').focus();
 };
 $('bizCancel').onclick = () => { $('sheet').hidden = true; };
+
+// A judge should be able to see what good input looks like without inventing
+// a business first. This fills the form with the NVIDIA example.
+$('bizDemo').onclick = () => {
+  $('bizKey').value = 'nvidia-demo';
+  $('bizSite').value = 'https://www.nvidia.com';
+  $('bizWins').value = 'We won a sovereign compute programme after the client announced a funded national AI roadmap.\n'
+    + 'We won a networking expansion after a hyperscaler announced new AI capacity with a named fabric.\n'
+    + 'We LOST a deal at a hyperscaler that announced it had taped out its own accelerator — they build in-house.';
+  $('bizBrief').value = 'Priority markets: sovereign AI, data centres, accelerated compute and enterprise infrastructure.';
+};
 $('sheet').onclick = (e) => { if (e.target === $('sheet')) $('sheet').hidden = true; };
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('sheet').hidden = true; });
 

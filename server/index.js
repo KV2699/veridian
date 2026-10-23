@@ -14,6 +14,7 @@ import { getBriefings, getSignals, getRuns, getRejections } from './lib/store.js
 import { MODELS, listModels } from './lib/nebius.js';
 import { readCompanySite, draftProfile, researchMarket, findFeeds, verifyDomains, validateDraft } from './lib/profile-builder.js';
 import { safeKey, deleteGenerated, toProfile, saveGenerated } from './lib/profile-write.js';
+import { isGenericEntity, ownerOf } from './lib/register.js';
 import { log } from './lib/log.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -85,11 +86,23 @@ app.get('/api/signals', async (req, res) => {
   try {
     const profile = profileOf(req);
     const all = await getSignals(profile);
-    const { category, week, limit } = req.query;
+    const { category, week, limit, prospects } = req.query;
     let signals = all;
     if (category) signals = signals.filter((s) => s.category === category);
     if (week) signals = signals.filter((s) => (s.collected_at ?? '').startsWith(String(week)));
-    if (limit) signals = signals.slice(-Number(limit));
+    // ?prospects=true applies the same guards the register uses, so the
+    // dashboard never shows a country or a description as if it were an
+    // organisation you could approach. The unfiltered log stays the audit
+    // record — this is a view of it, not a replacement.
+    if (prospects === 'true') {
+      signals = signals
+        .map((x) => ({ ...x, company: ownerOf(x.company) }))
+        .filter((x) => !isGenericEntity(x.company, { sourceUrl: x.url }))
+        .filter((x) => Number.isFinite(x.priority_score))
+        .sort((a, b) => b.priority_score - a.priority_score
+          || String(b.date ?? '').localeCompare(String(a.date ?? '')));
+    }
+    if (limit) signals = prospects === 'true' ? signals.slice(0, Number(limit)) : signals.slice(-Number(limit));
     res.json({ ok: true, profile, total: all.length, returned: signals.length, signals });
   } catch (err) { fail(res, err); }
 });

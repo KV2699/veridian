@@ -579,6 +579,52 @@ executable JavaScript, into `data/profiles/` rather than the source tree.
 being configuration and starts being input. Cap it, normalise it, and never let
 it become code.
 
+### C15. Splicing code by string-matching function boundaries
+
+Three separate times in one session, a scripted edit that replaced everything
+between `function A` and `function B` produced a file that would not parse:
+
+- `loadRejections` declared twice, because the replacement text ended with the
+  declaration that marked the end of the span
+- `drawBars` declared twice, for the same reason
+- `drawProfiles` deleted entirely, because it had been sitting between the two
+  functions being spliced and nothing checked what was in the gap
+
+Each one broke the whole dashboard — one unbalanced brace means the browser
+parses nothing, so every panel reads "Loading…" forever. And the browser's
+error, *"Unexpected end of input"*, points at the last line of the file rather
+than the fault.
+
+**The rule.** After any scripted edit to a code file, parse it. `node --check`
+on the extracted script took seconds and would have caught all three
+immediately. Finding the third one by hand took twenty times longer than the
+check would have.
+
+**The second rule.** When replacing a span between two anchors, print what is
+being removed before removing it. The `drawProfiles` deletion was invisible —
+the file parsed, the page loaded, and the only symptom was a selector that
+never populated.
+
+### C16. Hierarchy from weight, not from fading the text
+
+The brief was "no grey text — use font weight and size". It is worth recording
+why that is the better instruction, because the lazy version of de-emphasis is
+always to reduce contrast.
+
+Grey text fails twice. It fails accessibility, because a mid-grey on a light
+ground often lands under 4.5:1 and the people it fails are the ones who most
+need the secondary information. And it fails aesthetically, because faded type
+reads as *unfinished* rather than *secondary* — the eye registers it as a
+rendering problem.
+
+The alternative costs nothing: one ink, and hierarchy carried by **size**
+(15px against 12.5px), **weight** (700 against 400) and **letterform** (a
+tracked-out mono label against a sans sentence). A label set in mono at 10px,
+uppercase and tracked, is unmistakably subordinate at full contrast.
+
+**The rule.** De-emphasise with weight, size and letterform. Reach for lower
+contrast only when all three are already spent.
+
 ---
 
 ## Part D — Working rules, distilled
@@ -609,3 +655,6 @@ Pin these up.
 22. **Before trusting a model for a fact, ask what would catch it if it were wrong.** If nothing would, do not ask the model.
 23. **A model writes for the generic tool, not yours.** Name the constraint and show an example of right and wrong.
 24. **Configuration that arrives over the network is input.** Cap it, normalise it, and never let it become code.
+25. **Parse every file you edit with a script.** `node --check` is seconds; finding one unbalanced brace by hand is an hour.
+26. **Print what a splice removes before removing it.** A silently deleted function parses fine and fails quietly.
+27. **De-emphasise with weight and size, not with grey.** Faded text reads as unfinished and fails contrast on the people who need it most.
