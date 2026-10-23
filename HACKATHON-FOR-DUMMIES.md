@@ -1,3 +1,5 @@
+
+
 # Signal Bureau — the hackathon submission, in plain English
 
 **Who this is for:** you, or anyone who needs to understand this system without
@@ -603,7 +605,7 @@ by something breaking:
 | 6 | Record the 3-minute video | You + Claude | Not started — **required** |
 | 7 | Write the Devpost description | You + Claude | Not started — **required** |
 | 8 | Write the tooling feedback | Claude | Material exists |
-| 9 | Redesign the dashboard from your Figma | Claude, once you share it | Waiting on you |
+| 9 | Redesign the dashboard from your Figma | Claude, once you share it | **Reference built** — a populated NVIDIA-configuration console to screenshot for the designer: https://claude.ai/code/artifact/d41becf6-c0f5-4eb0-9277-4d4d0fcfb045 |
 
 ### What the video should show
 
