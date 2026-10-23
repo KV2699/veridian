@@ -76,9 +76,35 @@ four items — and the filter is free to tighten. `exec-search` passed 11 of 145
 because its terms are weighted to movement words (steps down, promoted,
 recruit) rather than topic words.
 
+### Two more found by running it, same day
+
+**The model did not know what day it was.** The first free run of `exec-search`
+verified nothing, and the rejection log said why: *"Future date (2026-10-20) is
+implausible"* — on a story three days old. Five agents never stated today's
+date, so the model fell back on its training cutoff and penalised the freshest
+signals hardest. `Today's date:` is in every prompt of the Acre pack; it never
+made it into the code. Fixed — same sources, same day, 0 verified → **1
+verified, banded High, with a real briefing and a populated register**.
+
+**`npm run pipeline:free` now exists.** The whole pipeline on the two sources
+that cost nothing — RSS feeds and procurement portals. Not a degraded mode: they
+are the only paths where a model never supplies a fact. It is how both
+configurations have real data with 26 credits left.
+
 ---
 
-## 0.1 THE BLOCKER — Tavily credits
+## 0.1 THE CREDIT POSITION — solved, free, named in the rules
+
+**The official rules point at the answer:** *"Entrants can join the Nebius
+Builder Program and get credits for Nebius Token Factory, Tavily, and Nebius
+Academy."* — https://dev.nebius.com/builders
+
+Free to join. **$25 Tavily credit ≈ 3,125 credits ≈ 28 full runs**, plus $25 of
+Token Factory credit. No pay-as-you-go, no card, no duplicate accounts.
+
+### The position until those land
+
+
 
 Queried from the account on 23 October:
 

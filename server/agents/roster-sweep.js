@@ -44,6 +44,10 @@ OUTPUT FORMAT — strict: your entire reply must be a single JSON object. Do not
 
 For a quiet organisation return only: {"organisation":"exactly as given","found":false}`;
 
+// Today's date — see the note in collector-base.js. A model that does not know
+// the date treats this week's news as future-dated and implausible.
+const today = () => new Date().toISOString().slice(0, 10);
+
 export default async function rosterSweep({ profile, week }, ctx = {}, deps = {}) {
   const find = deps.searchMany ?? searchMany;
   const ask = deps.completeJSON ?? completeJSON;
@@ -212,7 +216,7 @@ function buildPrompt({ names, results, practiceAreas, valueFactor, polarity }) {
     ? `\nHOW TO READ THESE EVENTS:\n${polarity.map((p) => `- ${p}`).join('\n')}\n`
     : '';
 
-  return `BATCH OF ORGANISATIONS — return exactly one row for each of these ${names.length}:
+  return `TODAY'S DATE: ${today()}. A result dated on or before today is in the past — recent is good, not suspicious.\n\nBATCH OF ORGANISATIONS — return exactly one row for each of these ${names.length}:
 ${orgs}
 ${areas}${levels}${pol}
 SEARCH RESULTS:

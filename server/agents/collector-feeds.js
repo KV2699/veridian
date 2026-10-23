@@ -38,6 +38,18 @@ OUTPUT FORMAT — strict: your entire reply must be a single JSON object. Do not
 
 {"items":[{"id":"the id given","qualifies":true,"company":"string","signal_type":"string","summary":"string","practice_areas":["key"],"value_level":"string","relevance_score":0}]}`;
 
+// Today's date, handed to every model that has to reason about recency.
+//
+// Without it a model falls back on its training cutoff and treats THIS WEEK's
+// news as future-dated and therefore implausible — penalising exactly the
+// freshest, most valuable signals. Found by running the pipeline: a Disney
+// departure published three days earlier was rejected with "future date
+// (2026-10-20) is implausible".
+//
+// This is in the operator's own prompt pack — "Today's date: [TODAY'S DATE]"
+// appears in every prompt there — and it did not survive into the code.
+const today = () => new Date().toISOString().slice(0, 10);
+
 export default async function collectFeeds({ profile }, ctx = {}, deps = {}) {
   const fetchAll = deps.fetchFeeds ?? fetchFeeds;
   const ask = deps.completeJSON ?? completeJSON;
@@ -161,7 +173,9 @@ function buildPrompt(group, practiceAreas, valueFactor, polarity = []) {
     ? `\nHOW TO READ THESE EVENTS (this business specifically — these override general news sense):\n${polarity.map((p) => `- ${p}`).join('\n')}\n`
     : '';
 
-  return `OFFERINGS THIS BUSINESS SELLS:
+  return `TODAY'S DATE: ${today()}. These headlines were published in the last few weeks — recent is good, not suspicious.
+
+OFFERINGS THIS BUSINESS SELLS:
 ${areas}
 ${levels}${polarityBlock}
 HEADLINES:

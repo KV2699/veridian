@@ -64,6 +64,18 @@ export async function runPipeline({
   // Reuse the last collection instead of searching again. Useful when a run
   // failed downstream, and when iterating on verification or briefing wording.
   resume = process.env.RESUME === 'true',
+  // FREE SOURCES ONLY — run the collection paths that cost no search credits.
+  //
+  // RSS feeds and government procurement portals are not a lesser version of
+  // the pipeline: they are the two paths where a model never supplies a fact,
+  // so they cannot misattribute a claim. What they cannot do is find an
+  // organisation nobody has written a headline about.
+  //
+  // This exists because a search allowance is a hard floor, not a soft one.
+  // When it is gone, the choice is between a system that cannot run at all and
+  // one that runs on the half of its sources that are free — and the free half
+  // still produces a real, verified, scored briefing.
+  freeOnly = process.env.FREE_ONLY === 'true',
 } = {}) {
   if (running) throw Object.assign(new Error('A pipeline run is already in progress'), { code: 'BUSY' });
 
@@ -110,14 +122,17 @@ export async function runPipeline({
       // search finds the most and invents the most, feeds cannot invent at all,
       // and procurement notices are the buyer's own words with a closing date.
       let slot = profile.collectors.length;
+      if (freeOnly) {
+        log.warn('FREE SOURCES ONLY — feeds and procurement portals; every Tavily-backed collector is skipped. 0 search credits.');
+      }
       const collectorRuns = await Promise.all([
-        ...profile.collectors.map((cfg, i) =>
-          timed(i + 1, cfg.name, () => runCollector({ ...cfg, category: cfg.key, market: profile.market, polarity: profile.polarity, practiceAreas: profile.practiceAreas, valueFactor: profile.scoring?.valueFactor, excludeDomains: profile.excludeDomains }, ctx), total)),
-        ...(profile.rosterSweep !== false ? [timed(++slot, 'Roster Sweep', () => rosterSweep({ profile, week }, ctx), total)] : []),
-        ...(profile.regulators?.bodies?.length ? [timed(++slot, 'Regulator Sweep', () => regulatorSweep({ profile, week }, ctx), total)] : []),
+        ...(freeOnly ? [] : profile.collectors.map((cfg, i) =>
+          timed(i + 1, cfg.name, () => runCollector({ ...cfg, category: cfg.key, market: profile.market, polarity: profile.polarity, practiceAreas: profile.practiceAreas, valueFactor: profile.scoring?.valueFactor, excludeDomains: profile.excludeDomains }, ctx), total))),
+        ...(!freeOnly && profile.rosterSweep !== false ? [timed(++slot, 'Roster Sweep', () => rosterSweep({ profile, week }, ctx), total)] : []),
+        ...(!freeOnly && profile.regulators?.bodies?.length ? [timed(++slot, 'Regulator Sweep', () => regulatorSweep({ profile, week }, ctx), total)] : []),
         ...(profile.feeds?.sources?.length ? [timed(++slot, 'Feed Collector', () => collectFeeds({ profile }, ctx), total)] : []),
         ...(profile.tenders ? [timed(++slot, 'Tender Collector', () => collectTenders({ profile }, ctx), total)] : []),
-        timed(++slot, 'Account Watch', () => accountWatch({ profile }, ctx), total),
+        ...(freeOnly ? [] : [timed(++slot, 'Account Watch', () => accountWatch({ profile }, ctx), total)]),
       ]);
       statuses.push(...collectorRuns.map(toStatus));
 
@@ -132,7 +147,7 @@ export async function runPipeline({
       quietNames = collectorRuns.flatMap((c) => c.quiet ?? []);
 
       // Checkpoint before anything downstream can fail.
-      await saveCollection({ week, collected_at: new Date().toISOString(), profile: profile.key, signals, telemetry, rejections: collectorRejections }, profile.key);
+      await saveCollection({ week, collected_at: new Date().toISOString(), profile: profile.key, free_only: freeOnly, signals, telemetry, rejections: collectorRejections }, profile.key);
       log.step('collection checkpointed — rerun with RESUME=true to skip searching');
     }
 

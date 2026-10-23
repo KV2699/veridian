@@ -304,6 +304,25 @@ Part 2, which found the Disney vacancy and correctly binned the Ingka
 appointment — but it has not yet done a full live run with web search, because
 of the credit situation in Part 6.
 
+**And then the free run found a bug worth more than the run.** The first
+free-sources run of this configuration verified **nothing** — two signals
+extracted, both thrown away. The rejection log said why, word for word:
+*"Future date (2026-10-20) is implausible."* The story was three days old. The
+AI was treating this week's news as being in the future, because **nothing in
+the instructions told it what today's date was**, so it fell back on the last
+date it saw during training.
+
+That is precisely backwards: the fresher the news, the more suspicious it looked
+— and recency is a quarter of the score. Five of the twelve agents had the same
+gap.
+
+Worse, it was a solved problem. `Today's date: [TODAY'S DATE]` appears in every
+single prompt of the original Acre prompt pack. The big ideas were carried into
+the code carefully; this one-line habit was dropped.
+
+Fixed, and the same sources on the same day then produced the briefing quoted in
+Part 6.
+
 **What this means for the submission:** say exactly this. The method is
 evidence-tested; the port is proven on real content through the free path; the
 full live run is pending credits. Judges discount vague claims. They rarely
@@ -383,13 +402,40 @@ submission anyway.
 ### Until those credits arrive, here is everything you can run for free
 
 ```bash
-npm test                              # 15 test files, no keys needed
-node tools/feed-check.mjs exec-search  # real signals from RSS, 0 search credits
-node tools/feed-check.mjs nvidia       # same for the other configuration
+npm test                               # 15 test files, no keys needed
+npm run pipeline:free                  # THE WHOLE PIPELINE on free sources only — 0 search credits
+node tools/feed-check.mjs exec-search  # just the feed step, to check a profile quickly
 npm run pipeline:dry                   # the whole pipeline on fake data, 0 calls
 npm run pipeline:resume                # re-run from the last saved search, 0 credits
 npm start                              # the dashboard, using data already collected
 ```
+
+### `pipeline:free` — the one that changes the situation
+
+This runs the **entire** pipeline — verification, scoring, the briefing, the
+register, the rejection log — using only the two collection sources that cost
+nothing: the trade press RSS feeds and the government procurement portals.
+
+It is not a cut-down version. Those two sources are the *only* ones where an AI
+never supplies a fact: the publisher writes the headline, the buyer writes the
+contract notice. They cannot get a company wrong. What they can't do is find an
+organisation nobody has written about yet.
+
+**On its first proper run for the headhunting configuration it produced a real
+briefing, for nothing:**
+
+> **This week's headline:** Disney's environmental sustainability co-lead
+> Yalmaz Siddiqui departed on 20 October 2026 with no named successor.
+>
+> *Counter-reading: Disney is a mega-cap with a mature in-house talent function
+> and a likely incumbent search panel, and the remaining co-lead may cover the
+> vacancy, making external search unlikely.*
+>
+> **Recommended action:** contact the remaining co-lead to confirm whether the
+> vacancy will be filled externally or covered internally.
+
+That is the system arguing against its own lead and then telling you how to
+test the argument. Zero credits.
 
 **`pipeline:resume` is the one to remember for the video.** It replays the last
 real collection without searching again, in about two minutes instead of
@@ -460,7 +506,7 @@ by something breaking:
 | 1 | **Join the Nebius Builder Program** for free credits | You, 5 minutes | **Do first — everything else waits on it** |
 | 2 | Push the code to a public GitHub repo | Either | Not started |
 | 3 | Clean the rubbish out of the register | Claude, half a day | Identified, not started |
-| 4 | One full live run of each configuration | Claude, once credits land | Blocked on #1 |
+| 4 | One full live run of each configuration | Claude, once credits land | Blocked on #1 — but **both configurations already produce a real briefing for free** via `npm run pipeline:free` |
 | 5 | Deploy so a judge can click a URL | Claude | Not started — **required** |
 | 6 | Record the 3-minute video | You + Claude | Not started — **required** |
 | 7 | Write the Devpost description | You + Claude | Not started — **required** |

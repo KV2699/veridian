@@ -362,6 +362,72 @@ band, and was auto-flagged for review. 8 of 117 signals.
 **The rule.** A fallback that is rarely exercised is a fallback that is rarely
 tested. Test the path that only runs when something else has already failed.
 
+### C7. The model did not know what day it was — and penalised this week's news for it
+
+**How it was found.** The first free-sources-only run of the executive search
+configuration produced **zero verified signals** from two extracted ones. The
+rejection log — which exists precisely so this question has an answer — gave the
+reason verbatim:
+
+> *"Future date (2026-10-20) is implausible"*
+
+The signal was three days old. The model was treating **this week's news as
+being in the future**, because nothing in the prompt told it what today was, so
+it fell back on its training cutoff.
+
+**What it cost.** The exact inversion of what you want: the fresher a signal, the
+more "implausible" it looked. Urgency is 25 of the 100 scoring points and
+recency is the whole premise of the product, so this penalised the most
+valuable signals hardest. Five of the agents that build prompts never stated the
+date.
+
+**The galling part.** `Today's date: [TODAY'S DATE]` appears in **every single
+prompt** of the operator's own Acre prompt pack. It is a documented, deliberate
+practice from the methodology this system was built from — and it did not
+survive into the code.
+
+**Fixed 23 October.** Today's date is now stated in the verifier, both topic and
+feed collectors, account watch and the roster sweep, with an explicit
+instruction that a date on or before today is in the past and must not be
+treated as implausible.
+
+**The result, same sources, same day:** 0 verified → **1 verified**, banded High,
+a real briefing written, and the organisation register populated — on a run that
+cost **zero search credits**.
+
+**The rule.** State the date in every prompt that reasons about recency. A model
+has no clock, and the failure mode is silent and backwards.
+
+**The wider rule, which is the more expensive one:** when porting a methodology
+into code, port the **small mechanical instructions** too. The big ideas —
+polarity, scoring, grounding — were all carried across carefully. A one-line
+convention that appeared in every prompt of the original was dropped, and it
+quietly degraded every run.
+
+### C8. Free sources as a first-class mode, not a degraded one
+
+**The problem.** A search allowance is a hard floor. At 26 credits with a full
+run costing 112, the system could not run at all — and an empty dashboard is a
+Design failure in front of a judge.
+
+**The fix.** `FREE_ONLY=true` (`npm run pipeline:free`) runs the two collection
+paths that cost nothing: RSS feeds and government procurement portals.
+Verification, scoring, the briefing, the register and the rejection log all run
+exactly as normal.
+
+**Why this is not a lesser pipeline.** Those two paths are the only ones where a
+model never supplies a fact — the publisher writes the headline, the buyer
+writes the notice. They cannot misattribute a claim. What they cannot do is find
+an organisation nobody has written about yet.
+
+**What it produced on its first proper run:** a 259-word briefing for the
+executive search configuration, naming a real vacancy at a real company with a
+live source link, a counter-reading arguing against it, and three recommended
+actions that each address that counter-reading. Zero credits.
+
+**The rule.** Build the free path properly and the paid path becomes an
+accelerator rather than a dependency.
+
 ---
 
 ## Part D — Working rules, distilled
@@ -381,3 +447,6 @@ Pin these up.
 11. **"Checked and quiet" is a finding.** "Didn't look" is not.
 12. **Ask whether the event gets published** before rewriting a query a third time.
 13. **An empty week and a broken pipeline look identical.** Diagnose the difference automatically, or you will not notice for months.
+14. **Tell the model what day it is.** It has no clock, and without one it treats today's news as implausibly futuristic.
+15. **When porting a method into code, port the small conventions too.** The big ideas get carried across carefully; a one-line habit gets dropped and silently degrades every run.
+16. **Make the free path a real path.** If it only works when you are paying, it does not work.

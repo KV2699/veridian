@@ -14,6 +14,18 @@ import { completeJSON, MODELS } from '../lib/nebius.js';
 import { scoreAll, valueFactorFor } from '../lib/score.js';
 import { log } from '../lib/log.js';
 
+// Today's date, handed to every model that has to reason about recency.
+//
+// Without it a model falls back on its training cutoff and treats THIS WEEK's
+// news as future-dated and therefore implausible — penalising exactly the
+// freshest, most valuable signals. Found by running the pipeline: a Disney
+// departure published three days earlier was rejected with "future date
+// (2026-10-20) is implausible".
+//
+// This is in the operator's own prompt pack — "Today's date: [TODAY'S DATE]"
+// appears in every prompt there — and it did not survive into the code.
+const today = () => new Date().toISOString().slice(0, 10);
+
 const DEFAULT_FLOOR = 6;
 
 // One verdict is roughly 50 output tokens, so a busy week of 70 signals needs
@@ -332,7 +344,9 @@ function buildPrompt(signals, profile) {
     ? `\nCOMMERCIAL VALUE — ${factorName}. Set value_level to one of: ${Object.keys(factor.points ?? {}).join(' | ')}\n${factor.guidance.map((g) => `- ${g}`).join('\n')}\n`
     : '';
 
-  return `${signals.length} signals were collected this week.
+  return `TODAY'S DATE: ${today()}. Any signal dated on or before today is in the past and is NOT implausible. Do not treat a recent date as a future date, and never lower a score because a date looks like it is in the future when it is not.
+
+${signals.length} signals were collected this week.
 
 MARKET: ${profile?.name ?? 'unnamed'}${profile?.market ? ` — ${profile.market}` : ''}
 ${areas}${valueBlock}

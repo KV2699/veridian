@@ -11,6 +11,63 @@ except where noted.
 
 ---
 
+## 23 October — third batch: the date the model never knew, and a free run mode
+
+### `FREE_ONLY` — the whole pipeline on sources that cost nothing
+
+`npm run pipeline:free` runs collection through RSS feeds and government
+procurement portals only, then verifies, scores, writes the briefing, updates
+the register and logs rejections exactly as normal.
+
+It exists because a search allowance is a hard floor, not a soft one. At 26
+credits against 112 for a full run, the choice was between a system that could
+not run at all and one that runs on the half of its sources that are free. It is
+not a degraded pipeline: those two paths are the only ones where a model never
+supplies a fact, so they cannot misattribute a claim. What they cannot do is
+find an organisation nobody has written about.
+
+### And the first free run immediately found something worth more than the run
+
+Zero verified signals from two extracted. The rejection log — added hours
+earlier, for exactly this — gave the reason verbatim:
+
+> *"Future date (2026-10-20) is implausible"*
+
+The story was three days old. **Nothing in the prompt told the model what day it
+was**, so it fell back on its training cutoff and treated this week's news as
+futuristic and therefore untrustworthy. Five of the prompt-building agents had
+the same gap.
+
+The cost is the exact inverse of what you want: the fresher the signal, the more
+implausible it looked — and urgency is 25 of the 100 scoring points.
+
+The galling part is that it was a solved problem. `Today's date: [TODAY'S DATE]`
+appears in **every prompt** of the Acre prompt pack this system was built from.
+Polarity, scoring and grounding were all ported carefully; a one-line convention
+was dropped, and it degraded every run since.
+
+Fixed in the verifier, both collectors, account watch and the roster sweep, with
+an explicit instruction that a date on or before today is in the past.
+
+**Same sources, same day, after the fix:** 0 verified → **1 verified**, banded
+High, a 259-word briefing naming a real vacancy with a live source link, a
+counter-reading arguing against it, and three recommended actions each written
+to test that counter-reading. Zero search credits.
+
+That briefing is also the first production proof of the counter-reading feature:
+
+> *"Disney is a mega-cap with mature in-house talent function and likely
+> incumbent search panel, and the remaining co-lead may cover the vacancy,
+> making external search unlikely."*
+
+### The credit answer was in the rules all along
+
+*"Entrants can join the Nebius Builder Program and get credits for Nebius Token
+Factory, Tavily, and Nebius Academy."* — $25 of Tavily credit is roughly 3,125
+credits, about 28 full runs. Free, and named by the sponsor.
+
+---
+
 ## 23 October — second batch: the review fixes, and two living documents
 
 Acting on two outside reviews (DeepSeek and Kimi) plus the query lab's own

@@ -42,6 +42,10 @@ Reply with JSON only:
 {"signals":[{"company":"string","signal_type":"string","summary":"string","url":"string","date":"YYYY-MM-DD or null","relevance_score":0}]}
 If nothing qualifies, return {"signals":[]}.`;
 
+// Today's date — see the note in collector-base.js. A model that does not know
+// the date treats this week's news as future-dated and implausible.
+const today = () => new Date().toISOString().slice(0, 10);
+
 export default async function accountWatch({ profile }, ctx = {}, deps = {}) {
   const find = deps.searchMany ?? searchMany;
   const ask = deps.completeJSON ?? completeJSON;
@@ -136,7 +140,7 @@ function buildPrompt({ focus, signalTypes, roster, batch, polarity }) {
     ? `\nHOW TO READ THESE EVENTS (this business specifically):\n${polarity.map((p) => `- ${p}`).join('\n')}\n`
     : '';
 
-  return `WATCHED ORGANISATIONS (existing relationships — a signal must be about one of these):
+  return `TODAY'S DATE: ${today()}. A result dated on or before today is in the past — recent is good, not suspicious.\n\nWATCHED ORGANISATIONS (existing relationships — a signal must be about one of these):
 ${roster.map((r) => `- ${r}`).join('\n')}
 
 WHAT COUNTS AS A REASON TO CONTACT THEM: ${focus}

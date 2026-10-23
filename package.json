@@ -13,6 +13,7 @@
     "test": "node test/run-all.mjs",
     "verify": "node scripts/verify-nemotron.mjs",
     "pipeline:resume": "RESUME=true node server/pipeline.js",
+    "pipeline:free": "FREE_ONLY=true node server/pipeline.js",
     "backfill": "BACKFILL=true node server/pipeline.js",
     "query": "node tools/query-lab.mjs"
   },

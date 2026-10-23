@@ -49,6 +49,18 @@ If nothing in the results qualifies, return {"signals":[]}.`;
 // collection, and — measured on real web content — a reasoning-tuned model
 // needs the per-call output to stay small or it exhausts its token budget
 // thinking and never answers.
+// Today's date, handed to every model that has to reason about recency.
+//
+// Without it a model falls back on its training cutoff and treats THIS WEEK's
+// news as future-dated and therefore implausible — penalising exactly the
+// freshest, most valuable signals. Found by running the pipeline: a Disney
+// departure published three days earlier was rejected with "future date
+// (2026-10-20) is implausible".
+//
+// This is in the operator's own prompt pack — "Today's date: [TODAY'S DATE]"
+// appears in every prompt there — and it did not survive into the code.
+const today = () => new Date().toISOString().slice(0, 10);
+
 const BATCH = Number(process.env.EXTRACTION_BATCH) || 4;
 
 export async function runCollector(
@@ -211,7 +223,9 @@ function buildPrompt({ focus, signalTypes, batch, polarity = [], practiceAreas =
     ? `\nCOMMERCIAL VALUE — set value_level to one of: ${Object.keys(valueFactor.points ?? {}).join(' | ')}\n${valueFactor.guidance.map((g) => `- ${g}`).join('\n')}\n`
     : '';
 
-  return `BD FOCUS: ${focus}${areasBlock}${valueBlock}
+  return `TODAY'S DATE: ${today()}. A result dated on or before today is in the past — recent is good, not suspicious.
+
+BD FOCUS: ${focus}${areasBlock}${valueBlock}
 
 SIGNAL TYPES TO LOOK FOR:
 ${signalTypes.map((t) => `- ${t}`).join('\n')}
