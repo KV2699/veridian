@@ -13,6 +13,15 @@
 
 ---
 
+## Read these two first
+
+| | |
+|---|---|
+| [HACKATHON-FOR-DUMMIES.md](HACKATHON-FOR-DUMMIES.md) | The whole system in plain English — what it is, how it works, what is tested, what it costs, what is left. **Kept current after every batch of changes.** |
+| [PITFALLS-AND-LESSONS.md](PITFALLS-AND-LESSONS.md) | Everything that went wrong, what it cost, how it was found, and the rule that prevents it recurring. Same update cadence. |
+
+---
+
 ## 0. What changed on 23 October — read this first
 
 **Two configurations now ship, and the engine is genuinely market-agnostic.**

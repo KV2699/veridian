@@ -313,16 +313,30 @@ export function normalise(raw, { batch, category, practiceAreas = [], valueFacto
 
 const str = (v) => (typeof v === 'string' ? v.trim().replace(/\s+/g, ' ') : '');
 
+// Accepts both shapes a date arrives in, which is the whole point.
+//
+// The model supplies YYYY-MM-DD. TAVILY SUPPLIES RFC-2822 —
+// "Fri, 02 Oct 2026 18:24:26 GMT" — and the original matched YYYY-MM-DD only,
+// so Tavily's own date returned null. Mostly invisible, because the model
+// usually supplies a date of its own; the damage happened exactly when it did
+// NOT, which is when the fallback was the only thing left. The signal became
+// undated, scored ZERO urgency points out of 25, dropped a band, and was
+// auto-flagged for review. 8 of 117 signals in the log at the time.
 function isoDate(v) {
   if (typeof v !== 'string') return null;
-  const m = v.match(/\d{4}-\d{2}-\d{2}/);
-  if (!m) return null;
-  const d = new Date(m[0]);
+  const trimmed = v.trim();
+  if (!trimmed) return null;
+
+  // Prefer an explicit YYYY-MM-DD anywhere in the string: it is unambiguous,
+  // and it avoids Date's timezone shifting a bare date back by a day.
+  const m = trimmed.match(/\d{4}-\d{2}-\d{2}/);
+  const d = m ? new Date(m[0]) : new Date(trimmed);
   if (Number.isNaN(d.getTime())) return null;
+
   // Reject anything in the future or absurdly old — both are extraction errors.
   const now = Date.now();
   if (d.getTime() > now + 864e5 || d.getTime() < now - 365 * 864e5) return null;
-  return m[0];
+  return m ? m[0] : d.toISOString().slice(0, 10);
 }
 
 // Unknown is the safe default: scale points treat unknown as small, so a

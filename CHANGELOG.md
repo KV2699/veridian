@@ -11,6 +11,92 @@ except where noted.
 
 ---
 
+## 23 October — second batch: the review fixes, and two living documents
+
+Acting on two outside reviews (DeepSeek and Kimi) plus the query lab's own
+backlog. Everything here was free — no search credits spent.
+
+### Verified a claim before it went in a video
+
+One review challenged the feed-collector story, having been shown a paste of the
+file that already contained the fix. `git diff b8d611c..b00c6aa --
+server/agents/collector-feeds.js` settles it: the polarity block and the scoring
+rubric are **additions** in that commit. The claim is reproducible and safe to
+put on camera.
+
+Two other review findings were artefacts of an incomplete upload rather than
+real gaps: the MIT `LICENSE`, the 15 test files and `public/index.html` all
+exist and always did.
+
+### The date bug — a quarter of the score, invisible
+
+Tavily returns RFC-2822 (`"Fri, 02 Oct 2026 18:24:26 GMT"`). `isoDate()` matched
+`YYYY-MM-DD` only and returned null for it.
+
+It stayed invisible because the model usually supplies its own date — the damage
+happened precisely when it did not, which is exactly when the fallback was the
+only thing left. The signal became undated, scored **zero of 25 urgency
+points**, dropped a band and was auto-flagged. 8 of 117 signals in the log.
+
+Now prefers an explicit `YYYY-MM-DD` anywhere in the string (unambiguous, and it
+avoids the timezone shifting a bare date back a day) and falls back to
+`new Date()`. Verified against all four shapes in use.
+
+### Five measured query improvements, applied at last
+
+They had been sitting in `tools/QUERY-LOG.md` marked "awaiting approval", worth
++30 to +60 points of usable yield each:
+
+| Replaced | Gain |
+|---|---|
+| `"has appointed" chief AI officer OR head of AI infrastructure announcement` | 30 → 90% |
+| `"has deployed" AI networking fabric data center announced` | 40 → 90% |
+| `signed agreement deploy custom AI accelerators cloud provider announced` | 60 → 90% |
+| `taped out custom AI accelerator announced Broadcom OR Marvell partnership` | 60 → 80% |
+| `Google OR Amazon OR Microsoft OR Meta unveils new AI chip announced` | 50 → 78% |
+
+Plus two additions (`"breaks ground"` at 100%, `"has awarded"` at 88%) and one
+deletion. The deletion is the lesson: the HBM supply query resisted four
+rewrites — 40%, 60%, 30%, 50%, 50% — and the reason was not wording. Supply
+agreements of that kind are commercially confidential, so the event is rarely
+published at all. That is "hunting states, not events" in a new costume. 31 → 32
+queries.
+
+### A test for the entire class of bug that produced the feed defect
+
+`test/polarity-propagation.test.mjs` captures the prompt each agent actually
+sends to the model and asserts the profile's polarity text is inside it — for
+the topic collectors, the feed collector, account watch and the verifier, plus
+the market and reader for the briefing writer.
+
+**Verified by reintroducing the bug:** with the polarity argument removed the
+test fails on exactly the right line, and passes again when restored. That is
+the difference between a test and a comment.
+
+### Two living documents
+
+`HACKATHON-FOR-DUMMIES.md` — the whole system in plain English for a
+non-technical reader: what it is, the two configurations and the proof they
+work, how every hackathon requirement is met, what has actually been tested and
+whether it worked, what it costs to run, the top ten strengths and the top ten
+enhancements, and how a new business would supply a profile.
+
+`PITFALLS-AND-LESSONS.md` — every failure with what it cost, how it was found
+and the rule that prevents recurrence. Part A is the pitfalls that predate the
+software and reappeared in new code; Part B is software-specific; Part C is this
+build; Part D distils thirteen working rules.
+
+**Both are updated after every batch of changes from now on.**
+
+### The credit answer, found in the rules themselves
+
+The official rules say entrants can join the **Nebius Builder Program**
+(https://dev.nebius.com/builders), which includes **$25 of Tavily credit** —
+about 3,125 credits, or 28 full runs — and $25 of Token Factory credit. Free,
+legitimate, and named by the sponsor. No pay-as-you-go needed.
+
+---
+
 ## 23 October — the second configuration
 
 The brief: change the hackathon track, and make the system ship with **two**

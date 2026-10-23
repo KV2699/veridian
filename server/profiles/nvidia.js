@@ -166,6 +166,13 @@ export default {
         'neocloud Series B Series C raised AI compute capacity',
         'national AI factory supercomputer government funding announced',
         'AI infrastructure acquisition acquired data center operator',
+        // Round 2 of the query lab, measured: quoting the exact verb phrase is
+        // the strongest lever found — it forces a match on REPORTING language
+        // rather than topic vocabulary. Use it to rescue a weak query, never to
+        // polish a strong one: adding a quoted phrase to a query already at
+        // 100% dropped it to 90%, because a quote is a hard constraint that
+        // excludes real events worded differently.
+        '"has awarded" contract AI compute data centre',
         'private credit debt facility GPU financing announced',
       ],
       windowDays: 30,
@@ -183,9 +190,9 @@ export default {
         'Announced supply constraint, allocation change, or lead-time shift affecting AI compute',
       ],
       queries: [
+        '"breaks ground" AI data center campus announced',
         'AI data center power purchase agreement megawatt announced',
         'new AI data center campus gigawatt site announced operator',
-        'HBM CoWoS advanced packaging capacity supply agreement allocation',
         'AI server production order ODM manufacturing expansion announced',
         'data centre grid connection substation approval AI campus',
         'liquid cooling contract AI data center deployment announced',
@@ -207,13 +214,13 @@ export default {
         'Export control, trade restriction, or regulatory decision that changes which market can be sold to',
       ],
       queries: [
-        'company deploying Trainium TPU MTIA custom AI chip at scale',
+        'signed agreement deploy custom AI accelerators cloud provider announced',
         'AMD Instinct MI deployment enterprise win announced',
-        'custom AI accelerator programme expanded cancelled company',
+        'taped out custom AI accelerator announced Broadcom OR Marvell partnership',
         'inference chip startup deployment enterprise customer announced',
-        'hyperscaler custom silicon tape out production announced',
+        'Google OR Amazon OR Microsoft OR Meta unveils new AI chip announced',
         'company switching GPU vendor migration announced',
-        'AI networking ethernet infiniband deployment win announced',
+        '"has deployed" AI networking fabric data center announced',
       ],
       windowDays: 30,
     },
@@ -231,7 +238,7 @@ export default {
       ],
       queries: [
         'enterprise AI factory on-premise AI infrastructure buildout announced',
-        'appointed chief AI officer head of AI infrastructure VP compute',
+        '"has appointed" chief AI officer OR head of AI infrastructure announcement',
         'RFP tender AI compute GPU procurement notice published',
         'national lab university funded AI supercomputer programme announced',
         'bank insurer manufacturer AI infrastructure investment announced',

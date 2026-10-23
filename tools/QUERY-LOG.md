@@ -76,7 +76,11 @@ invisible — but whenever it does not, the fallback that should rescue the sign
 fails instead. The signal becomes undated, scores **zero urgency points**, drops
 a band, and is auto-flagged for review. 8 of 117 signals in the current log.
 
-One-line fix, not applied: parse with `new Date(v)` and fall back to the regex.
+**✅ FIXED 23 October.** `isoDate()` in `collector-base.js` now prefers an
+explicit `YYYY-MM-DD` anywhere in the string — unambiguous, and it avoids the
+timezone shifting a bare date back a day — and falls back to `new Date(v)` for
+everything else. Verified against all four shapes Tavily and the model actually
+produce. Covered by `test/collector.test.mjs`.
 
 ---
 
@@ -166,9 +170,11 @@ not just the usable percentage.
 
 ---
 
-## Recommendations awaiting approval
+## Recommendations — ✅ ALL APPLIED 23 October 2026
 
-Five replacements, all measured, none applied:
+Five replacements, two additions and one deletion. All were measured here and
+all are now live in `server/profiles/nvidia.js`. The collector query count went
+31 → 32 (five swapped in place, two added, one deleted).
 
 | Replace | With | Gain |
 |---|---|---|
@@ -201,3 +207,25 @@ served by the feed collector than by search.
 8. **`max_results` caps ranking, not dates.** Widening a window does not add results, it exchanges them — and a busy week crowds out a quiet one.
 9. **Let the cadence do the slicing.** A weekly run on a 7-day window accumulates a month of weekly top-10s. A weekly run on a 30-day window re-reads the same month and dedup throws most of it away.
 10. **Slice explicitly only when backfilling.** 3.3× the recall, 4× the credits, and 3.3× the extraction cost — worth it once, not every week.
+
+
+---
+
+## Applied, 23 October 2026
+
+| Change | Collector | Measured |
+|---|---|---|
+| `"has appointed" chief AI officer OR head of AI infrastructure announcement` | opportunity | 30 → 90% |
+| `"has deployed" AI networking fabric data center announced` | infrastructure | 40 → 90% |
+| `signed agreement deploy custom AI accelerators cloud provider announced` | competitive | 60 → 90% |
+| `taped out custom AI accelerator announced Broadcom OR Marvell partnership` | competitive | 60 → 80% |
+| `Google OR Amazon OR Microsoft OR Meta unveils new AI chip announced` | competitive | 50 → 78% |
+| **Added** `"breaks ground" AI data center campus announced` | infrastructure | 100% |
+| **Added** `"has awarded" contract AI compute data centre` | capital | 88% |
+| **Deleted** `HBM CoWoS advanced packaging capacity supply agreement allocation` | infrastructure | 40%, four rewrites could not clear 60% |
+
+The deletion is the one worth remembering. Supply agreements of that kind are
+commercially confidential, so the event is rarely published at all and no
+wording can find it. That is the "hunting states, not events" failure in a new
+form: **before rewriting a query a third time, ask whether the event gets
+published.** If it does not, delete the query rather than tune it.

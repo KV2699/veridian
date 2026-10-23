@@ -1,4 +1,4 @@
-// Pipeline orchestrator — runs the eight agents in sequence.
+// Pipeline orchestrator — runs the twelve agents in sequence.
 //
 // Agents 1-5 collect independently and run concurrently: four discovery
 // collectors plus Account Watch. They share no state. Agents 6, 7 and 8 are

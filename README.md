@@ -4,6 +4,12 @@
 
 Built for the **Nebius x NVIDIA Global AI Hackathon** — Best Apps and Agents track.
 
+> **New here?** [HACKATHON-FOR-DUMMIES.md](HACKATHON-FOR-DUMMIES.md) explains the
+> whole system in plain English — what it does, why each decision was made, what
+> has been tested, and what it costs to run.
+> [PITFALLS-AND-LESSONS.md](PITFALLS-AND-LESSONS.md) is the log of everything
+> that went wrong and the rule that stops each one recurring.
+
 **Two configurations ship, and they are opposites.** The same twelve agents, the same scoring code, the same verification — serving a GPU infrastructure vendor and an ESG executive search firm, which read the identical event in opposite directions. Switch between them in the dashboard.
 
 ---
