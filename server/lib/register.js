@@ -14,6 +14,7 @@
 // Quarters Tracked column.
 
 import { readJSON, writeJSON, filesFor } from './store.js';
+import { bandFor } from './score.js';
 
 // The register is per profile. Two businesses in two markets accumulate two
 // prospect lists; merged, neither list describes anybody. The profile key is
@@ -22,6 +23,126 @@ import { readJSON, writeJSON, filesFor } from './store.js';
 export const registerFile = (profile) => filesFor(profile).register;
 
 export const getRegister = (profile) => readJSON(registerFile(profile), {});
+
+
+// ── Things that are not prospects ──────────────────────────────────────────
+//
+// A country cannot buy anything. Neither can a continent, a trade bloc, or the
+// abstract noun "government". They appear in this market's reporting constantly
+// — "the UK will invest in AI compute", "South Korea announces a national AI
+// programme" — and an extractor doing its job correctly names them as the
+// organisation the story is about, because they ARE.
+//
+// They were the top five entries in the register: `United Kingdom` scoring 90
+// Critical, sourced to an ETF investment guide. Every claim this system makes
+// about grounding and arithmetic scoring is undercut by that one row, because
+// it is the first thing anyone sees.
+//
+// The lead is never the country. It is whichever named body runs the programme
+// — and if the source does not name one, there is no lead yet.
+const GENERIC_PREFIXES = [
+  'government of', 'the government of', 'the government',
+];
+// Deliberately SHORT. An earlier version listed ministry, department, agency,
+// authority, council and commission here, and it dropped the US Department of
+// Energy — which buys exascale supercomputers — along with a county council.
+// A NAMED public body is one of the best prospects in this market: sovereign
+// AI programmes are signed by one. Only the country itself, and government as
+// an abstraction, cannot buy anything.
+const GENERIC_SUFFIXES = [
+  'government', 'administration', 'parliament', 'cabinet',
+];
+const GENERIC_EXACT = new Set([
+  // Sovereign states and territories seen in this market's reporting
+  'unitedkingdom', 'uk', 'unitedstates', 'us', 'usa', 'america', 'southkorea',
+  'northkorea', 'japan', 'china', 'india', 'france', 'germany', 'italy',
+  'spain', 'netherlands', 'belgium', 'sweden', 'norway', 'denmark', 'finland',
+  'poland', 'ireland', 'canada', 'australia', 'singapore', 'taiwan', 'israel',
+  'saudiarabia', 'uae', 'unitedarabemirates', 'qatar', 'kuwait', 'brazil',
+  'mexico', 'russia', 'ukraine', 'turkey', 'switzerland', 'austria', 'portugal',
+  'greece', 'malaysia', 'indonesia', 'thailand', 'vietnam', 'philippines',
+  'newzealand', 'southafrica', 'egypt', 'nigeria', 'kenya',
+  // Blocs and abstractions
+  'europeanunion', 'eu', 'europe', 'asia', 'africa', 'middleeast', 'apac',
+  'emea', 'nato', 'g7', 'g20', 'unitednations', 'un',
+  // Bare abstractions that reach the extractor from headlines
+  'government', 'governments', 'state', 'industry', 'market', 'sector',
+  'enterprise', 'enterprises', 'customers', 'companies', 'organisations',
+  'organizations', 'universities', 'researchers', 'startups',
+]);
+
+/**
+ * Is this name a country, a bloc, a bare government, or a description rather
+ * than an organisation that could sign a contract?
+ */
+export function isGenericEntity(raw, { sourceUrl = '' } = {}) {
+  const name = String(raw ?? '').trim();
+  if (!name) return true;
+  const lower = name.toLowerCase();
+  const key = keyFor(name);
+
+  if (GENERIC_EXACT.has(key)) return true;
+  if (GENERIC_PREFIXES.some((p) => lower.startsWith(p))) return true;
+  // "UK government", "South Korea Government", "US administration"
+  if (GENERIC_SUFFIXES.some((suf) => lower.endsWith(` ${suf}`))) return true;
+
+  // A DESCRIPTION is handled by ownerOf() below, not dropped here: the owner
+  // of the description is a real lead and throwing the row away loses it.
+
+  // A PERSON, and only when the source says so.
+  //
+  // There was a general heuristic here — two or three capitalised words with
+  // no corporate vocabulary — and it dropped "Dell Technologies" on its first
+  // test. That is the wrong trade entirely: a stray person in the register is
+  // visible and traceable, while a silently dropped roster account is neither.
+  //
+  // So the rule now needs corroboration from the source. A profile page is
+  // about a person; an article is about an organisation.
+  // LinkedIn only, deliberately. X and Twitter were in this list and a test
+  // immediately caught the consequence: a two-word company name sourced from
+  // an X post is dropped as a person. X carries company announcements as often
+  // as personal ones; a LinkedIn /in/ or /posts/ url is about a person.
+  if (sourceUrl && /(?:^|\.)linkedin\.com$/i.test(hostOf(sourceUrl))
+      && /^[A-Z][a-z]+(?:\s+[A-Z][a-z'’-]+){1,2}$/.test(name)
+      && !/\b(Inc|Ltd|Limited|Co|Corp|Corporation|Group|Labs?|Systems?|Technologies|Tech|Cloud|Data|Energy|Digital|Networks?|Capital|Partners|Ventures|Bank|University|Institute|Solutions|Services|Holdings|AI|Compute)\b/i.test(name)) {
+    return true;
+  }
+
+  return false;
+}
+
+function hostOf(url) {
+  try { return new URL(url).hostname; } catch { return ''; }
+}
+
+
+// Common nouns that mark the words after a possessive as a DESCRIPTION of
+// something a company owns rather than part of its name.
+const DESCRIPTION_NOUNS = /\b(company|business|unit|division|subsidiary|venture|arm|platform|programme|program|project|initiative|facility|datacentre|datacenter|data centre|data center|infrastructure|operation|operations)\b/i;
+
+/**
+ * "KKR's AI infrastructure company" → "KKR".
+ *
+ * An extractor naming the thing a company owns, rather than the company, is
+ * common and the row is still a real lead — the owner is the organisation to
+ * approach. Dropping it loses a genuine prospect, so the name is rewritten.
+ *
+ * Deliberately narrow. It fires ONLY when what follows the possessive is a
+ * common-noun description, because a possessive is part of plenty of real
+ * names: "Lloyd's Register", "Moody's", "Standard & Poor's". Those are left
+ * exactly as they are.
+ */
+export function ownerOf(raw) {
+  const name = String(raw ?? '').trim();
+  const m = name.match(/^(.+?)['’]s?\s+(.+)$/);
+  if (!m) return name;
+  const [, owner, remainder] = m;
+  if (!DESCRIPTION_NOUNS.test(remainder)) return name;
+  // A government ministry is a nameable buyer in this market — sovereign AI
+  // programmes are signed by one. Only the bare country is not.
+  if (/\b(ministry|department|agency|authority|office|bureau)\b/i.test(remainder)) return name;
+  return owner.trim();
+}
 
 /**
  * Fold a week's verified signals into the register.
@@ -43,10 +164,20 @@ export async function updateRegister(signals, { week, roster = [], exclusions = 
   let updated = 0, skipped = 0;
 
   for (const s of signals) {
-    const raw = String(s.company ?? '').trim();
+    // "KKR's AI infrastructure company" registers as KKR — the owner is the
+    // lead, and the description is not an organisation anyone can approach.
+    const raw = ownerOf(String(s.company ?? '').trim());
     // A joint announcement is not one organisation. Splitting it reliably is
     // guesswork, so it is skipped rather than registered under a merged name.
-    if (/\s[/&]\s|\sand\s.+\sand\s/.test(raw)) { skipped++; continue; }
+    //
+    // The original pattern missed the most common shape in this market's
+    // reporting — a comma list ending in "and": "Apollo, BlackRock, Microsoft
+    // and KKR" registered as a single 40-character organisation scoring 55.
+    if (/\s[/&]\s|\sand\s.+\sand\s|,.*\sand\s|,.*,/.test(raw)) { skipped++; continue; }
+
+    // A country, bloc or bare government cannot buy anything, and a
+    // description of a company is not the company.
+    if (isGenericEntity(raw, { sourceUrl: s.url })) { skipped++; continue; }
 
     let key = keyFor(raw);
     if (!key) continue;
@@ -92,7 +223,12 @@ export async function updateRegister(signals, { week, roster = [], exclusions = 
 
     if ((s.priority_score ?? 0) > entry.best_score) {
       entry.best_score = s.priority_score ?? 0;
-      entry.best_band = s.priority_band ?? 'Low';
+      // DERIVED, never taken as given. Storing the band alongside the score let
+      // the two disagree — four entries sat at 80 labelled "High" when 80 is
+      // Critical, because the band came from the signal rather than from the
+      // number next to it. Same principle as the score itself: if it can be
+      // computed, never accept it as input.
+      entry.best_band = bandFor(entry.best_score).band;
     }
 
     // Signals are kept newest-first and capped: the register is a directory of

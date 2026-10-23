@@ -125,6 +125,10 @@ export default {
   // organisation it should register under.
   aliases: {
     AWS: 'Amazon Web Services',
+    // Reporting uses the two interchangeably for datacentre and capacity news,
+    // and they registered as two separate prospects in the top ten.
+    Amazon: 'Amazon Web Services',
+    'Amazon.com': 'Amazon Web Services',
     'Amazon Web Services (AWS)': 'Amazon Web Services',
     GCP: 'Google Cloud',
     'Google Cloud Platform': 'Google Cloud',

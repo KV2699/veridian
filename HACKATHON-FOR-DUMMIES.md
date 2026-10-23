@@ -74,7 +74,12 @@ to prove it is real rather than just claimed.
 
 ---
 
-## Part 2 — The two configurations (and how we proved they work)
+## Part 2 — The configurations (and how we proved they work)
+
+**Two were hand-built. The third was built BY the system, in about a minute, for
+nothing** — see Part 2b. That is the answer to "how would a business provide a
+profile": it mostly doesn't have to.
+
 
 The system ships set up for two completely different businesses. Same code, same
 AI, same everything — one file different.
@@ -106,6 +111,89 @@ You can run it yourself in about 30 seconds, for free:
 ```bash
 node tools/feed-check.mjs exec-search
 ```
+
+---
+
+## Part 2b — Onboarding a new business automatically
+
+You asked whether the system could build its own profiles. It can — all of it
+except one thing, and that exception is the whole point.
+
+### What it does on its own
+
+```bash
+node tools/build-profile.mjs --site https://thecompany.com --brief brief.md --wins wins.md --key thekey
+```
+
+In about a minute, with **no search credits**, it:
+
+1. **Reads the company's own website** over plain HTTP — the homepage plus the
+   "what we do" and services pages it finds by following links
+2. **Works out what they sell**, as separate budgets signed by different people
+3. **Finds their named clients and competitors** from their own site and the brief
+4. **Probes for live RSS feeds** and *tests every one*. On the real test it
+   found 6 working feeds and correctly rejected 4 — including a "soft 404", a
+   page that returns success but isn't a feed
+5. **Writes the filter words** that decide which headlines are worth reading,
+   weighted to event words (*appoints, steps down, awarded, acquires*) rather
+   than topic words
+6. **Writes a complete, runnable profile file**
+
+### The one thing it refuses to do
+
+**It will not guess the polarity.** That is the field saying whether an
+appointment means "call them" or "we've lost this one", and no amount of
+research answers it, because it isn't a fact about the market — it's a fact
+about the business model.
+
+But there *is* one reliable source, and it isn't a description of the company.
+**It's their own past wins.** For each deal they've already won, one question:
+
+> *What published event started this deal?*
+
+Answer it five times and the polarity falls out of the answers. No guessing.
+
+Here is what it produced from six real wins, unedited:
+
+> - *A COMPLETED ACQUISITION with a stated integration timetable is a LEAD — two estates must be merged against a legally fixed date and the work cannot be deferred.*
+> - *A REGULATOR PUBLISHING FINAL RULES with an in-force date is a LEAD on every firm it obliges, and NOT on the regulator itself — the regulator is not a customer.*
+> - *AN ORGANISATION STATING IT BUILDS IN-HOUSE is a DEAD LEAD — the work will never come to market, however well it fits.*
+
+That last line came from a deal they **lost**. No market research would ever
+have produced it. Each line is written into the file with the deal it came from,
+so a human can check it.
+
+**If you give it no wins, it still writes the profile** — with the polarity
+block left as explicit unanswered questions and a warning at the top saying the
+profile will not score correctly until a human answers them. Refusing to guess
+is not a limitation. It's the product.
+
+### Proof: a third business, onboarded free, producing a real briefing
+
+A UK technology consultancy. Website + a research brief + six past wins. One
+minute. Zero search credits. Then one free run, and the briefing it wrote found:
+
+> **Open tender** — Future Generations Commissioner for Wales, Cymru Can
+> Strategy Review, **£12,500, closing 9 November**
+> *Counter-reading: the tender value is only £12.5k, which may be below their
+> minimum engagement threshold.*
+
+A real contract, a real deadline, a real source link — and the system arguing
+against its own lead on commercial grounds. It also connected that tender to a
+government announcement in the same week and recommended a combined pitch.
+
+**This is the answer to "does it generalise?"** It isn't a claim. It's a third
+market, running, built by the system itself.
+
+### The workflow, end to end
+
+| Step | Tool | Cost |
+|---|---|---|
+| 1. Research the company | Perplexity, using the prompt in [tools/PERPLEXITY-PROFILE-PROMPT.md](tools/PERPLEXITY-PROFILE-PROMPT.md) | free |
+| 2. Write down 5–10 past wins — *what event started each deal?* | You, 20 minutes | free |
+| 3. Build the profile | `node tools/build-profile.mjs` | free |
+| 4. Read the polarity block and correct it | You, 10 minutes | free |
+| 5. Test it | `PROFILE=thekey npm run pipeline:free` | **free** |
 
 ---
 
@@ -462,9 +550,13 @@ hallucinate because any link the AI didn't get from the search is thrown away.
 questions by voice, shows its workings, and now lets you switch between two
 businesses from a dropdown.
 
-**Weak:** the prospect register has rubbish at the top of it — `South Korea` and
-a Japanese government ministry are listed as if they were companies. **That is
-the first thing a judge sees.** It needs half a day.
+**Fixed 23 October:** the register used to have rubbish at the top — `United
+Kingdom` scoring 90 Critical, sourced to an investment guide. A country cannot
+sign a contract. 15 non-organisations removed, `Amazon` and `Amazon Web
+Services` merged, and four entries whose band disagreed with their own score
+corrected. 165 → 150 organisations, and the top ten is now defensible.
+
+**Weak:** still not deployed anywhere a judge can click.
 
 ### 3. Potential Impact
 
@@ -505,7 +597,7 @@ by something breaking:
 |---|---|---|---|
 | 1 | **Join the Nebius Builder Program** for free credits | You, 5 minutes | **Do first — everything else waits on it** |
 | 2 | Push the code to a public GitHub repo | Either | Not started |
-| 3 | Clean the rubbish out of the register | Claude, half a day | Identified, not started |
+| 3 | ~~Clean the rubbish out of the register~~ | Claude | **Done 23 Oct** — 165 → 150, top ten defensible |
 | 4 | One full live run of each configuration | Claude, once credits land | Blocked on #1 — but **both configurations already produce a real briefing for free** via `npm run pipeline:free` |
 | 5 | Deploy so a judge can click a URL | Claude | Not started — **required** |
 | 6 | Record the 3-minute video | You + Claude | Not started — **required** |
@@ -548,6 +640,13 @@ These are the ones that genuinely cannot be guessed from a company website.
 | 5 | **Which events actually get published?** | If the event is confidential, no wording will ever find it — delete the search rather than tune it | Supply agreements: mostly never published. Deleted |
 | 6 | **Which publications carry your market's news?** | General web search systematically misses trade press, and source lists go stale | 11 named RSS feeds, each checked live |
 | 7 | **Who are your clients, and who are your competitors?** | Clients are never "prospects" and get their own weekly check. Competitors are intelligence, never leads | — |
+
+### The quickest version: let the system do it
+
+Most of this is now automated — see Part 2b. Run the Perplexity prompt in
+[tools/PERPLEXITY-PROFILE-PROMPT.md](tools/PERPLEXITY-PROFILE-PROMPT.md), write
+down five past wins, and `node tools/build-profile.mjs` produces the file. The
+only part that needs a human is reading the polarity block afterwards.
 
 ### What you would physically send us
 
@@ -594,7 +693,7 @@ for your business.** That last one is the claim to lead with.
 
 ---
 
-## Part 10 — The top ten things this does brilliantly
+## Part 10 — The top eleven things this does brilliantly
 
 1. **It reads the same news two opposite ways, correctly.** Provable in 30
    seconds, for free, on real headlines. Nothing else in this competition will
@@ -620,6 +719,11 @@ for your business.** That last one is the claim to lead with.
    — including "the real buyer here is someone else entirely".
 10. **It checks every name on the list, including the quiet ones.** "Checked and
     nothing" is different from "didn't look", and only one of those is useful.
+11. **It onboards a new business itself** — reads their website, works out what
+    they sell, finds and *tests* their trade press feeds, and writes the
+    configuration file. One minute, no search credits. And it refuses to guess
+    the one field that cannot be researched, deriving it from past wins instead
+    or leaving it as explicit questions for a human.
 
 ---
 
@@ -630,11 +734,11 @@ Ranked by what each would add against the judging criteria.
 | # | Enhancement | What it adds | Effort |
 |---|---|---|---|
 | 1 | **Deploy on Nebius Serverless** — dashboard as an Endpoint, weekly run as a Job | **Required for submission.** Directly answers "how effectively does it use Nebius" | 1 day |
-| 2 | **Clean the register** — countries and ministries listed as companies | First thing a judge sees. Pure Design points | ½ day |
+| 2 | ~~Clean the register~~ | **Done 23 Oct** — 165 → 150 organisations | — |
 | 3 | **Route to market** — every lead names a door and a job title to approach | Turns "here's a lead" into "here's what to do". From the Scott Logic tracker | ½ day |
 | 4 | **Deadline countdown** — anything with a closing date, diarised and counted down weekly | A tender reported once and forgotten is a lost tender. Strong "persistent memory" evidence | ½ day |
 | 5 | **Turn one regulation into many named companies** — a rule obliging "all UK water companies" becomes 11 named leads | The fastest route from one signal to a pipeline. Proven in the Scott Logic work | 1 day |
-| 6 | **A third configuration** — think tank, or software consultancy | Two proves the idea; three proves it scales. Both methods already exist | ½ day each |
+| 6 | ~~A third configuration~~ | **Done 23 Oct** — and built BY the system in a minute, which is a better story than building it by hand | — |
 | 7 | **Let the user strike off an account** — with a reason code, excluded from all future runs | Gives the user control, and two of the reason codes are bug reports that improve the system | ½ day |
 | 8 | **Learn from what you win** — mark a lead won or lost, feed it back into scoring | The obvious next step, honestly out of reach this week: needs real outcome data | Weeks |
 | 9 | **Email the briefing on Monday morning** | Removes the last manual step. Trivially easy and demos beautifully | 2 hours |

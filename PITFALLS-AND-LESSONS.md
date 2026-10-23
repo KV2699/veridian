@@ -428,6 +428,97 @@ actions that each address that counter-reading. Zero credits.
 **The rule.** Build the free path properly and the paid path becomes an
 accelerator rather than a dependency.
 
+### C9. The register was full of things that cannot buy anything
+
+**What it looked like.** The top five entries, by score: `United Kingdom` (90,
+Critical, sourced to an ETF investment guide), `South Korea Government`,
+`South Korea` as a separate entry, a government ministry, and `UK government`.
+`Amazon` and `Amazon Web Services` both sat in the top ten as separate
+prospects. A person was in there, sourced to a LinkedIn post.
+
+**Why it mattered more than it looked.** The register is the first screen anyone
+sees. Every claim this system makes — grounding, arithmetic scoring, the
+rejection log — is undercut by one row reading `United Kingdom — 90 — Critical`.
+
+**Four distinct defects, not one:**
+
+1. **No guard on what can be a prospect.** A country cannot sign a contract.
+   Neither can a bloc, nor "government" as an abstraction.
+2. **The joint-announcement check missed comma lists.** The pattern caught
+   "A and B and C" but not "Apollo, BlackRock, Microsoft and KKR", which
+   registered as one 40-character organisation.
+3. **Aliases were never merged in the register**, only applied to new signals.
+4. **The band was stored next to the score instead of derived from it**, so the
+   two could disagree — and did, on four entries sitting at 80 labelled "High"
+   when 80 is Critical.
+
+**The near-miss worth recording.** The first version of the guard dropped
+**Dell Technologies** — a roster account — because a general "two capitalised
+words with no corporate vocabulary" heuristic read it as a person's name. It
+also dropped the **US Department of Energy**, which buys exascale
+supercomputers, because the rule treated any "Department of X" as a bare
+government body.
+
+**The rule that came out of it.** When writing a filter, the two error
+directions are never equally costly. A stray person in the register is visible
+and traceable; a silently dropped roster account is neither. So the person check
+now requires corroboration from the source — a LinkedIn profile URL — and named
+public bodies are explicitly KEPT, because in this market a named ministry
+running a sovereign AI programme is one of the best prospects there is.
+
+**A better fix than dropping.** "KKR's AI infrastructure company" is not an
+organisation, but KKR is — and it is a real lead. So a possessive description
+now registers under its **owner** rather than being discarded. The same
+mechanism leaves "Lloyd's Register" and "Moody's" alone, because what follows
+the possessive there is part of the name, not a description.
+
+### C10. Automating onboarding without automating the judgement
+
+**The question.** Can the system configure itself for a new business?
+
+**The answer, and why it is interesting.** Almost all of it, yes: what a
+business sells, who it can win, who its competitors are, and which trade press
+carries its market's news are all public, and the builder gathers them from the
+company's own website in about a minute for no search credits.
+
+**Polarity is the exception, and it is the whole product.** Asked which way an
+event points for a business it has only read a website about, a model produces a
+confident, plausible, wrong answer — and the resulting empty pipeline looks
+exactly like a quiet market.
+
+**But "cannot be researched" is not the same as "cannot be derived".** There is
+one reliable source and it is the business's own won deals: *what published
+event started this deal?* Answer it five times and the polarity falls out. The
+builder derives each line from a specific win and writes that win beside it, so
+a human can check the reasoning rather than the conclusion.
+
+**The best line it produced came from a LOSS**, not a win: *"an organisation
+stating it builds in-house is a DEAD LEAD — the work will never come to market,
+however well it fits."* No market research would have produced that. **Always
+ask for the losses.**
+
+**And the failure on the first attempt is the recurring lesson again.** The
+first run returned a polarity block reading `'call them'` five times. The field
+was specified without being shown — the schema said what to return but never
+what a polarity line looks like. The same defect as the feed collector's
+undefined `relevance_score` (C2), in a new place, two days later.
+
+Fixed by putting four fully written examples in the prompt. **The rule: show the
+shape, do not just name the field.**
+
+### C11. Free sources are not a lesser pipeline — they are a different risk profile
+
+The third business type was onboarded and run entirely on free sources, and the
+briefing it produced named a real tender with a real closing date and a
+counter-reading sharp enough to be useful (*"the tender value is only £12.5k,
+which may be below their minimum engagement threshold"*).
+
+**The thing to understand about the free paths**: RSS and procurement portals
+cannot invent a fact, because the publisher writes the headline and the buyer
+writes the notice. What they cannot do is find an organisation nobody has
+written about. That is a different limitation from "worse", and it is worth
+saying plainly rather than presenting a free run as equivalent to a full one.
+
 ---
 
 ## Part D — Working rules, distilled
@@ -450,3 +541,8 @@ Pin these up.
 14. **Tell the model what day it is.** It has no clock, and without one it treats today's news as implausibly futuristic.
 15. **When porting a method into code, port the small conventions too.** The big ideas get carried across carefully; a one-line habit gets dropped and silently degrades every run.
 16. **Make the free path a real path.** If it only works when you are paying, it does not work.
+17. **Show the shape, do not just name the field.** A schema that names `polarity` without showing what a polarity line looks like gets `'call them'` five times.
+18. **The two error directions are never equally costly.** Dropping a real account is far worse than keeping a stray row. Write the filter accordingly.
+19. **Recover, do not discard.** "KKR's AI infrastructure company" is not an organisation, but KKR is — and it is a real lead.
+20. **A number that can be computed must never be stored.** A band kept beside its score will eventually disagree with it.
+21. **Ask for the losses, not just the wins.** A lost deal tells you what a dead lead looks like, which is half of polarity.

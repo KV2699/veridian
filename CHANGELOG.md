@@ -11,6 +11,106 @@ except where noted.
 
 ---
 
+## 23 October — fourth batch: a clean register, and the system onboarding itself
+
+### The register was full of things that cannot buy anything
+
+The top five entries by score were `United Kingdom` (90, Critical, sourced to an
+ETF investment guide), `South Korea Government`, `South Korea` separately, a
+ministry, and `UK government`. `Amazon` and `Amazon Web Services` sat in the top
+ten as two prospects. The register is the first screen anyone sees, and one row
+reading `United Kingdom — 90 — Critical` undercuts every claim the system makes
+about grounding and arithmetic scoring.
+
+Four distinct defects:
+
+- no guard on what is allowed to BE a prospect
+- the joint-announcement check caught "A and B and C" but not
+  "Apollo, BlackRock, Microsoft and KKR", which registered as one organisation
+- aliases were applied to new signals but never merged in the register
+- **the band was stored beside the score instead of derived from it**, so the
+  two could disagree — and did, on four entries at 80 labelled "High"
+
+All four fixed, plus `tools/clean-register.mjs` to apply the rules to data that
+predates them. **165 → 150 organisations**, and the top ten is now HPE, METI,
+OpenAI, AWS, Cigna, Meta, KKR, Nscale, Samsung — all organisations that can sign
+a contract.
+
+**The near-miss is the lesson.** The first guard dropped **Dell Technologies**,
+a roster account, because a "two capitalised words, no corporate vocabulary"
+heuristic read it as a person. It also dropped the **US Department of Energy**,
+which buys exascale supercomputers. The two error directions are not equally
+costly: a stray person is visible and traceable, a silently dropped roster
+account is neither. The person check now needs corroboration from the source (a
+LinkedIn profile url), and named public bodies are explicitly kept.
+
+Better than dropping: "KKR's AI infrastructure company" now registers under
+**KKR**, which is a real lead. The same rule leaves "Lloyd's Register" and
+"Moody's" untouched, because what follows the possessive there is part of the
+name rather than a description.
+
+### The system now onboards a business itself
+
+`tools/build-profile.mjs` reads a company's own website over plain HTTP, works
+out what it sells as separate budgets, extracts clients and competitors, probes
+for live RSS feeds and **tests every one**, writes event-weighted filter terms,
+and emits a runnable profile. About a minute. **No search credits.**
+
+On the real test it found 6 working feeds and rejected 4 — including a soft 404,
+a page returning HTTP 200 that is not a feed.
+
+**It refuses to guess polarity**, and that refusal is the product. Asked which
+way an event points for a business it has only read a website about, a model
+produces a confident, plausible, wrong answer, and the empty pipeline that
+follows looks exactly like a quiet market.
+
+But "cannot be researched" is not "cannot be derived". The one reliable source
+is the business's own won deals: *what published event started this deal?* From
+six of them the builder produced, unedited:
+
+> *A COMPLETED ACQUISITION with a stated integration timetable is a LEAD — two
+> estates must be merged against a legally fixed date and the work cannot be
+> deferred.*
+>
+> *AN ORGANISATION STATING IT BUILDS IN-HOUSE is a DEAD LEAD — the work will
+> never come to market, however well it fits.*
+
+The second came from a deal that was **lost**. Each line is written into the
+file beside the deal it came from. With no wins supplied it writes the polarity
+block as explicit unanswered questions and says the profile will not score
+correctly until a human answers them.
+
+**And it failed the first time in a way we have now seen three times.** The
+first run returned `'call them'` five times: the schema named the field without
+showing what a polarity line looks like. Same defect as the feed collector's
+undefined `relevance_score`, two days apart. Fixed with four written examples in
+the prompt. **Show the shape, do not just name the field.**
+
+### A third configuration, built by the system, running free
+
+A UK technology consultancy: website + research brief + six past wins → profile
+in one minute → `npm run pipeline:free` → a real briefing naming a real tender
+with a real deadline:
+
+> **Future Generations Commissioner for Wales** — Cymru Can Strategy Review,
+> **£12,500, closing 9 November**
+> *Counter-reading: the tender value is only £12.5k, which may be below their
+> minimum engagement threshold.*
+
+It also connected that tender to a government announcement in the same week and
+recommended a combined pitch. Three markets now run on identical code.
+
+### Also
+
+`tools/PERPLEXITY-PROFILE-PROMPT.md` — the research prompt that feeds the
+builder, with an explicit section on why it does not ask about polarity and what
+to do instead.
+
+Tests 15 → 16 files. `test/profile-builder.test.mjs` checks both halves: that
+the builder extracts what it can, and that it refuses to invent what it cannot.
+
+---
+
 ## 23 October — third batch: the date the model never knew, and a free run mode
 
 ### `FREE_ONLY` — the whole pipeline on sources that cost nothing

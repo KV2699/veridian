@@ -95,5 +95,61 @@ check('ranked best first', (await listRegister({ profile: P }))[0].best_score ==
 
 await fs.rm(FILE, { force: true });
 
+
+// ── What is allowed to BE a prospect ───────────────────────────────────────
+// The top five entries in the live register were once `United Kingdom`,
+// `South Korea Government`, `South Korea`, a ministry and `UK government` —
+// with `United Kingdom` scoring 90 Critical, sourced to an ETF investment
+// guide. A country cannot sign a contract, and that one row undercut every
+// claim the system makes about grounding and arithmetic scoring.
+const { isGenericEntity, ownerOf } = await import('../server/lib/register.js');
+
+console.log('\nWho is allowed to be a prospect\n');
+
+for (const n of ['United Kingdom', 'South Korea', 'Taiwan', 'European Union', 'UK government',
+  'Government of Canada', 'Trump Administration', 'government']) {
+  check(`a country, bloc or bare government is not a prospect — ${n}`, isGenericEntity(n));
+}
+
+// The opposite failure is worse, and it happened: an earlier heuristic dropped
+// Dell Technologies and the US Department of Energy. A named body that can
+// sign a contract must survive, and in this market a public body is one of the
+// best prospects there is — sovereign AI programmes are signed by one.
+for (const n of ['Dell Technologies', 'Hewlett Packard Enterprise', 'Lambda Labs', 'Crusoe Energy',
+  'Department of Energy', 'East Riding of Yorkshire Council', 'European Commission',
+  'Nscale', 'CoreWeave', 'Digital Realty', "Lloyd's Register", "Moody's"]) {
+  check(`a named organisation survives — ${n}`, !isGenericEntity(n));
+}
+
+check('a person is dropped only when the source is a profile page',
+  isGenericEntity('James Wise', { sourceUrl: 'https://www.linkedin.com/posts/jameswise' })
+  && !isGenericEntity('James Wise', { sourceUrl: 'https://www.datacenterdynamics.com/news/x' }));
+
+check('a description registers under its owner, who is the real lead',
+  ownerOf("KKR's AI infrastructure company") === 'KKR'
+  && ownerOf("Microsoft's new datacentre") === 'Microsoft');
+check('a possessive that is part of the name is left alone',
+  ownerOf("Lloyd's Register") === "Lloyd's Register" && ownerOf("Moody's") === "Moody's");
+check('a possessive naming a public body is left alone',
+  ownerOf("Japan's Ministry of Economy, Trade and Industry").includes('Ministry'));
+
+// A band stored alongside a score can disagree with it. Four live entries sat
+// at 80 labelled "High" when 80 is Critical, because the band was taken as
+// given rather than derived from the number beside it.
+await writeJSON(FILE, {});
+await updateRegister(
+  [sig('Banded Industries', { priority_score: 80, priority_band: 'High', url: 'https://news.example.com/1' })],
+  { week: '2026-W40', profile: P },
+);
+check('the band is derived from the score, never taken as given',
+  (await listRegister({ profile: P }))[0].best_band === 'Critical');
+
+await writeJSON(FILE, {});
+await updateRegister([sig('Apollo, BlackRock, Microsoft and KKR')], { week: '2026-W40', profile: P });
+check('a comma-list joint announcement is not registered as one organisation',
+  (await listRegister({ profile: P })).length === 0);
+
+await fs.rm(FILE, { force: true });
+
 console.log(failed ? `\n✗ ${failed} check(s) failed\n` : '\n✓ all checks passed\n');
 process.exit(failed ? 1 : 0);
