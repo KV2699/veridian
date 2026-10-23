@@ -1,4 +1,4 @@
-# Signal Bureau — change log
+# Veridian — change log
 
 Chronological record of every change, with the reason. Written for a fork
 session picking this up cold. Companion to `HANDOVER.md`, which covers current
@@ -8,6 +8,93 @@ change cost to learn**.
 Two parallel Claude Code sessions worked on this repo on 2–3 October. Both
 committed to the same branch. Everything merged cleanly; nothing was lost
 except where noted.
+
+---
+
+## 23 October — fifth batch: Veridian, and configuring itself from the interface
+
+### The product is now Veridian
+
+*Verified Signal Intelligence.* Renamed throughout — dashboard, briefing header,
+package, documentation. `FIGMA-BRIEF.md` carries the full brand direction for a
+designer, including the one hard constraint: **no white backgrounds and no
+near-black ones**, which overrides the deep-graphite palette the brand research
+proposed.
+
+### It researches the market itself — the second tool is gone
+
+The builder read a company's own website, which establishes what they sell. It
+could not establish which trade press carries their market's events, which
+regulators oblige their customers, or who they compete against. That was being
+done by hand in a separate research tool.
+
+Now it is a stage in the builder, and the reason it is safe to let a model do it
+is one specific asymmetry:
+
+| | Collectors | Profile research |
+|---|---|---|
+| The model supplies | an event that happened | a candidate domain |
+| Checkable afterwards? | **No** — a fabricated signal is indistinguishable from a real one | **Yes** — fetch it; a made-up domain does not resolve |
+| So | a model may never supply a fact | the model proposes, the network disposes |
+
+On the law-firm test it proposed 24 publications and 8 regulators. **Six feeds
+survived the fetch, nine were discarded**, and every regulator domain that did
+not answer was dropped. Nothing unverified reaches the configuration.
+
+### `+ Add a business` — the answer to "where does a judge do this?"
+
+`POST /api/profiles/build` and a sheet in the top bar beside the configuration
+selector. A website, a few past deals, a live log while it works. No terminal.
+
+Generated configurations are stored as **JSON** in `data/profiles/`, never as
+executable JavaScript in the source tree, and registered at runtime so they
+survive a restart and are runnable from both the dashboard and the command line.
+
+A configuration arriving in a request body is untrusted input that then drives
+twelve agents and names directories, so the boundary is explicit: keys reduced
+to `[a-z0-9-]` and refused on collision with a shipped profile or a data
+directory, every string length-capped, practice-area keys normalised, lists
+capped at eight areas / sixty roster names / eight queries.
+
+### A fourth market, built from the interface, in two minutes
+
+A **UK law firm** — nothing in common with AI infrastructure. Website, four past
+deals, one of them lost. The polarity it derived:
+
+> *A REGULATOR ANNOUNCING A FORMAL INVESTIGATION INTO A SECTOR is a LEAD — it
+> signals imminent scrutiny that triggers demand for external competition law
+> counsel.*
+>
+> *AN FTSE 100 GROUP ANNOUNCING AN EXPANSION OF ITS IN-HOUSE LEGAL TEAM is a
+> DEAD LEAD — the client is building internal capacity.*
+
+One free run then produced a 410-word briefing naming two funding rounds closed
+the same day, a live public tender, and:
+
+> *Counter-reading: the tender is issued by a public authority; the realistic
+> buyers are the bidding consortia, which are not named, so there is no direct
+> contact point.* **Action: monitor the outcome, then approach the winning
+> bidder's legal team.**
+
+It worked out that the named buyer was not the real buyer, and said who was.
+
+**Four markets, identical code. Two hand-written, two built by the system. Zero
+search credits spent on any of it** — still 26 in the account, untouched since
+this work began.
+
+### And one defect the first build exposed
+
+The generated queries came back full of search operators —
+`"investigation" site:fca.org.uk OR site:gov.uk/cma` — which the search layer
+does not take, so they would have returned nothing and looked like a quiet
+market. The model wrote for a generic search engine rather than this one.
+
+Fixed by stating the constraint with an example of each form. This is the third
+time the same lesson has appeared in two days: **a model produces the most
+generically plausible version of whatever you ask for, so name the constraint
+and show the shape.**
+
+Tests 16 → 17 files.
 
 ---
 

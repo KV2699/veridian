@@ -21,7 +21,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import 'dotenv/config';
-import { readCompanySite, draftProfile, validateDraft, findFeeds } from '../server/lib/profile-builder.js';
+import { readCompanySite, draftProfile, researchMarket, validateDraft, findFeeds, verifyDomains } from '../server/lib/profile-builder.js';
 import { log } from '../server/lib/log.js';
 
 const argv = process.argv.slice(2);
@@ -32,6 +32,7 @@ const briefPath = arg('brief');
 const winsPath = arg('wins');
 const key = arg('key');
 const out = arg('out');
+const noResearch = argv.includes('--no-research');
 
 if (!key || (!site && !briefPath)) {
   console.log(`
@@ -44,6 +45,9 @@ Onboard a new business — writes server/profiles/<key>.js
   --wins <file>    past wins, one per line: "what published event started this
                    deal?". THE ONLY valid basis for polarity.
   --out <file>     where to write. Defaults to server/profiles/<key>.js
+  --no-research    skip the market research stage (publications, regulators,
+                   competitors). Faster, but the profile will have no free
+                   collection layer worth running.
 
 At least one of --site or --brief is required. Costs no search credits.
 `);
@@ -63,6 +67,34 @@ if (site) log.ok(`${pages.length} page(s) read from the company's own site — 0
 
 log.step('drafting with Nemotron (fast tier)');
 const draft = await draftProfile({ pages, brief, wins });
+
+// ── Stage 2: research the market itself ────────────────────────────────────
+// The company's own site says what it sells. It does not say which trade press
+// carries its market's events or which regulators oblige its customers. The
+// model proposes those from its own knowledge and every domain is then fetched
+// — a hallucinated domain does not resolve, so it cannot reach the file.
+let research = {};
+if (!noResearch) {
+  log.step('researching the market with Nemotron (ultra tier)');
+  research = await researchMarket({
+    name: draft.name ?? key, market: draft.market ?? '',
+    practiceAreas: draft.practice_areas ?? [], description: draft.description ?? '',
+  });
+  log.ok(`proposed ${(research.publications ?? []).length} publications, ${(research.regulators ?? []).length} regulators, ${(research.competitors ?? []).length} competitors`);
+
+  // Merge, preferring anything the supplied brief already established.
+  draft.publications = [...new Set([...(draft.publications ?? []), ...(research.publications ?? [])])];
+  draft.competitors = [...new Set([...(draft.competitors ?? []), ...(research.competitors ?? [])])];
+  draft.winnable_universe = draft.winnable_universe || research.winnable_universe;
+  draft.too_big = draft.too_big || research.too_big;
+  draft.collector_queries = research.collector_queries ?? [];
+
+  log.step('checking every regulator domain resolves');
+  const reg = await verifyDomains(research.regulators ?? []);
+  draft.regulators = reg.live;
+  if (reg.dead.length) log.warn(`${reg.dead.length} regulator domain(s) discarded: ${reg.dead.map((d) => d.name ?? d.domain).join(', ')}`);
+  log.ok(`${reg.live.length} regulator(s) verified`);
+}
 
 // Verify every publication the research named, before it reaches the file.
 log.step('probing for live RSS feeds — free, and a dead feed is a silent failure');
@@ -184,7 +216,10 @@ ${polarityBlock}
 ${(d.practice_areas ?? []).map((a) => `        ${q(`A named organisation taking a dated, published action that creates a concrete reason to discuss ${a.name}`)},`).join('\n')}
       ],
       queries: [
-${(d.practice_areas ?? []).slice(0, 6).map((a) => `        ${q(`${a.name} announced appointed awarded contract`)},`).join('\n')}
+${((d.collector_queries ?? []).length
+    ? d.collector_queries
+    : (d.practice_areas ?? []).slice(0, 6).map((a) => `${a.name} announced appointed awarded contract`)
+  ).map((qq) => `        ${q(qq)},`).join('\n')}
       ],
       windowDays: 30,
     },
@@ -206,6 +241,18 @@ ${feeds.live.map((f) => `      { name: ${q(f.name)}, url: ${q(f.url)} },`).join(
     // empty list here reads EVERY item in EVERY feed, which is both expensive
     // and noisy — 144 of 178 items passed the first profile's filter.
     terms: ${list(d.feed_terms ?? [], '      ')},
+  },
+
+  // ── Regulators and public bodies ─────────────────────────────────────────
+  // Whose published decisions OBLIGE this business's customers to act. The
+  // lead is never the regulator — it is whoever the decision obliges.
+  // Every domain below answered when this profile was built.
+  regulators: {
+    windowDays: 90,
+    maxResults: 10,
+    bodies: [
+${(d.regulators ?? []).map((r) => `      { name: ${q(r.name)}, domain: ${q(r.domain)}, terms: ${q(r.terms ?? 'decision rule requirement deadline')} },`).join('\n')}
+    ],
   },
 
   tenders: { days: 60, maxPages: 10 },

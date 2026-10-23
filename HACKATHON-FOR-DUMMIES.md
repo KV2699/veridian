@@ -1,6 +1,6 @@
 
 
-# Signal Bureau — the hackathon submission, in plain English
+# Veridian — the hackathon submission, in plain English
 
 **Who this is for:** you, or anyone who needs to understand this system without
 reading code. No jargon that isn't explained. Nothing assumed.
@@ -27,7 +27,7 @@ first usually wins the work. Nobody can read the whole internet every week, so
 in practice people check a few sources, miss most of it, and call the result a
 pipeline.
 
-### What Signal Bureau does about it
+### What Veridian does about it
 
 Every Monday morning at 7am, without anyone pressing anything, it reads the
 market, checks what it found, throws away what it can't prove, scores what's
@@ -118,14 +118,19 @@ node tools/feed-check.mjs exec-search
 
 ## Part 2b — Onboarding a new business automatically
 
-You asked whether the system could build its own profiles. It can — all of it
-except one thing, and that exception is the whole point.
+The system builds its own configurations — all of it except one thing, and that
+exception is the whole point.
+
+### Where it lives in the interface
+
+**Top bar, next to the configuration selector: `+ Add a business`.**
+
+That is the answer to "where would a judge do this?". It opens a sheet, takes a
+website and a few past deals, and shows a live log while it works. No terminal,
+no files, no second tool. The same thing is available from the command line
+(`node tools/build-profile.mjs`) for anyone who prefers it.
 
 ### What it does on its own
-
-```bash
-node tools/build-profile.mjs --site https://thecompany.com --brief brief.md --wins wins.md --key thekey
-```
 
 In about a minute, with **no search credits**, it:
 
@@ -184,18 +189,60 @@ A real contract, a real deadline, a real source link — and the system arguing
 against its own lead on commercial grounds. It also connected that tender to a
 government announcement in the same week and recommended a combined pitch.
 
-**This is the answer to "does it generalise?"** It isn't a claim. It's a third
-market, running, built by the system itself.
+### And then a fourth, from the interface, in a market with nothing in common
 
-### The workflow, end to end
+A **UK law firm**. Website, four past deals (three won, one lost), nothing else.
+Built from the dashboard in about two minutes. The polarity it derived:
 
-| Step | Tool | Cost |
+> - *A REGULATOR ANNOUNCING A FORMAL INVESTIGATION INTO A SECTOR is a LEAD — it signals imminent scrutiny that triggers demand for external competition law counsel.*
+> - *AN FTSE 100 GROUP ANNOUNCING AN EXPANSION OF ITS IN-HOUSE LEGAL TEAM is a DEAD LEAD — the client is building internal capacity and is less likely to engage external counsel.*
+
+Then one free run produced a 410-word briefing naming two funding rounds that
+closed the same day, a live public tender, and this:
+
+> *Counter-reading: the tender is issued by a public authority; the realistic
+> buyers are the bidding consortia, which are not named, so there is no direct
+> contact point.*
+>
+> **Recommended action:** monitor the tender outcome to identify the winning
+> consortium, then approach the lead bidder's legal team.
+
+It noticed the named buyer wasn't the real buyer, and said who was instead.
+
+**Four markets now run on identical code** — AI infrastructure, executive
+search, technology consultancy and law. Two were hand-written. Two the system
+built itself. **Zero search credits were spent on any of it.**
+
+### It researches the market itself — no second tool needed
+
+A company's own website says what it sells. It does not say which trade press
+carries its market's news, which regulators create work for its customers, or
+who it competes against. That used to be a separate research step in another
+tool. It isn't any more.
+
+**Why it is safe to let the AI do that research**, when the rest of the system
+never lets a model supply a fact: *anything it invents can be caught by
+fetching it.* A made-up publication doesn't resolve. A real one returns a feed
+with articles in it. So the model proposes and the network disposes.
+
+On the law-firm test it proposed 24 publications and 8 regulators; **6 feeds
+survived the check and 9 were discarded**, along with every regulator domain
+that didn't answer. Nothing unverified reaches the configuration.
+
+That is the exact opposite of how the collectors work, and deliberately so.
+There, a model may never supply a fact, because a made-up *signal* looks
+identical to a real one and nothing can check it afterwards.
+
+### The workflow, end to end — all in the product
+
+| Step | Where | Cost |
 |---|---|---|
-| 1. Research the company | Perplexity, using the prompt in [tools/PERPLEXITY-PROFILE-PROMPT.md](tools/PERPLEXITY-PROFILE-PROMPT.md) | free |
-| 2. Write down 5–10 past wins — *what event started each deal?* | You, 20 minutes | free |
-| 3. Build the profile | `node tools/build-profile.mjs` | free |
-| 4. Read the polarity block and correct it | You, 10 minutes | free |
-| 5. Test it | `PROFILE=thekey npm run pipeline:free` | **free** |
+| 1. Click **+ Add a business** | the top bar | — |
+| 2. Paste their website | the sheet | free |
+| 3. Write down a few deals they won — *and lost* | the sheet, 10 minutes | free |
+| 4. Watch it build | live log in the sheet | free |
+| 5. Read the polarity lines it derived | you, 5 minutes | free |
+| 6. Run it | **Run pipeline**, free-sources mode | **free** |
 
 ---
 

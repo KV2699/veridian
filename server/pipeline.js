@@ -19,7 +19,7 @@ import { timed, log } from './lib/log.js';
 import { knownUrlKeys, saveRun, saveCollection, getCollection, appendRejections } from './lib/store.js';
 import { MODELS, tokens, resetTokens } from './lib/nebius.js';
 import { diagnose, report } from './lib/diagnostics.js';
-import { loadProfile } from './profiles/index.js';
+import { loadProfile, loadGeneratedProfiles } from './profiles/index.js';
 import { updateRegister, registerStats, recordQuiet } from './lib/register.js';
 import { acquire } from './lib/lock.js';
 
@@ -89,6 +89,9 @@ export async function runPipeline({
 
   const started = Date.now();
   resetTokens();
+  // Profiles the system generated for itself live on disk, so a configuration
+  // built in the dashboard is runnable from the command line and vice versa.
+  await loadGeneratedProfiles();
   const profile = loadProfile(profileKey);
   const agents = agentList(profile);
   const total = agents.length;
@@ -305,7 +308,7 @@ function fixtureBriefing({ weekLabel, signals, profile }) {
   const section = (title, rows) => [`## ${title} (${rows.length} signals)`,
     ...(rows.length ? rows.map((s) => `- ${s.summary} [source](${s.url})`) : ['No signals this week.']), ''];
   return [
-    `# Signal Bureau — Week of ${weekLabel}`, '',
+    `# Veridian — Week of ${weekLabel}`, '',
     "## This Week's Headline",
     'Dry run: this briefing was generated from fixtures without calling Nebius or Tavily.', '',
     ...section('Your Accounts', signals.filter((s) => s.category === 'account')),

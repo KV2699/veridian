@@ -30,18 +30,52 @@ const PROFILES = { nvidia, 'exec-search': execSearch, consultancy };
 
 export const DEFAULT_PROFILE = process.env.PROFILE || 'nvidia';
 
-export const profileKeys = () => Object.keys(PROFILES);
+// Profiles the system generated for itself, loaded from data/profiles/*.json.
+//
+// Kept in a separate map from the shipped ones so the two can never be
+// confused: a generated profile is a draft until a human has read its polarity
+// block, and the dashboard says so. Registered at boot and whenever one is
+// built, so a judge can create a business and run it without a restart.
+const GENERATED = new Map();
+
+export function registerGenerated(profile) {
+  if (!profile?.key) throw new Error('a generated profile needs a key');
+  GENERATED.set(profile.key, profile);
+  return profile;
+}
+
+export const unregisterGenerated = (key) => GENERATED.delete(key);
+
+/**
+ * Load every profile the system has generated for itself.
+ *
+ * Called by the server at boot AND by the pipeline before a run, so a profile
+ * built in the dashboard can be run from the command line and vice versa. The
+ * import is dynamic to keep this module loadable by tests that have no data
+ * directory.
+ */
+export async function loadGeneratedProfiles() {
+  const { listGenerated, readGenerated } = await import('../lib/profile-write.js');
+  const loaded = [];
+  for (const key of await listGenerated()) {
+    const p = await readGenerated(key);
+    if (p?.key) { GENERATED.set(p.key, p); loaded.push(p.key); }
+  }
+  return loaded;
+}
+
+export const profileKeys = () => [...Object.keys(PROFILES), ...GENERATED.keys()];
 
 export function loadProfile(key = DEFAULT_PROFILE) {
-  const profile = PROFILES[key];
+  const profile = PROFILES[key] ?? GENERATED.get(key);
   if (!profile) {
-    throw new Error(`Unknown profile "${key}" — available: ${Object.keys(PROFILES).join(', ')}`);
+    throw new Error(`Unknown profile "${key}" — available: ${profileKeys().join(', ')}`);
   }
   return profile;
 }
 
 export const listProfiles = () =>
-  Object.values(PROFILES).map(({ key, name, description, market, roster = [], collectors = [], practiceAreas = [], scoring = {} }) =>
+  [...Object.values(PROFILES), ...GENERATED.values()].map(({ key, name, description, market, roster = [], collectors = [], practiceAreas = [], scoring = {}, generated = false, polarity = [], polarityQuestions = [] }) =>
     ({
       key,
       name,
@@ -54,4 +88,9 @@ export const listProfiles = () =>
       // which is the difference a reader should notice between the two.
       value_factor: scoring.valueFactor?.name ?? 'Multi-Service Potential',
       is_default: key === DEFAULT_PROFILE,
+      generated,
+      // A generated profile whose polarity is still empty will run and will
+      // score badly, and the dashboard needs to be able to say so.
+      needs_polarity: generated && polarity.length === 0,
+      open_questions: polarityQuestions.length,
     }));

@@ -1,7 +1,7 @@
 {
-  "name": "signal-bureau",
+  "name": "veridian",
   "version": "1.0.0",
-  "description": "Seven-agent BD intelligence pipeline for the AI infrastructure market. Nebius Token Factory + NVIDIA Nemotron + Tavily.",
+  "description": "Veridian — verified signal intelligence. A twelve-agent BD intelligence pipeline, configurable per market. Nebius Token Factory + NVIDIA Nemotron + Tavily.",
   "type": "module",
   "main": "server/index.js",
   "scripts": {

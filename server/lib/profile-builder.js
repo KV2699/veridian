@@ -146,6 +146,94 @@ export async function findFeeds(publications = [], { fetchImpl = fetch, timeoutM
   return { live, dead };
 }
 
+// ── Stage 2: research the MARKET, not the company ──────────────────────────
+//
+// A company's own website says what it sells. It does not say which trade
+// publications carry its market's news, which regulators create work for its
+// customers, or who it competes against — and those are three of the seven
+// questions a profile must answer.
+//
+// That research was being done by hand in a separate tool. It does not need to
+// be, because of one asymmetry: a model's knowledge of "which publications
+// cover UK banking technology" is broad and mostly right, and ANY ANSWER IT
+// INVENTS CAN BE CAUGHT BY FETCHING IT. A hallucinated domain does not resolve.
+// A real one returns a feed with items in it.
+//
+// So the model proposes and the network disposes. That is a safe use of model
+// knowledge, and it is the opposite of how the collectors work — there, a model
+// may never supply a fact, because a hallucinated SIGNAL looks exactly like a
+// real one and nothing can check it after the fact.
+//
+// The one thing this stage must not do is propose polarity. See the note at the
+// top of this file.
+const RESEARCH_SYSTEM = `You are researching a MARKET so that a business development intelligence system can be configured for it.
+
+You are told what a business sells and who it sells to. You return the publications, regulators and competitors that define its market.
+
+Everything you return will be CHECKED. Publication and regulator domains are fetched; anything that does not resolve is discarded before it reaches the configuration. So propose your best candidates rather than only the ones you are certain of — but never invent a domain you have no reason to believe exists, because a wrong domain costs a real source its place.
+
+RULES:
+- publications: outlets that report EVENTS in this market — appointments, contracts, funding, restructures, regulatory deadlines. Give the bare domain only: "esgdive.com", never "https://..." and never the publication's title. Favour VERTICAL TRADE PRESS over general business media: general web search already finds the Financial Times, and systematically misses the trade outlet that actually carries the event. Give 12-18.
+- regulators: bodies whose published decisions, rules or deadlines OBLIGE THIS BUSINESS'S CUSTOMERS to act. Not who regulates this business — who regulates its buyers, because a published deadline someone else must meet is the strongest buying trigger there is. Give the body's name, its bare domain, and the search terms that would find its decisions. 4-8.
+- competitors: firms selling the same thing to the same buyer. These are EXCLUDED from the prospect list entirely, so a wrong name here deletes a real opportunity — give only firms you are confident compete directly.
+- winnable_universe: who this business can realistically WIN, which is a different question from who it sells to. The largest organisations in any market are usually the worst prospects: mature in-house functions, incumbent suppliers, framework agreements. Name the segment where this business actually wins.
+- too_big: the kind of prospect that wastes their time, and why in one clause.
+- collector_queries: 5-7 web searches that would find dated, published events creating demand here.
+
+  WRITE THEM AS PLAIN LANGUAGE. No site: operators, no boolean OR chains, no quoted-phrase stacking — the search layer takes a natural-language query and is given its domain restrictions separately, so an operator-heavy query returns nothing and looks like a quiet market. "regulator opens formal investigation into retailer announced" is a query. "\"investigation\" site:gov.uk OR site:ico.org.uk" is not.
+
+  Every query must hunt something that gets PUBLISHED ON A DATE. A query that asks a search engine to prove a negative — "companies that lack X" — can never be satisfied, and a model faced with an unanswerable question either returns nothing or invents.
+
+  Name the ACTOR and the COMMITMENT: company and body names appear in announcements, category words appear in analysis. "signed", "awarded", "raised", "appointed", "opened an investigation", "breaks ground" are dated acts; "deploying", "expanding", "pursuing", "focusing on" are states and will return commentary.
+
+Reply with JSON only. The first character must be {.
+
+{"publications":["domain.com"],"regulators":[{"name":"Body","domain":"body.gov.uk","terms":"decision rule deadline"}],"competitors":["Name"],"winnable_universe":"one sentence","too_big":"one clause","collector_queries":["query"]}`;
+
+/**
+ * Research the market around a business. Uses the ULTRA tier: this is recall
+ * and judgement about an industry, not extraction from a supplied document.
+ */
+export async function researchMarket({ name, market, practiceAreas = [], description = '' }, deps = {}) {
+  const ask = deps.completeJSON ?? completeJSON;
+  const { data } = await ask({
+    tier: 'ultra',
+    temperature: 0.2,
+    maxTokens: 6000,
+    expectKey: 'publications',
+    system: RESEARCH_SYSTEM,
+    user: `THE BUSINESS: ${name}
+MARKET: ${market}
+WHAT THEY SELL:
+${practiceAreas.map((a) => `- ${a.name}: ${a.description}`).join('\n')}
+${description ? `\nDESCRIPTION: ${description}` : ''}
+
+Research this market. Return JSON.`,
+  });
+  return data ?? {};
+}
+
+/** Does this domain exist and serve something? Cheap, and it is the only
+ *  thing standing between a model's guess and the configuration file. */
+export async function verifyDomains(entries = [], { fetchImpl = fetch, timeoutMs = 10000 } = {}) {
+  const live = [];
+  const dead = [];
+  await Promise.all(entries.map(async (e) => {
+    const domain = String(e?.domain ?? e ?? '').trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+    if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(domain)) { dead.push({ ...(typeof e === 'object' ? e : { name: e }), reason: 'not a domain' }); return; }
+    try {
+      const res = await fetchImpl(`https://${domain}/`, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(timeoutMs) });
+      // Anything that answers at all is real enough — a 403 from a bot wall
+      // still proves the domain exists, which is what is being checked.
+      if (res.status < 500) live.push(typeof e === 'object' ? { ...e, domain } : { domain });
+      else dead.push({ ...(typeof e === 'object' ? e : { name: e }), reason: `HTTP ${res.status}` });
+    } catch (err) {
+      dead.push({ ...(typeof e === 'object' ? e : { name: e }), reason: 'did not resolve' });
+    }
+  }));
+  return { live, dead };
+}
+
 const SYSTEM = `You are drafting a configuration file for a business development intelligence system.
 
 You are given a company's own words about itself, and possibly a list of deals it has won. You turn that into a structured description of what the business sells and who it can win.

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Signal Bureau — BD Intelligence</title>
+<title>Veridian</title>
 <style>
   :root {
     --bg: #0f172a; --panel: #16203a; --panel-2: #1c2746; --line: #273458;
@@ -98,6 +98,25 @@
   .pill { display: inline-block; font-family: var(--mono); font-size: 11px; padding: 3px 9px; border-radius: 99px; background: var(--panel-2); color: var(--muted); margin-right: 6px; }
   .empty { color: var(--dim); padding: 40px 0; text-align: center; }
 
+  /* Onboarding — the answer to "would this work for MY business?" */
+  .sheet { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: grid; place-items: start center; padding: 40px 16px; overflow-y: auto; z-index: 50; }
+  .sheet-inner { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; width: min(620px, 100%); padding: 22px 24px 24px; }
+  .sheet h2 { margin: 0 0 4px; font-size: 17px; }
+  .sheet .sub { color: var(--muted); font-size: 12.5px; margin-bottom: 18px; }
+  .field { margin-bottom: 15px; }
+  .field label { display: block; font-size: 12.5px; font-weight: 500; margin-bottom: 5px; }
+  .field .hint { font-size: 11.5px; color: var(--dim); margin-bottom: 6px; line-height: 1.45; }
+  .field input, .field textarea {
+    width: 100%; padding: 9px 11px; border-radius: 8px; font: inherit; font-size: 13px;
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--text); resize: vertical;
+  }
+  .field textarea { min-height: 112px; line-height: 1.55; }
+  .sheet-actions { display: flex; gap: 9px; justify-content: flex-end; margin-top: 18px; }
+  .buildlog { font-family: var(--mono); font-size: 11.5px; color: var(--muted); max-height: 230px; overflow-y: auto; margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .buildlog div { padding: 3px 0; }
+  .buildlog div:last-child { color: var(--text); }
+  .warnbar { background: var(--panel-2); border-left: 2px solid #d99a28; padding: 9px 12px; font-size: 12px; color: var(--muted); margin-bottom: 12px; border-radius: 0 6px 6px 0; }
+
   /* Configuration selector. Two profiles ship; the switch is the proof that
      one engine serves both, so it is in the header rather than buried. */
   .cfg { display: flex; align-items: center; gap: 8px; }
@@ -173,11 +192,13 @@
 
 <header>
   <div class="brand">
-    <h1>Signal Bureau</h1>
+    <h1>Veridian</h1>
+    <span class="tagline">Verified Signal Intelligence</span>
     <span id="week">—</span>
   </div>
   <div class="cfg">
     <select id="profile" title="Which business this deployment is running for"></select>
+    <button class="ghost" id="addBiz" title="Configure Veridian for a business it has never seen">+ Add a business</button>
     <span class="measures" id="measures"></span>
   </div>
   <div class="spacer"></div>
@@ -186,7 +207,47 @@
   <button id="run">Run pipeline</button>
 </header>
 
+<div class="sheet" id="sheet" hidden>
+  <div class="sheet-inner">
+    <h2>Configure Veridian for a business</h2>
+    <p class="sub">Point it at a company. It reads their own website, works out what they sell, researches which trade press and regulators matter in their market, checks every source resolves, and writes a configuration. No search credits.</p>
+
+    <div class="field">
+      <label for="bizKey">Short name</label>
+      <div class="hint">Used in the address bar and to keep this business's data separate from every other one.</div>
+      <input id="bizKey" placeholder="acme-search" autocomplete="off">
+    </div>
+
+    <div class="field">
+      <label for="bizSite">Their website</label>
+      <div class="hint">The homepage is enough — it follows the links to their services pages itself.</div>
+      <input id="bizSite" placeholder="https://www.example.com" autocomplete="off">
+    </div>
+
+    <div class="field">
+      <label for="bizWins">Deals they have already won <span style="color:var(--dim);font-weight:400">— the important one</span></label>
+      <div class="hint">One per line. For each, the only thing that matters: <b>what published event started this deal?</b> Include deals you <b>lost</b> too — a loss tells the system what a dead lead looks like, and nothing else can.<br>Leave this blank and it still builds, but it will refuse to guess which way events point and will leave you questions to answer instead.</div>
+      <textarea id="bizWins" placeholder="We won a migration programme at a bank. It started when they announced an acquisition with a fixed integration timetable.&#10;&#10;We lost one at a government department — they announced they build in-house, and it never came to market."></textarea>
+    </div>
+
+    <div class="field">
+      <label for="bizBrief">Anything else you know <span style="color:var(--dim);font-weight:400">— optional</span></label>
+      <div class="hint">Clients, competitors, the publications they read. Paste freely; it takes what it can verify.</div>
+      <textarea id="bizBrief" style="min-height:72px" placeholder="Optional"></textarea>
+    </div>
+
+    <div class="err" id="bizError" hidden></div>
+    <div class="buildlog" id="bizLog" hidden></div>
+
+    <div class="sheet-actions">
+      <button class="ghost" id="bizCancel">Cancel</button>
+      <button id="bizGo">Build it</button>
+    </div>
+  </div>
+</div>
+
 <main>
+  <div class="warnbar" id="polarityWarn" hidden style="grid-column:1/-1"></div>
   <aside>
     <div class="card">
       <h2>Agent status</h2>
@@ -505,6 +566,14 @@ function drawProfiles(profiles, active) {
   // service breadth for the other.
   $('measures').innerHTML = `${active.market ? `${esc(active.market)} · ` : ''}`
     + `value = ${esc(active.value_factor ?? 'Multi-Service Potential')} · ${active.accounts} accounts`;
+  // A generated profile is a draft until someone has read its polarity. Saying
+  // so is the honest thing and it is also the most interesting thing on screen.
+  const meta = (s.profiles ?? []).find((p) => p.key === active.key) ?? {};
+  const warn = $('polarityWarn');
+  if (meta.needs_polarity) {
+    warn.hidden = false;
+    warn.innerHTML = `<b>This configuration has no polarity yet.</b> Veridian built everything it could research, and refused to guess which way events point for this business — that cannot be derived from a description, only from deals already won. It will run and it will score badly until ${meta.open_questions} question${meta.open_questions === 1 ? '' : 's'} are answered.`;
+  } else warn.hidden = true;
   drawExamples(active.first_practice_area);
 }
 
@@ -613,6 +682,72 @@ $('profile').onchange = async (e) => {
 };
 
 $('refresh').onclick = () => { logLine('refreshed'); refresh(); };
+
+
+// ── Onboarding a new business ──────────────────────────────────────────────
+// The question every judge and every prospect asks is "would this work for MY
+// business?". This is that question, answerable in the interface.
+let buildPoll = null;
+
+$('addBiz').onclick = () => {
+  $('sheet').hidden = false;
+  $('bizError').hidden = true;
+  $('bizLog').hidden = true;
+  $('bizKey').focus();
+};
+$('bizCancel').onclick = () => { $('sheet').hidden = true; };
+$('sheet').onclick = (e) => { if (e.target === $('sheet')) $('sheet').hidden = true; };
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('sheet').hidden = true; });
+
+$('bizGo').onclick = async () => {
+  const body = {
+    key: $('bizKey').value.trim(),
+    site: $('bizSite').value.trim(),
+    wins: $('bizWins').value.trim(),
+    brief: $('bizBrief').value.trim(),
+  };
+  $('bizError').hidden = true;
+  $('bizGo').disabled = true;
+  $('bizGo').textContent = 'Building…';
+  try {
+    const res = await fetch('/api/profiles/build', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok || data.ok === false) throw new Error(data.error || 'could not start');
+    $('bizLog').hidden = false;
+    pollBuild(body.key);
+  } catch (err) {
+    $('bizError').hidden = false;
+    $('bizError').textContent = err.message;
+    $('bizGo').disabled = false;
+    $('bizGo').textContent = 'Build it';
+  }
+};
+
+function pollBuild(key) {
+  clearInterval(buildPoll);
+  buildPoll = setInterval(async () => {
+    try {
+      const { building, log } = await get('/api/profiles/build');
+      $('bizLog').innerHTML = (log ?? []).map((l) => `<div>${esc(l.text)}</div>`).join('');
+      $('bizLog').scrollTop = $('bizLog').scrollHeight;
+      if (!building) {
+        clearInterval(buildPoll); buildPoll = null;
+        $('bizGo').disabled = false;
+        $('bizGo').textContent = 'Build it';
+        // Switch straight to the new configuration — the point is to see it work.
+        profileKey = key;
+        const url = new URL(location.href);
+        url.searchParams.set('profile', key);
+        history.replaceState(null, '', url);
+        await refresh(false);
+        setTimeout(() => { $('sheet').hidden = true; }, 1400);
+        logLine(`configuration built: ${key}`);
+      }
+    } catch { /* the build keeps running; the next tick will catch up */ }
+  }, 1500);
+}
 
 // ── Ask the register ────────────────────────────────────────────────────────
 // Retrieval happens on the server, in code. This only sends the question and

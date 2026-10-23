@@ -1,4 +1,4 @@
-# Signal Bureau — pitfalls, blockers and lessons learned
+# Veridian — pitfalls, blockers and lessons learned
 
 Written in the house style of `GA-BD-Pitfalls-Blockers.md`: every entry is
 something that actually went wrong, what it cost, how it was found, and the rule
@@ -519,6 +519,66 @@ writes the notice. What they cannot do is find an organisation nobody has
 written about. That is a different limitation from "worse", and it is worth
 saying plainly rather than presenting a free run as equivalent to a full one.
 
+### C12. When a model may be trusted for facts, and when it may not
+
+The system has a hard rule: **a model never supplies a fact.** Every signal must
+come from a fetched source, and a URL the search did not return is discarded in
+code.
+
+Making the builder self-sufficient meant breaking that rule on purpose, and the
+distinction is worth stating precisely, because it is the difference between a
+safe use of model knowledge and the thing that produces confident fiction.
+
+| | Collectors | Profile research |
+|---|---|---|
+| What the model supplies | an event that happened | a candidate domain |
+| Can it be checked afterwards? | **No.** A fabricated signal looks exactly like a real one | **Yes.** Fetch it. A made-up domain does not resolve |
+| So the rule is | the model may never supply a fact | the model proposes, the network disposes |
+
+On the law-firm test it proposed 24 publications; 6 survived the fetch and 9 were
+discarded, along with every regulator domain that did not answer.
+
+**The rule.** Model knowledge is safe exactly where a cheap, automatic check can
+falsify it, and dangerous everywhere else. Before letting a model supply
+something, ask what would catch it if it were wrong. If the answer is "nothing",
+do not ask the model.
+
+### C13. A model writing search queries writes them for the wrong search engine
+
+The first generated profile came back with queries like:
+
+```
+"investigation" "FCA" OR "CMA" site:fca.org.uk OR site:gov.uk/cma
+```
+
+Syntactically impressive, and useless: the search layer takes natural language
+and is given its domain restrictions separately, so an operator-heavy query
+returns nothing — which looks exactly like a quiet market.
+
+Fixed by stating the constraint in the prompt with an example of each form. The
+rebuilt queries read `FCA opens investigation into fintech announced`.
+
+**The rule, which is rule 17 again in a new costume.** A model will produce the
+most generically plausible version of whatever you ask for. If your tool is not
+the generic one, say so and show an example.
+
+### C14. Untrusted input that the pipeline executes
+
+A configuration built from the interface arrives in an HTTP request body and is
+then used to drive twelve agents, name directories and build prompts. It is
+untrusted input with unusually wide reach.
+
+So the boundary is explicit rather than assumed: the key is reduced to
+`[a-z0-9-]` and refused if it collides with a shipped profile or a data
+directory, every string is length-capped, practice-area keys are normalised to
+safe identifiers, and lists are capped — eight practice areas, sixty roster
+names, eight queries. Generated profiles are written as **JSON**, never as
+executable JavaScript, into `data/profiles/` rather than the source tree.
+
+**The rule.** The moment a configuration can arrive over the network, it stops
+being configuration and starts being input. Cap it, normalise it, and never let
+it become code.
+
 ---
 
 ## Part D — Working rules, distilled
@@ -546,3 +606,6 @@ Pin these up.
 19. **Recover, do not discard.** "KKR's AI infrastructure company" is not an organisation, but KKR is — and it is a real lead.
 20. **A number that can be computed must never be stored.** A band kept beside its score will eventually disagree with it.
 21. **Ask for the losses, not just the wins.** A lost deal tells you what a dead lead looks like, which is half of polarity.
+22. **Before trusting a model for a fact, ask what would catch it if it were wrong.** If nothing would, do not ask the model.
+23. **A model writes for the generic tool, not yours.** Name the constraint and show an example of right and wrong.
+24. **Configuration that arrives over the network is input.** Cap it, normalise it, and never let it become code.

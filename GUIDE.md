@@ -1,4 +1,4 @@
-# Signal Bureau — the plain English guide
+# Veridian — the plain English guide
 
 ## What this is, in one paragraph
 

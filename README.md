@@ -1,4 +1,4 @@
-# Signal Bureau
+# Veridian
 
 **It models what you sell, scores every signal on how many of your practice areas it opens, and only lets a signal keep that score if the source actually supports it — autonomously, every week, on NVIDIA Nemotron via Nebius Token Factory.**
 
@@ -177,7 +177,7 @@ Model judgement is used where judgement is needed, and bounded by code everywher
 
 The hardest failure in BD collection is not a crash. It is a clean run that quietly returns nothing useful, because **an empty week and a quiet market look identical from the outside**. The predecessor system shipped two full versions of one client's prompt pack in that state before anyone replicated the searches by hand and found eight root causes.
 
-Signal Bureau runs that diagnosis automatically, every time. It tracks where signals are lost:
+Veridian runs that diagnosis automatically, every time. It tracks where signals are lost:
 
 ```
 searched → hits → fresh → extracted → verified

@@ -1,4 +1,4 @@
-# Signal Bureau — build retrospective
+# Veridian — build retrospective
 
 **Session:** 1–3 October 2026 · **Subject:** rebuild of the BD Horizon Scanner on Nebius Token Factory + NVIDIA Nemotron + Tavily
 

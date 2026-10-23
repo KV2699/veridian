@@ -7,11 +7,13 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { runPipeline, isRunning, agentList, isoWeek } from './pipeline.js';
-import { loadProfile, listProfiles, profileKeys, DEFAULT_PROFILE } from './profiles/index.js';
+import { loadProfile, listProfiles, profileKeys, registerGenerated, unregisterGenerated, loadGeneratedProfiles, DEFAULT_PROFILE } from './profiles/index.js';
 import { listRegister, registerStats } from './lib/register.js';
 import ask from './agents/analyst.js';
 import { getBriefings, getSignals, getRuns, getRejections } from './lib/store.js';
 import { MODELS, listModels } from './lib/nebius.js';
+import { readCompanySite, draftProfile, researchMarket, findFeeds, verifyDomains, validateDraft } from './lib/profile-builder.js';
+import { safeKey, deleteGenerated, toProfile, saveGenerated } from './lib/profile-write.js';
 import { log } from './lib/log.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -178,6 +180,100 @@ app.get('/api/profiles', (req, res) => {
   } catch (err) { fail(res, err); }
 });
 
+
+// ── Onboarding a new business, from the interface ──────────────────────────
+//
+// The answer to "how would this work for MY business?" should be something a
+// person can do, not something they read about. Point it at a website, add the
+// events that started a few deals you have already won, and it configures
+// itself: what you sell, who you can win, which trade press carries your
+// market, which regulators oblige your customers.
+//
+// It runs the same code as tools/build-profile.mjs and costs no search credits.
+let building = false;
+const buildLog = [];
+
+app.get('/api/profiles/build', (_req, res) => {
+  res.json({ ok: true, building, log: buildLog.slice(-40) });
+});
+
+app.post('/api/profiles/build', async (req, res) => {
+  if (building) return res.status(409).json({ ok: false, error: 'A profile is already being built' });
+
+  const key = safeKey(req.body?.key);
+  const site = String(req.body?.site ?? '').trim();
+  const wins = String(req.body?.wins ?? '').trim().slice(0, 8000);
+  const brief = String(req.body?.brief ?? '').trim().slice(0, 12000);
+
+  if (!key) return res.status(400).json({ ok: false, error: 'Give it a short name — letters, numbers and hyphens, and not one of the built-in names.' });
+  if (!site && !brief) return res.status(400).json({ ok: false, error: 'Give it a website to read, or paste what you know about the business.' });
+  if (site && !/^https?:\/\/[^\s]+$/i.test(site)) return res.status(400).json({ ok: false, error: 'That does not look like a web address. It should start with https://' });
+
+  building = true;
+  buildLog.length = 0;
+  const step = (text) => { buildLog.push({ at: new Date().toISOString(), text }); log.step(text); };
+
+  res.status(202).json({ ok: true, started: true, key });
+
+  (async () => {
+    try {
+      let pages = [];
+      if (site) {
+        step(`Reading ${site}`);
+        pages = await readCompanySite(site);
+        step(`Read ${pages.length} page(s) — no search credits used`);
+      }
+
+      step(wins ? 'Working out what they sell, and deriving polarity from the deals you described' : 'Working out what they sell');
+      const draft = await draftProfile({ pages, brief, wins });
+      step(`Found ${(draft.practice_areas ?? []).length} things they sell`);
+
+      step('Researching the market — publications, regulators, competitors');
+      const research = await researchMarket({
+        name: draft.name ?? key, market: draft.market ?? '',
+        practiceAreas: draft.practice_areas ?? [], description: draft.description ?? '',
+      });
+      draft.publications = [...new Set([...(draft.publications ?? []), ...(research.publications ?? [])])];
+      draft.competitors = [...new Set([...(draft.competitors ?? []), ...(research.competitors ?? [])])];
+      draft.winnable_universe = draft.winnable_universe || research.winnable_universe;
+      draft.too_big = draft.too_big || research.too_big;
+      draft.collector_queries = research.collector_queries ?? [];
+      step(`Proposed ${draft.publications.length} publications and ${(research.regulators ?? []).length} regulators — now checking every one resolves`);
+
+      const [feeds, regs] = await Promise.all([
+        findFeeds(draft.publications),
+        verifyDomains(research.regulators ?? []),
+      ]);
+      step(`${feeds.live.length} live feeds found, ${feeds.dead.length} discarded · ${regs.live.length} regulators verified`);
+
+      const profile = toProfile(key, draft, { feeds: feeds.live, regulators: regs.live });
+      const { problems } = validateDraft(draft);
+      for (const p of problems) step(`Check: ${p}`);
+
+      await saveGenerated(profile);
+      registerGenerated(profile);
+      step(profile.polarity.length
+        ? `Done. ${profile.name} is ready to run — read the polarity lines before you trust them.`
+        : `Done, but polarity is unanswered — it will run and score badly until someone answers ${profile.polarityQuestions.length} question(s).`);
+    } catch (err) {
+      step(`Failed: ${err.message}`);
+      log.error(`profile build failed — ${err.message}`);
+    } finally {
+      building = false;
+    }
+  })();
+});
+
+app.delete('/api/profiles/:key', async (req, res) => {
+  const key = safeKey(req.params.key);
+  if (!key) return res.status(400).json({ ok: false, error: 'Built-in configurations cannot be removed.' });
+  try {
+    await deleteGenerated(key);
+    unregisterGenerated(key);
+    res.json({ ok: true, removed: key });
+  } catch (err) { fail(res, err); }
+});
+
 // Ask the register a question in plain English. Retrieval happens in code;
 // Nemotron translates the question and narrates the rows it is handed, so an
 // answer can always be traced to the records behind it.
@@ -252,6 +348,12 @@ app.get('/api/diagnostics', async (req, res) => {
     res.json({ ok: true, profile, week: last.week, status: last.status, diagnostics: last.diagnostics ?? null });
   } catch (err) { fail(res, err); }
 });
+
+// Generated profiles survive a restart: they live in data/profiles/.
+{
+  const restored = await loadGeneratedProfiles();
+  if (restored.length) log.step(`generated configurations restored: ${restored.join(', ')}`);
+}
 
 app.get('/api/health', (_req, res) => {
   const nebius = keySet('NEBIUS_API_KEY');

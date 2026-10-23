@@ -1,6 +1,6 @@
 // PROFILE — NVIDIA ecosystem BD
 //
-// A profile is the whole strategy of a Signal Bureau deployment in one file:
+// A profile is the whole strategy of a Veridian deployment in one file:
 // who you sell to, what counts as a signal, which way each signal points, how
 // fast it goes stale, and which accounts you already hold.
 //

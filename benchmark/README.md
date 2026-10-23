@@ -1,4 +1,4 @@
-# Benchmark — can another tool beat Signal Bureau?
+# Benchmark — can another tool beat Veridian?
 
 Four copy-paste prompts for testing Gemini, Grok, Perplexity, DeepSeek, Kimi,
 ChatGPT or anything else against this system, plus a scoring sheet.
@@ -11,7 +11,7 @@ want to know which tool is better, not which prompt was slacker.
 
 ## The baseline to beat
 
-| | Signal Bureau, one backfill run |
+| | Veridian, one backfill run |
 |---|---|
 | Distinct organisations | **100** (`baseline-organisations.txt`) |
 | Genuinely actionable leads | ~18 |
@@ -91,7 +91,7 @@ count — see the sheet below.
 
 ---
 
-## Prompt 2 — Hard mode: find what Signal Bureau missed
+## Prompt 2 — Hard mode: find what Veridian missed
 
 The more interesting test. Paste the 100 names from
 `baseline-organisations.txt` into the exclusion block and see whether the tool
@@ -140,7 +140,7 @@ names failed to read its own instructions.
 
 ## Prompt 3 — Open procurement hunt
 
-Signal Bureau's weakest area: it scanned 2,000 UK notices and surfaced only one
+Veridian's weakest area: it scanned 2,000 UK notices and surfaced only one
 to three live opportunities. If another tool does better here, that is worth
 knowing.
 
@@ -213,7 +213,7 @@ LEADS TO CHECK:
 [PASTE 15-20 ROWS FROM YOUR OWN BRIEFING OR FROM ANOTHER TOOL'S PROMPT 1 OUTPUT]
 ```
 
-**Why this one matters most:** on a live run, two of Signal Bureau's top five
+**Why this one matters most:** on a live run, two of Veridian's top five
 leads were attached to articles that were not about them — a national
 laboratory claim sourced to a post about a university physicist, and a telecom
 buildout sourced to an article about an unrelated product launch. A tool that
