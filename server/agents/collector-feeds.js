@@ -18,7 +18,9 @@ import { log } from '../lib/log.js';
 
 const SYSTEM = `You turn news headlines into business development signals.
 
-Each item is a real, already-published headline with its own url and date. You are NOT verifying it and NOT searching. You are deciding whether it describes a named organisation doing something specific, and what that means commercially.
+Each item is a real, already-published headline with its own url and date. You are NOT verifying it and NOT searching. You are deciding whether it describes a named organisation doing something specific, and what that means commercially FOR THE BUSINESS DESCRIBED BELOW.
+
+The same event means opposite things to different businesses, so read every item through the polarity rules given to you, not through general news sense.
 
 HARD RULES:
 - company must be the organisation the headline is about. If the headline names no specific organisation — a market roundup, an opinion piece, a listicle, a "top 10" — set qualifies to false.
@@ -26,6 +28,11 @@ HARD RULES:
 - practice_areas: which of the listed offerings this opens a genuine conversation for. Use only the given keys. Most items open exactly one. If none, set qualifies to false.
 - value_level: commercial scale, using only the listed levels, based only on figures stated in the text. No figure stated means the unknown level.
 - Product reviews, benchmarks, share-price commentary and general analysis do not qualify.
+- relevance_score is 0-10 for how directly this matters to THIS business, read through the polarity rules below. This field has a meaning and a default of 0 is almost never right for an item that qualifies:
+    8-10 = a named organisation took a dated action that creates a concrete reason to make contact now
+    6-7  = real and relevant, but not directly actionable this week
+    0-5  = background, or an event this business reads as a CLOSED opportunity
+  An item scoring 5 or below will be discarded, so score an event the polarity rules call a lead accordingly.
 
 OUTPUT FORMAT — strict: your entire reply must be a single JSON object. Do not reason out loud, do not explain, do not use a code fence. The first character must be {.
 
@@ -81,7 +88,7 @@ export default async function collectFeeds({ profile }, ctx = {}, deps = {}) {
     try {
       const { data } = await ask({
         tier: 'fast', temperature: 0, maxTokens: 4000, expectKey: 'items',
-        system: SYSTEM, user: buildPrompt(group, practiceAreas, valueFactor),
+        system: SYSTEM, user: buildPrompt(group, practiceAreas, valueFactor, profile?.polarity ?? []),
       });
       for (const row of Array.isArray(data?.items) ? data.items : []) {
         if (row && typeof row.id === 'string') judged.set(row.id, row);
@@ -136,7 +143,7 @@ export default async function collectFeeds({ profile }, ctx = {}, deps = {}) {
   return { signals, telemetry: { ...telemetry(signals.length), parseFailures }, summary: `${signals.length} from feeds` };
 }
 
-function buildPrompt(group, practiceAreas, valueFactor) {
+function buildPrompt(group, practiceAreas, valueFactor, polarity = []) {
   const items = group.map(([id, i]) => [
     `ID: ${id}`,
     `PUBLICATION: ${i.feed}`,
@@ -150,9 +157,13 @@ function buildPrompt(group, practiceAreas, valueFactor) {
     ? `\nVALUE LEVELS — use one of: ${Object.keys(valueFactor.points ?? {}).join(' | ')}\n${(valueFactor.guidance ?? []).map((g) => `- ${g}`).join('\n')}\n`
     : '';
 
+  const polarityBlock = polarity.length
+    ? `\nHOW TO READ THESE EVENTS (this business specifically — these override general news sense):\n${polarity.map((p) => `- ${p}`).join('\n')}\n`
+    : '';
+
   return `OFFERINGS THIS BUSINESS SELLS:
 ${areas}
-${levels}
+${levels}${polarityBlock}
 HEADLINES:
 
 ${items}

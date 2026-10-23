@@ -14,6 +14,19 @@ export default {
   description:
     'BD intelligence for selling into, alongside, or in service of the NVIDIA AI infrastructure ecosystem — GPU cloud, sovereign AI programmes, enterprise AI buildouts, and the supply chain underneath them.',
 
+  // Short noun phrase for the agent prompts. The pipeline is generic, so every
+  // prompt has to be TOLD which market it is reading — nothing in the code
+  // knows. This used to be hardcoded in three agents, which silently made the
+  // engine single-market: a second profile inherited "you are a signal
+  // extractor for the AI infrastructure market" no matter what it declared.
+  market: 'AI infrastructure',
+  reader:
+    'a business development professional or founder selling into GPU cloud, enterprise ML, AI tooling and the NVIDIA ecosystem',
+
+  // Suffix appended to the enumerated sweeps, where the query is a list of
+  // organisation names and needs a topic to pin it to this market.
+  sweepTerms: 'AI infrastructure announcement',
+
   // ── Practice areas — grouped by where the money actually comes from ───────
   // These are revenue lines, not a product catalogue. That distinction decides
   // whether the scoring works at all.

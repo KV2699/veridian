@@ -11,7 +11,11 @@ import { checkGrounding } from '../lib/grounding.js';
 import { completeJSON } from '../lib/nebius.js';
 import { log } from '../lib/log.js';
 
-const SYSTEM = `You are a business development signal extractor for the AI infrastructure market.
+// The market is supplied by the profile, never hardcoded. This string used to
+// name the AI infrastructure market outright, which quietly made the whole
+// engine single-market: a second profile could declare whatever practice areas
+// it liked and still be extracted by a model told it was reading GPU news.
+const systemFor = (market) => `You are a business development signal extractor for ${market ? `the ${market} market` : 'the market described below'}.
 
 You receive raw web search results. You convert them into structured BD signals.
 
@@ -48,7 +52,15 @@ If nothing in the results qualifies, return {"signals":[]}.`;
 const BATCH = Number(process.env.EXTRACTION_BATCH) || 4;
 
 export async function runCollector(
-  { key, name, category, focus, signalTypes, queries, windowDays = 7, polarity = [], practiceAreas = [], valueFactor = null, excludeDomains = [] },
+  {
+    key, name, category, focus, signalTypes, queries, windowDays = 7,
+    polarity = [], practiceAreas = [], valueFactor = null, excludeDomains = [],
+    // Supplied by the profile. `market` tells the extractor which market it is
+    // reading; `topic` and `includeDomains` are per-collector search levers —
+    // a job advert is not a news article, so the postings collector needs the
+    // general index rather than Tavily's news topic.
+    market = '', topic = 'news', includeDomains = [],
+  },
   ctx = {},
   deps = {},
 ) {
@@ -94,7 +106,7 @@ export async function runCollector(
   const maxResults = Number(process.env.MAX_RESULTS) || (backfill ? 30 : 10);
 
   log.step(`Running ${queries.length} Tavily searches (${days}-day window${days !== windowDays ? ', backfill' : ''})`);
-  const { results, stats } = await find(queries, { days, maxResults, excludeDomains });
+  const { results, stats } = await find(queries, { days, maxResults, excludeDomains, topic, includeDomains });
 
   const fresh = results.filter((h) => !known.has(canonicalUrl(h.url)));
   log.step(`${results.length} unique results, ${fresh.length} not seen in a previous week`);
@@ -104,6 +116,11 @@ export async function runCollector(
   let parseFailures = 0;
   let batches = 0;
   let ungrounded = 0;
+  // The grounding drops themselves, not just the count. A claim attached to an
+  // article that is not about that organisation is the single most instructive
+  // thing this pipeline throws away, and until now it existed only as a line
+  // of console output that scrolled past.
+  const rejections = [];
   const telemetry = (extracted) => ({
     key: key ?? category,
     name,
@@ -117,7 +134,7 @@ export async function runCollector(
   });
 
   if (!fresh.length) {
-    return { category, signals: [], telemetry: telemetry(0), summary: '0 signals (no new results)' };
+    return { category, signals: [], rejections, telemetry: telemetry(0), summary: '0 signals (no new results)' };
   }
 
   const signals = [];
@@ -133,12 +150,22 @@ export async function runCollector(
         temperature: 0,
         maxTokens: 4000,
         expectKey: 'signals',
-        system: SYSTEM,
+        system: systemFor(market),
         user: buildPrompt({ focus, signalTypes, batch, polarity, practiceAreas, valueFactor }),
       });
       signals.push(...normalise(data?.signals, {
         batch, category, practiceAreas, valueFactor, windowDays: days,
-        onDrop: ({ company, reason }) => { ungrounded++; log.warn(`dropped "${company}" — ${reason}`); },
+        onDrop: ({ company, summary, url, reason }) => {
+          ungrounded++;
+          rejections.push({
+            company, summary, url, url_key: canonicalUrl(url), category,
+            // UNGROUNDED is a suppression, not a defect report: the pipeline
+            // worked. The organisation can return next week on a source that
+            // is actually about it.
+            reason_code: 'UNGROUNDED', reason, stage: 'extraction',
+          });
+          log.warn(`dropped "${company}" — ${reason}`);
+        },
       }));
     } catch (err) {
       // Counted separately from "found nothing": a batch that failed to parse
@@ -152,6 +179,7 @@ export async function runCollector(
   return {
     category,
     signals,
+    rejections,
     telemetry: telemetry(signals.length),
     summary: `${signals.length} signals from ${results.length} results`,
   };

@@ -1,28 +1,84 @@
 # Signal Bureau
 
-**An eight-agent intelligence pipeline that monitors a market autonomously, uses NVIDIA Nemotron on Nebius Token Factory to verify and synthesise signals, diagnoses its own collection failures, and delivers a decision-ready BD briefing every Monday morning without anyone pressing a button.**
+**It models what you sell, scores every signal on how many of your practice areas it opens, and only lets a signal keep that score if the source actually supports it — autonomously, every week, on NVIDIA Nemotron via Nebius Token Factory.**
 
-Built for the **Nebius x NVIDIA Global AI Hackathon** — Personal AI Track.
+Built for the **Nebius x NVIDIA Global AI Hackathon** — Best Apps and Agents track.
+
+**Two configurations ship, and they are opposites.** The same twelve agents, the same scoring code, the same verification — serving a GPU infrastructure vendor and an ESG executive search firm, which read the identical event in opposite directions. Switch between them in the dashboard.
+
+---
+
+## What it actually is
+
+Most BD tools are news alerts with a filter on top. They tell you something happened.
+
+This one starts from a different question: **what do you sell, and which of those things does this event open a conversation about?** The profile declares the practice areas. The collectors map each signal to the areas it opens. The verifier corrects that mapping downwards by default. Then the score is computed in code — 30 points for three or more areas, 25 for a multi-service opening — and ranked.
+
+That makes it a **cross-sell and origination engine**, not a feed. A prospect who could buy two of your services outranks a larger prospect who could buy one, because multi-service accounts are stickier and cheaper to serve.
+
+### What is genuinely new here, and what is not
+
+Practice-area prospecting is not a new idea, and the submission does not claim it is. [Sprouts](https://www.sproutsai.com/) does it for law firms. Clay users build it by hand. Signal platforms score fit and intent.
+
+Three things here are not standard, and they are the claim:
+
+1. **The engine is horizontal and profile-swappable.** The same code scores an AI infrastructure vendor and a sustainability executive search firm, driven by a configuration file rather than a codebase. Both ship. Neither is a special case.
+2. **Signal polarity is a first-class configuration primitive.** The same event means opposite things to different businesses, and no platform listed above exposes that as something you can declare. A new Head of Sustainability is a *budget holder with a mandate* to a vendor and a *mandate filled, fee gone* to a recruiter. It is stated in plain English in the profile and travels with every prompt in the pipeline.
+3. **The mapping is verification-gated and the score is arithmetic.** A signal's practice areas survive only if the grounding check confirms the source is actually about that company. Nothing can inflate a score by mapping a passing mention to three practice areas, because the signal is dropped before it is scored.
+
+### Proof, on real data, from one run of the free feed path
+
+Two headlines, published the same week, read by the two configurations:
+
+| Headline | ESG Executive Search config | Why |
+|---|---|---|
+| *Disney's environmental sustainability co-lead leaves the company* | **Kept — scored 9** | A departure with no named successor is an open mandate. The strongest signal this configuration can find |
+| *Ingka Group appoints Erika Intiso as Chief Sustainability Officer* | **Discarded** | A filled role is a lost mandate. The fee is gone |
+
+The NVIDIA configuration reads the second as a lead — a new budget holder with a 90-day window — and the first as a *stall* on an existing account. Same code, same feed, same day, opposite conclusions. That inversion is declared in six lines of `polarity` in each profile and nowhere else.
+
+---
+
+## The two configurations
+
+| | `nvidia` | `exec-search` |
+|---|---|---|
+| **Business** | Selling into the NVIDIA AI infrastructure ecosystem | A sustainability & ESG executive search firm |
+| **Practice areas** | 6 — compute, networking, software, Omniverse, automotive, edge | 4 — retained search, professional recruitment, contract & interim, advisory |
+| **An appointment is** | a **lead** — new budget holder | a **dead lead** — mandate filled |
+| **A departure is** | a **stall** on an existing account | the **strongest lead** in the system |
+| **Commercial value measured by** | **Deal scale** — revenue is concentrated in one line, so breadth separates nothing | **Multi-service breadth** — the engine default |
+| **Collector windows** | 30 days throughout | 21 / 30 / 90, per signal type — a vacancy is contested in days, a restructure plays out over months |
+| **Free collection layer** | 8 RSS feeds, government procurement portals | 11 RSS feeds, recruitment-services procurement notices |
+
+Each configuration keeps its **own register, signal log, briefing history and rejection log**. They never merge: two markets in one register is a list describing nobody.
+
+**A third market is a third file.** The questions it must answer — and why this is deliberately a file rather than a settings screen — are in [`server/profiles/README.md`](server/profiles/README.md). Two ship because two is what proves the architecture; the work to add a third is writing one profile, not changing the engine.
 
 ---
 
 ## What it does
 
-Signal Bureau watches the AI infrastructure market — GPU cloud, enterprise ML, AI tooling, the NVIDIA ecosystem — on behalf of one person: a BD professional or founder selling into it.
-
 Every Monday at 07:00 UTC it runs itself, and by the time its user opens a laptop there is a briefing waiting that names who moved, what it means, and three things to do about it this week.
 
-The design principle is a hard separation between **finding** and **believing**. Four collector agents are tuned for recall and will happily over-collect. A fifth agent, running Nemotron's deep-reasoning tier, is the only thing allowed to decide what survives. Those are opposite skills, and the system never asks one component to do both.
+The design principle is a hard separation between **finding** and **believing**. The collector agents are tuned for recall and will happily over-collect. The verifier, running Nemotron's deep-reasoning tier, is the only thing allowed to decide what survives. Those are opposite skills, and the system never asks one component to do both.
 
-## Why this is a personal AI assistant
+Four things follow from that, each forced by a live failure rather than chosen on design grounds:
 
-| Track requirement | How Signal Bureau meets it |
+- **The model never selects.** It translates the question, code runs the filter, and the model narrates only the rows it is handed. A model asked to pick the top five from 165 records returns five plausible names, some of them wrong.
+- **Scoring is arithmetic, never a prompt.** A model-supplied priority score was a whole band out when recomputed against the real algorithm.
+- **Grounding asks whether the article is *about* the company**, not whether it mentions it. Two top-five leads survived an earlier version by appearing deep in articles about something else.
+- **What it rejects is kept, with the reason.** A tool that only shows what it found cannot be audited. Reason codes separate a correct suppression from a defect in the rules — and without the log, a rejected organisation returns next week and is re-judged from scratch at full cost.
+
+## Why it fits Best Apps and Agents
+
+| Track text | How this meets it |
 |---|---|
-| **Always-on** | `node-cron` scheduler fires the pipeline every Monday 07:00 UTC with no human involvement |
-| **Persistent memory** | `signal_log.json` is append-only across every run. The collectors read it before searching, so a story already reported in a previous week is never surfaced as new — the system's memory of what it already told you shapes what it looks for next |
-| **Reusable skills** | Eight composable agents behind one orchestrator, driven by a swappable **profile**. Changing target market is a config file, not a rewrite |
-| **Tools and information you choose** | Tavily is the only source of external fact, scoped by editable query sets in `server/agents/collector-*.js` |
-| **Tasks across daily workflows** | Weekly briefing, account watch, dashboard, trend history, self-diagnosis, and a JSON API any downstream tool can read |
+| *"a workflow that runs itself"* | `node-cron` fires the whole pipeline weekly with no human involvement; collection is checkpointed so a downstream failure costs seconds, not a full re-run |
+| *"Nemotron 3 Ultra when you need serious reasoning"* | Ultra verifies and synthesises — both need the whole week in context at once |
+| *"let Nano or Super handle the fast, everyday calls"* | Super does per-source extraction: dozens of small independent calls. All four Nemotron tiers were measured before choosing — see [RETROSPECTIVE.md](RETROSPECTIVE.md) |
+| *"so your credits stretch further"* | The free collection layer (RSS + procurement portals) costs zero search credits and cannot hallucinate a source; `pipeline:resume` reuses a checkpoint and spends nothing |
+| *"an app or agent someone would actually use"* | Built from a working BD methodology with a decade of documented pitfalls behind it, by the person who wrote it |
 
 ---
 
@@ -53,7 +109,8 @@ Two tiers, each doing the job it is suited to:
 
 **Tavily is the only source of external fact in this system.** This is an architectural decision, not a convenience: Nemotron is never asked what happened in the market, only to summarise, score and synthesise what Tavily actually fetched. That boundary is what makes the output checkable.
 
-- **20 targeted searches per run** — each of the four collectors runs five distinct queries (`server/agents/collector-*.js`), all with a 7-day window and `search_depth: "advanced"`
+- **Search volume is bounded and counted.** The `nvidia` configuration runs 56 searches a full run (31 collector queries, 7 regulator sweeps, 15 roster-sweep batches, 3 account-watch batches); `exec-search` runs fewer. Windows are 21-90 days *per collector*, set by signal type, and **30 days is a measured ceiling**: past it Tavily's date filter leaks badly — an 84-day backfill returned items dated a full year earlier
+- **The free layer carries real load.** RSS feeds and government procurement portals cost zero search credits, cannot hallucinate a source, and are where the proof above came from. `TAVILY_DEPTH=basic` halves credit cost while iterating; `npm run pipeline:resume` reuses the last checkpoint and spends nothing
 - **Every signal carries its Tavily source URL** into the final briefing as a clickable link
 - **Hallucinated sources are structurally impossible.** `normalise()` in `server/agents/collector-base.js` discards any signal whose URL was not in the Tavily result set the model was shown. A fabricated URL cannot reach a briefing — this is enforced in code and covered by `test/collector.test.mjs`
 - **Results are de-duplicated on a canonical URL** (tracking params and fragments stripped) within a run, across collectors, and against every prior week
@@ -61,11 +118,9 @@ Two tiers, each doing the job it is suited to:
 
 ---
 
-## The seven agents
+## The twelve agents
 
-| # | Agent | Engine | Job |
-|---|---|---|---|
-Collectors are defined by the active profile. For the shipped `nvidia` profile:
+Collectors are defined by the active profile — the table below is the shipped `nvidia` configuration. The `exec-search` configuration swaps agents 1-4 for a Departure & Backfill collector, a Direct-Employer Posting collector, a Restructure & New-Mandate collector and a Deal-Driven Hiring collector. Everything from the verifier onwards is identical.
 
 | # | Agent | Engine | Job |
 |---|---|---|---|
@@ -73,16 +128,28 @@ Collectors are defined by the active profile. For the shipped `nvidia` profile:
 | 2 | Infrastructure & Supply | Tavily + Nemotron fast | Power agreements, datacentre siting, HBM/CoWoS allocation — demand signals 12-24 months early |
 | 3 | Competitive Displacement | Tavily + Nemotron fast | Custom silicon and AMD wins at named accounts, read defensively |
 | 4 | Enterprise Opportunity | Tavily + Nemotron fast | AI factory buildouts, new AI leadership appointments, published RFPs |
-| 5 | **Account Watch** | Tavily + Nemotron fast | Sweeps the accounts you already hold for fresh reasons to make contact |
-| 6 | **QA Verifier** | **Nemotron Ultra** | Score 0-10, deduplicate, flag for review, find connections, drop everything below the floor |
-| 7 | **Briefing Writer** | **Nemotron Ultra** | Synthesise the verified set into the structured weekly briefing |
-| 8 | Dashboard Updater | — | Persist briefing, append to the signal log, compute week-on-week trend |
+| 5 | Roster Sweep | Tavily + Nemotron fast | Walks the register by name and reports a result for **every** organisation, including "no signal found" — which is what makes coverage auditable |
+| 6 | Regulator Sweep | Tavily + Nemotron fast | Named regulators and public bodies. Compulsory work with a published date is the strongest buying trigger there is |
+| 7 | Feed Collector | RSS + Nemotron fast | **Zero search credits, zero hallucination risk** — publisher-written headlines with their own urls and dates |
+| 8 | Tender Collector | OCDS portals | The buyer's own words with a closing date. No model supplies a fact on this path |
+| 9 | **Account Watch** | Tavily + Nemotron fast | Sweeps the accounts you already hold for fresh reasons to make contact |
+| 10 | **QA Verifier** | **Nemotron Ultra** | Score 0-10, deduplicate, correct the practice-area mapping downwards, write the counter-reading, flag for review, drop everything below the floor — and log every drop with its reason |
+| 11 | **Briefing Writer** | **Nemotron Ultra** | Synthesise the verified set into the structured weekly briefing |
+| 12 | Dashboard Updater | — | Persist briefing, append to the signal log, compute week-on-week trend |
 
-Agents 1-5 run concurrently — they share no state. Agents 6, 7 and 8 are strictly sequential.
+Agents 1-9 run concurrently — they share no state. Agents 10, 11 and 12 are strictly sequential.
 
-**Failure policy:** a collector that fails is logged and the run continues with what the others found. Agents 6, 7 and 8 are load-bearing — if one fails, the run is marked failed and nothing is written.
+**Failure policy:** a collector that fails is logged and the run continues with what the others found. Agents 10, 11 and 12 are load-bearing — if one fails, the run is marked failed and nothing is written.
 
-### Agent 5 — Account Watch
+### The rejection log and the counter-reading
+
+Two things survive a run besides the briefing.
+
+**Every rejected signal is kept with its reason code** — `UNGROUNDED` (the source is not about that organisation), `BELOW_FLOOR`, `DUPLICATE`, `UNVERIFIED`. The distinction that matters is between a *suppression* (correctly dropped) and a *defect report* (dropped because a rule is wrong), because only the second kind should change the next run. `GET /api/rejections`.
+
+**Every kept signal can carry a counter-reading** — the argument against acting on it, in one sentence, written by the verifier. Not a confidence score: the reason a competent person might read the same event and reach the opposite conclusion. The three that recur are *the buyer is someone else* (a regulator publishing a rule is not a customer — the firms it obliges are), *they will do it themselves*, and *the event is real but the trigger is wrong*. It is stated in the briefing, never hidden.
+
+### Agent 9 — Account Watch
 
 Every other collector hunts strangers. This one sweeps the roster in the active profile — the organisations you already hold — for expansion, leadership change, earnings commentary, or a competitor win worth responding to.
 
@@ -127,21 +194,25 @@ See `server/lib/diagnostics.js` and `test/diagnostics.test.mjs`.
 
 ---
 
-## Profiles — one pipeline, any market
+## Profiles — one pipeline, two markets, and the room for more
 
-Everything strategy-shaped lives in a **profile**: the roster, the queries, the signal types, the decay window per signal type, the scoring guidance, and — most importantly — the **polarity**.
+Everything strategy-shaped lives in a **profile**: the practice areas, the roster, the queries, the decay window per signal type, the scoring guidance, the value factor, and — most importantly — the **polarity**.
 
 Polarity is the thing no onboarding form can capture. The same event means opposite things to different businesses:
 
 | Business | "Company X appoints a Head of Sustainability" |
 |---|---|
-| A policy think tank | **Hot lead** — new decision-maker, 90-day window |
-| An executive search firm | **Dead lead** — mandate filled, fee gone |
-| An infrastructure vendor | **Hot lead** — new budget holder with a mandate |
+| An infrastructure vendor (`nvidia`) | **Hot lead** — new budget holder with a mandate and a 90-day window |
+| An executive search firm (`exec-search`) | **Dead lead** — mandate filled, fee gone |
+| A policy think tank | **Hot lead** — new decision-maker to brief |
 
-Nothing in a product description implies which of those applies, so it is stated explicitly in the profile and travels with every prompt in the pipeline.
+Nothing in a product description implies which applies. A model asked to infer it produces a confident, plausible, wrong answer — and an empty week looks exactly like a quiet market, so nobody finds out for months. So it is declared in plain English and travels with every prompt in the pipeline.
 
-Swap market by writing a new profile and setting `PROFILE=` in `.env`. The questions a new profile must answer — and why this is deliberately a file rather than a settings screen — are in [`server/profiles/README.md`](server/profiles/README.md).
+**The pipeline knows nothing about either market.** Everything market-shaped — the system prompts for extraction, verification and synthesis, the sweep query suffixes, the procurement CPV codes — is supplied by the profile. The two configurations prove it: identical code, opposite readings.
+
+**What a third profile costs.** One file. `server/profiles/<key>.js`, registered in `index.js`. The seven questions it must answer — and why this is deliberately a file rather than a settings screen — are in [`server/profiles/README.md`](server/profiles/README.md). Two ship because two is what demonstrates the claim; the think-tank, sustainability-communications and software-consultancy configurations the methodology also covers are the obvious next ones, and none of them needs an engine change.
+
+Select a configuration in the dashboard, pass `?profile=<key>` to any API route, or set `PROFILE=` in `.env` for the default.
 
 ---
 
@@ -237,9 +308,16 @@ No API keys required — the agents accept an injected model client, so their lo
 
 ## Deployment
 
-**Vercel** — add `NEBIUS_API_KEY` and `TAVILY_API_KEY` as environment variables. Serverless functions do not hold a cron process: set `CRON_ENABLED=false` and use Vercel Cron to `POST /api/run` on `0 7 * * 1`.
+**Nebius Serverless — the intended target**, and the one the Best Apps and Agents track names. The split is clean:
 
-**Nebius Serverless Endpoints / any container host** — runs as-is with the built-in scheduler; set `CRON_ENABLED=true` and keep one instance.
+| Component | Nebius resource | Why |
+|---|---|---|
+| Dashboard + JSON API | **Serverless Endpoint** | Persistent, public URL — what a judge clicks |
+| Weekly pipeline | **Serverless Job** | A finite background run, which is exactly what this is |
+
+Set `NEBIUS_API_KEY` and `TAVILY_API_KEY` as environment variables. With the pipeline running as a Job, set `CRON_ENABLED=false` on the Endpoint so only one scheduler exists.
+
+**Any container host** — runs as-is with the built-in scheduler; set `CRON_ENABLED=true` and keep exactly one instance. The cross-process run lock (`server/lib/lock.js`) will refuse a second concurrent run rather than let two runs destroy each other's register, but it cannot schedule for you.
 
 ---
 

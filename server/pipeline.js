@@ -16,7 +16,7 @@
 import { pathToFileURL } from 'node:url';
 
 import { timed, log } from './lib/log.js';
-import { knownUrlKeys, saveRun, saveCollection, getCollection } from './lib/store.js';
+import { knownUrlKeys, saveRun, saveCollection, getCollection, appendRejections } from './lib/store.js';
 import { MODELS, tokens, resetTokens } from './lib/nebius.js';
 import { diagnose, report } from './lib/diagnostics.js';
 import { loadProfile } from './profiles/index.js';
@@ -91,17 +91,18 @@ export async function runPipeline({
   try {
     if (dryRun) return await dryRunPipeline({ profile, agents, week, weekLabel, started, statuses, trigger });
 
-    let signals, telemetry, quietNames = [];
+    let signals, telemetry, quietNames = [], collectorRejections = [];
 
-    const checkpoint = resume ? await getCollection() : null;
+    const checkpoint = resume ? await getCollection(profile.key) : null;
     if (checkpoint?.signals?.length) {
       ({ signals, telemetry } = checkpoint);
+      collectorRejections = checkpoint.rejections ?? [];
       log.warn(`RESUME — reusing ${signals.length} signals collected at ${checkpoint.collected_at}; no searches will run`);
       for (const [i, a] of agents.slice(0, agents.length - 3).entries()) {
         statuses.push({ agent: a.name, index: i + 1, status: 'success', duration_ms: 0, detail: 'resumed from checkpoint' });
       }
     } else {
-      const ctx = { knownUrlKeys: await knownUrlKeys() };
+      const ctx = { knownUrlKeys: await knownUrlKeys(profile.key) };
       log.step(`${ctx.knownUrlKeys.size} URLs already in the signal log will be excluded`);
 
       // ── Collection: search, feeds, procurement and account watch ──────────
@@ -111,7 +112,7 @@ export async function runPipeline({
       let slot = profile.collectors.length;
       const collectorRuns = await Promise.all([
         ...profile.collectors.map((cfg, i) =>
-          timed(i + 1, cfg.name, () => runCollector({ ...cfg, category: cfg.key, polarity: profile.polarity, practiceAreas: profile.practiceAreas, valueFactor: profile.scoring?.valueFactor, excludeDomains: profile.excludeDomains }, ctx), total)),
+          timed(i + 1, cfg.name, () => runCollector({ ...cfg, category: cfg.key, market: profile.market, polarity: profile.polarity, practiceAreas: profile.practiceAreas, valueFactor: profile.scoring?.valueFactor, excludeDomains: profile.excludeDomains }, ctx), total)),
         ...(profile.rosterSweep !== false ? [timed(++slot, 'Roster Sweep', () => rosterSweep({ profile, week }, ctx), total)] : []),
         ...(profile.regulators?.bodies?.length ? [timed(++slot, 'Regulator Sweep', () => regulatorSweep({ profile, week }, ctx), total)] : []),
         ...(profile.feeds?.sources?.length ? [timed(++slot, 'Feed Collector', () => collectFeeds({ profile }, ctx), total)] : []),
@@ -121,6 +122,7 @@ export async function runPipeline({
       statuses.push(...collectorRuns.map(toStatus));
 
       signals = collectorRuns.flatMap((c) => c.signals ?? []);
+      collectorRejections = collectorRuns.flatMap((c) => c.rejections ?? []);
       telemetry = collectorRuns.map((c) => c.telemetry).filter(Boolean);
       const failed = collectorRuns.filter((c) => c.status === 'error');
       if (failed.length === collectorRuns.length) throw new Error('every collector failed — check NEBIUS_API_KEY and TAVILY_API_KEY');
@@ -130,7 +132,7 @@ export async function runPipeline({
       quietNames = collectorRuns.flatMap((c) => c.quiet ?? []);
 
       // Checkpoint before anything downstream can fail.
-      await saveCollection({ week, collected_at: new Date().toISOString(), profile: profile.key, signals, telemetry });
+      await saveCollection({ week, collected_at: new Date().toISOString(), profile: profile.key, signals, telemetry, rejections: collectorRejections }, profile.key);
       log.step('collection checkpointed — rerun with RESUME=true to skip searching');
     }
 
@@ -138,6 +140,17 @@ export async function runPipeline({
     const qa = await timed(total - 2, 'QA Verifier', () => qaVerify({ signals, profile }), total);
     statuses.push(toStatus(qa));
     if (qa.status === 'error') throw new Error(`QA verification failed — ${qa.error}`);
+
+    // ── Rejection log ───────────────────────────────────────────────────────
+    // Persisted BEFORE the briefing, so a failure writing the briefing does not
+    // lose the record of what was thrown away. Two stages feed it: grounding
+    // drops during extraction, and the verifier's own drops.
+    const allRejections = [...collectorRejections, ...(qa.rejections ?? [])]
+      .map((r) => ({ ...r, week, rejected_at: new Date().toISOString() }));
+    if (allRejections.length) {
+      const { added, total } = await appendRejections(allRejections, profile.key);
+      log.step(`rejection log — ${added} new of ${allRejections.length} this run, ${total} on record`);
+    }
 
     // ── Yield diagnostics ───────────────────────────────────────────────────
     // Runs after verification so it can see the whole funnel, and before the
@@ -158,13 +171,13 @@ export async function runPipeline({
     // ── Dashboard Updater ───────────────────────────────────────────────────
     // The register is the accumulating prospect list — the system's own
     // sourced equivalent of a client roster, grown week by week.
-    const reg = await updateRegister(qa.signals, { week, roster: profile.roster ?? [], exclusions: profile.exclusions ?? [], aliases: profile.aliases ?? {} });
+    const reg = await updateRegister(qa.signals, { week, roster: profile.roster ?? [], exclusions: profile.exclusions ?? [], aliases: profile.aliases ?? {}, profile: profile.key });
 
     // Recorded AFTER the register knows this week's signals, so an
     // organisation that another collector found is never marked quiet — the
     // sweep only saw its own batch.
     if (quietNames.length) {
-      const { quiet } = await recordQuiet(quietNames, { week });
+      const { quiet } = await recordQuiet(quietNames, { week, profile: profile.key });
       log.step(`${quiet} organisations checked and quiet this week`);
     }
 
@@ -193,7 +206,7 @@ export async function runPipeline({
       tokens: { ...tokens, byTier: { ...tokens.byTier } },
     };
     log.step(`Nebius spend this run: ${tokens.calls} calls · ${tokens.prompt.toLocaleString()} in · ${tokens.completion.toLocaleString()} out`);
-    await saveRun(run);
+    await saveRun(run, profile.key);
     return { ...run, markdown: briefing.markdown };
   } catch (err) {
     const ms = Date.now() - started;
@@ -203,7 +216,7 @@ export async function runPipeline({
       profile: profile.key,
       started_at: new Date(started).toISOString(), duration_ms: ms, agents: statuses,
     };
-    await saveRun(run).catch(() => {});
+    await saveRun(run, profile.key).catch(() => {});
     throw err;
   } finally {
     running = false;
@@ -245,7 +258,7 @@ async function dryRunPipeline({ profile, agents, week, weekLabel, started, statu
 
   const diagnostics = diagnose({ collectors: [], signals, rawCount: signals.length });
   report(diagnostics, log);
-  const reg = await updateRegister(signals, { week, roster: profile.roster ?? [], exclusions: profile.exclusions ?? [], aliases: profile.aliases ?? {} });
+  const reg = await updateRegister(signals, { week, roster: profile.roster ?? [], exclusions: profile.exclusions ?? [], aliases: profile.aliases ?? {}, profile: profile.key });
   statuses.push(toStatus(await timed(total, 'Dashboard Updater', () => updateDashboard({
     week, weekLabel, markdown, signals, connections: [], counts,
     assessment: 'Dry run — no verification performed.',
@@ -262,7 +275,7 @@ async function dryRunPipeline({ profile, agents, week, weekLabel, started, statu
     signal_count: signals.length, raw_count: signals.length, counts, agents: statuses, diagnostics,
     models: { ultra: 'dry-run', fast: 'dry-run' },
   };
-  await saveRun(run);
+  await saveRun(run, profile.key);
   return { ...run, markdown };
 }
 

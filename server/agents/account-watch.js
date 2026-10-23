@@ -61,13 +61,14 @@ export default async function accountWatch({ profile }, ctx = {}, deps = {}) {
 
   // One query per batch of accounts rather than one per account, so a roster
   // of 50 does not mean 50 searches every week.
-  const queries = batches.map((names) => `${names.join(' OR ')} announcement expansion leadership AI infrastructure`);
+  const queries = batches.map((names) => `${names.join(' OR ')} announcement expansion ${profile?.sweepTerms ?? 'leadership'}`);
   const { results, stats } = await find(queries, { days: windowDays, maxResults: 10 });
 
   const fresh = results.filter((h) => !known.has(canonicalUrl(h.url)));
   log.step(`${results.length} unique results, ${fresh.length} not seen before`);
 
   let ungrounded = 0;
+  const rejections = [];
   const telemetry = (extracted) => ({
     key: 'account', name: 'Account Watch',
     queries: stats.map((s) => ({ ...s, fresh: fresh.filter((h) => h.found_via === s.query).length })),
@@ -91,7 +92,14 @@ export default async function accountWatch({ profile }, ctx = {}, deps = {}) {
       // Reuse the collector's guard: any url the search did not return is dropped.
       signals.push(...normalise(data?.signals, {
         batch, category: 'account',
-        onDrop: ({ company, reason }) => { ungrounded++; log.warn(`dropped "${company}" — ${reason}`); },
+        onDrop: ({ company, summary, url, reason }) => {
+          ungrounded++;
+          rejections.push({
+            company, summary, url, url_key: canonicalUrl(url), category: 'account',
+            reason_code: 'UNGROUNDED', reason, stage: 'extraction',
+          });
+          log.warn(`dropped "${company}" — ${reason}`);
+        },
       }));
     } catch (err) {
       log.warn(`batch ${n}/${of} extraction failed, continuing — ${err.message}`);
@@ -109,6 +117,7 @@ export default async function accountWatch({ profile }, ctx = {}, deps = {}) {
   log.ok(`${onRoster.length} account signals across ${new Set(onRoster.map((s) => s.company)).size} accounts`);
   return {
     signals: onRoster,
+    rejections,
     telemetry: telemetry(onRoster.length),
     summary: `${onRoster.length} signals on ${new Set(onRoster.map((s) => s.company)).size} accounts`,
   };

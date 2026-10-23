@@ -1,7 +1,92 @@
 # Signal Bureau — session handover
 
-**Written:** 3 October 2026 · **Deadline:** 30 October 2026, 10:00 PDT
-**Competition:** Nebius × NVIDIA Global AI Hackathon — Personal AI track
+**Written:** 3 October 2026 · **Updated:** 23 October 2026
+**Deadline:** 30 October 2026, 17:00 UTC
+**Competition:** Nebius × NVIDIA Global AI Hackathon — **Best Apps and Agents track**
+
+> **Track changed 23 October**, from Personal AI. Personal AI names a specific
+> stack (NemoClaw, OpenShell, Hermes Agent) that this does not use. Best Apps
+> and Agents asks for *"a workflow that runs itself"*, Ultra for reasoning with
+> Nano/Super for the fast calls, and Serverless Jobs for background processing
+> — which is this system, four for four. Verified against the live Devpost page
+> on 23 October, not assumed from the brief.
+
+---
+
+## 0. What changed on 23 October — read this first
+
+**Two configurations now ship, and the engine is genuinely market-agnostic.**
+
+| | |
+|---|---|
+| New profile | `exec-search` — ESG & sustainability executive search. The polarity INVERSE of `nvidia` |
+| Data | Now `data/<profile>/` — separate register, signal log, briefings, rejection log per configuration |
+| Selection | Dashboard dropdown, `?profile=<key>` on any API route, `PROFILE=` for the default |
+| New in the engine | Rejection log (every drop, with a reason code) and counter-reading (the argument against a kept lead) |
+| Tests | 12 → **14 files** |
+
+**Six places hardcoded the AI infrastructure market outside the profile** and
+had to be fixed before a second configuration could work at all: the system
+prompts in `collector-base.js`, `qa-verifier.js` and `briefing-writer.js`, the
+query suffixes in `roster-sweep.js` and `account-watch.js`, and the CPV codes
+in `collector-tenders.js`. None of these would have thrown — a second profile
+would have loaded fine and been extracted by a model told it was reading GPU
+news. They are now `profile.market`, `profile.reader`, `profile.sweepTerms`
+and `profile.tenders.cpvPrefixes`.
+
+**A seventh was found by running it.** The Feed Collector never received the
+profile's polarity, and its prompt declared a `relevance_score` field without
+ever defining what the number meant. So the model returned 0 for everything.
+
+Checked against the live log rather than assumed — and the real behaviour is
+more interesting than "they were dropped". All four feed signals in the last
+`nvidia` run carry `collector_score` **0 or 1** and a verified score of **7-8**:
+they survived only because Nemotron Ultra independently rescored them at
+verification. The collector's own score was meaningless on that path, so any
+feed signal Ultra did not happen to rescue was lost at the floor — which is
+consistent with feeds yielding just **4 signals of 110** from eight sources.
+
+Fixed by sending the polarity and defining the score. The result is the best
+demo material in the project:
+
+| Headline, same feed, same day | Before the fix | After the fix |
+|---|---|---|
+| *Disney's sustainability co-lead leaves the company* | scored **0** — below the floor, surviving only if Ultra rescued it | scored **9** — the strongest signal type this configuration has |
+| *Ingka Group appoints a Chief Sustainability Officer* | kept as a signal | **discarded at extraction** — a filled role is a lost mandate |
+
+That is the polarity engine working on real published content, with zero
+Tavily credits spent, and it is reproducible: `node tools/feed-check.mjs exec-search`.
+
+The `nvidia` path gained as much: a feed-only check after the fix returned **13
+signals from 178 items, scored 2 to 9** — a 960MW Amazon nuclear agreement at
+9, a conference keynote at 2 — where it previously scored everything 0 or 1.
+
+**Not fixed, worth doing:** 144 of those 178 items passed the `nvidia`
+profile's feed term filter. That is far too loose — one extraction call per
+four items — and the filter is free to tighten. `exec-search` passed 11 of 145
+because its terms are weighted to movement words (steps down, promoted,
+recruit) rather than topic words.
+
+---
+
+## 0.1 THE BLOCKER — Tavily credits
+
+Queried from the account on 23 October:
+
+```
+plan: Researcher (free) · plan_limit: 1000 · plan_usage: 974 · paygo: not enabled
+```
+
+**26 credits left. A full `nvidia` run costs 112** (56 searches × 2 for
+`advanced` depth: 31 collector + 7 regulator + 15 roster-sweep + 3 account
+watch). The free plan resets on the **1st of the month — 1 November, two days
+after the deadline.**
+
+**The fix is Pay-As-You-Go at $0.008/credit: a full run is ~$0.90, and 1,000
+credits is $8.** Nebius is not the constraint — at published rates (Ultra
+$1/$3, Super $0.30/$0.90 per M tokens) a full run's inference is well under a
+dollar. Until PAYG is enabled, work on the free paths: `tools/feed-check.mjs`,
+`npm run pipeline:resume`, `npm run pipeline:dry`.
 
 ---
 
@@ -11,8 +96,9 @@ Working, running end to end on live data, committed clean.
 
 | | |
 |---|---|
-| Agents | **12** |
-| Tests | **10 files, all passing** (`npm test`, no API keys needed) |
+| Configurations | **2** — `nvidia` (live data, 165 orgs) and `exec-search` (new, register empty) |
+| Agents | **12** per configuration |
+| Tests | **14 files, all passing** (`npm test`, no API keys needed) |
 | Last full run | 165 raw signals → **110 verified**, 1,978-word briefing, 1,133s |
 | Band spread | 14 Critical · 62 High · 34 Medium · 0 Low |
 | Organisation register | **169 organisations** accumulated |
@@ -125,10 +211,11 @@ Agreed scope, roughly a day, then **stop building and make the video**:
 - [x] Public open-source repo with MIT licence — *local only, not yet pushed to GitHub*
 - [x] Working build
 - [ ] **Public YouTube demo under 3 minutes**
-- [x] Track identified — Personal AI
+- [x] Track identified — **Best Apps and Agents** (switched 23 Oct, verified against the live Devpost page)
 - [ ] **Feedback on Nebius/NVIDIA tooling** — required, and there is unusually strong material: the Lightning no-answer behaviour, empty-200 throttling, and truncation handling are all measured and reproducible
 - [ ] Devpost written description
-- [ ] Deployment (Vercel — set `CRON_ENABLED=false` and use Vercel Cron to POST `/api/run`)
+- [ ] **Deployment — Nebius Serverless**, not Vercel: Endpoint for the dashboard/API, Job for the weekly pipeline. The track text names both, and criterion 1 asks how effectively the project uses Nebius
+- [ ] **Enable Tavily Pay-As-You-Go** — see section 0.1. Nothing can be run live until this is done
 
 **Demo advice from review feedback, endorsed:** lead with the *diagnostic story* — how the measurement failure was caught — not just the final scores. That is what demonstrates the system works.
 

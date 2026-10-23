@@ -6,6 +6,35 @@ generic; the profile is not.
 Changing target market means writing a new profile — not retraining anything,
 and not filling in a form.
 
+## The two that ship
+
+| | `nvidia.js` | `exec-search.js` |
+|---|---|---|
+| Business | Selling into the NVIDIA AI infrastructure ecosystem | A sustainability & ESG executive search firm |
+| An appointment is | a **lead** | a **dead lead** |
+| A departure is | a **stall** on a held account | the **strongest lead** in the system |
+| Value factor | `deal_scale` — breadth measures nothing when revenue sits in one line | engine default, multi-service breadth |
+| Windows | 30 days throughout | 21 / 30 / 90, per collector |
+
+They are deliberately opposites. Two profiles that merely differed in keywords
+would prove nothing; two that read the identical event in opposite directions
+prove the polarity system is real. **A third market is a third file** — the
+engine does not change.
+
+`exec-search.js` is a port of a prompt pack that was diagnosed against live
+test searches after two earlier versions returned almost nothing. Five of the
+eight root causes found there are design constraints in that file, each
+annotated at the point it applies. Read them before writing a new profile:
+they are the mistakes a new profile makes by default.
+
+## Data is per profile, and this is not optional
+
+Each profile reads and writes `data/<key>/` — its own register, signal log,
+briefing history and rejection log. Sharing one directory is not untidiness,
+it is a correctness failure: one register holding two markets describes
+nobody, and a shared cross-week URL exclusion list would suppress a story for
+one business because the *other* business had already seen it.
+
 ## Why this is a file and not a settings screen
 
 The tempting version of this product asks a business to describe itself —
@@ -60,17 +89,32 @@ These are the ones that cannot be derived from a product description:
 
 ## Writing one
 
-Copy `nvidia.js`, change the fields, add it to `index.js`, set `PROFILE=` in
-`.env`. The shape:
+Copy whichever of the two is closer to the business, change the fields, add it
+to `index.js`, and select it in the dashboard (or set `PROFILE=` in `.env` for
+the default). The shape:
 
 | Field | What it is |
 |---|---|
-| `polarity` | How to read each event type for this business. The most important field |
+| `polarity` | How to read each event type for this business. **The most important field** |
+| `market` | Short noun phrase. Goes into the extraction, verification and synthesis prompts — the pipeline has no other way to know what market it is reading |
+| `reader` | Who the briefing is written for, in one clause. Decides its whole voice |
+| `sweepTerms` | Suffix for the enumerated sweeps, where the query is a list of organisation names and needs a topic |
+| `practiceAreas[]` | `key`, `name`, `description` — what you sell. The scoring engine counts how many of these a signal opens |
 | `roster` | Accounts you already hold — swept by Account Watch, never returned as prospects |
-| `exclusions` | Never return these at all |
-| `collectors[]` | `key`, `name`, `focus`, `signalTypes[]`, `queries[]`, `windowDays` |
+| `exclusions` | Never return these at all. **Include your competitors**: they are intelligence, not opportunities |
+| `aliases` | Press variants a normaliser cannot reconcile — `AWS` → `Amazon Web Services` |
+| `collectors[]` | `key`, `name`, `focus`, `signalTypes[]`, `queries[]`, `windowDays`, and optionally `topic` (`news` default, `general` for things that are not news — a job advert is not an article) and `includeDomains[]` |
+| `regulators` | `bodies[]` with `name`, `domain`, `terms`. The lead is never the regulator — it is whoever the decision obliges |
+| `feeds` | `sources[]` and `terms[]`. **Costs no search credits and cannot hallucinate a source** — the cheapest yield in the system. Fetch every url before committing it |
+| `tenders` | `terms[]` and `cpvPrefixes[]` — the procurement codes for what you actually sell |
 | `accountWatch` | `focus`, `signalTypes[]`, `batchSize`, `windowDays` |
-| `scoring` | `floor` (numeric cutoff, enforced in code) and `guidance[]` (judgement, enforced by prompt) |
+| `scoring` | `floor` (numeric cutoff, enforced in code), `guidance[]` (judgement, enforced by prompt), and optionally `valueFactor` — omit it to keep multi-service breadth |
+
+**`valueFactor` is the question "how much money is in this?", and the answer is
+business-specific.** Omit it and you get breadth, which is right whenever a
+prospect can buy more than one thing. Override it when revenue is concentrated
+in a single line: measured on a live week, breadth put a 2GW datacentre campus
+and a 4.5MW site on the same score, so `nvidia.js` measures deal scale instead.
 
 ## Then check the diagnostics
 

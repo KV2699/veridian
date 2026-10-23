@@ -1,6 +1,9 @@
 node_modules/
 .env
-data/*.json
+# Collected data is per profile now — data/<profile>/*.json. The old pattern
+# only matched the top level, so the moment the register moved into a
+# subdirectory it would have been committed to a public repo.
+data/**/*.json
 data/.pipeline.lock
 !data/.gitkeep
 npm-debug.log*

@@ -9,7 +9,11 @@
 import { complete, MODELS } from '../lib/nebius.js';
 import { log } from '../lib/log.js';
 
-const SYSTEM = `You write Signal Bureau, a weekly BD intelligence briefing on the AI infrastructure market, for one reader: a business development professional or founder selling into GPU cloud, enterprise ML, AI tooling and the NVIDIA ecosystem.
+// Market and reader come from the profile. The briefing's whole voice depends
+// on who it is written for — "a founder selling into GPU cloud" and "a search
+// consultant who earns nothing from a filled role" want opposite things said
+// about the same event — so neither can be hardcoded here.
+const systemFor = (profile) => `You write Signal Bureau, a weekly BD intelligence briefing on the ${profile?.market || profile?.name || 'market described below'} market, for one reader: ${profile?.reader || 'a business development professional working this market'}.
 
 They will read this in four minutes on a Monday morning and decide what to do this week.
 
@@ -22,6 +26,7 @@ VOICE:
 - Lead each section with its highest-priority signal. Priority bands are given; treat Critical as needing contact this week.
 - A signal with a closing date is time-limited. Always state the date, and never bury it mid-sentence.
 - A regulatory obligation is compulsory work with a deadline, not a possibility. State WHO must act, WHAT they must do and BY WHEN — in that order.
+- WHERE A SIGNAL CARRIES A COUNTER-READING, SAY IT. One clause, after the signal, beginning "Counter-reading:". Do not soften it and do not drop it — on some rows it changes who the buyer is, and a briefing that hides the argument against a lead is how a week gets wasted on the wrong account. Where it says the named organisation is not the realistic buyer, name who is.
 
 HARD RULES:
 - Use ONLY the supplied signals. Never add a company, number, date or event from your own knowledge. If a section has no signals, write "No signals this week." under it.
@@ -67,7 +72,7 @@ export default async function writeBriefing({ signals, connections, assessment, 
     tier: 'ultra',
     temperature: 0.4,
     maxTokens: Number(process.env.BRIEFING_MAX_TOKENS) || 12000,
-    system: SYSTEM,
+    system: systemFor(profile),
     user: buildPrompt({ signals, connections, assessment, weekLabel, counts, CATEGORIES, profile }),
   });
 
@@ -92,6 +97,7 @@ function buildPrompt({ signals, connections, assessment, weekLabel, counts, CATE
           s.obligation ? `  OBLIGATION: ${s.obligation}${s.deadline ? ` (compliance by ${s.deadline})` : ''}` : null,
           s.demand_created ? `  WORK THIS CREATES: ${s.demand_created}` : null,
           s.contact_role ? `  APPROACH: ${s.contact_role}` : null,
+          s.counter_reading ? `  COUNTER-READING: ${s.counter_reading}` : null,
           s.needs_review ? `  FLAGGED FOR REVIEW: ${s.review_reason || 'thinly sourced'}` : null,
         ].filter(Boolean).join('\n')).join('\n')
       : '  (none)';
@@ -122,7 +128,7 @@ function buildPrompt({ signals, connections, assessment, weekLabel, counts, CATE
 
   return `Write the Signal Bureau briefing for the week of ${weekLabel}.
 
-MARKET: ${profile?.name ?? 'AI infrastructure'} — ${profile?.description ?? ''}
+MARKET: ${profile?.name ?? 'unnamed'} — ${profile?.description ?? ''}
 
 "Your Accounts" are organisations this reader ALREADY has a relationship with. Write those bullets as a reason to get back in touch, never as a new discovery.
 

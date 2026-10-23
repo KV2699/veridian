@@ -11,6 +11,157 @@ except where noted.
 
 ---
 
+## 23 October — the second configuration
+
+The brief: change the hackathon track, and make the system ship with **two**
+sector configurations, each demonstrably good at its own market, with a note
+that further sectors are additive.
+
+### Track: Personal AI → Best Apps and Agents
+
+Verified against the live Devpost page rather than the brief. Personal AI names
+a specific stack — NemoClaw, OpenShell, Hermes Agent — that this does not use.
+Best Apps and Agents asks for *"a workflow that runs itself"*, Nemotron 3 Ultra
+for reasoning with Nano or Super for the fast everyday calls, and Serverless
+Jobs for background processing. That is a description of this system.
+
+### The second profile — `exec-search`
+
+An ESG and sustainability executive search firm. Chosen over the other tested
+markets in the methodology (policy think tank, sustainability communications,
+software consultancy) for one reason: it is the only one that **inverts** the
+existing profile rather than varying it. A new Head of Sustainability is a
+budget holder with a mandate to the `nvidia` profile and a filled mandate with
+the fee gone to this one. Two profiles that differed only in keywords would
+prove nothing about the architecture.
+
+It is a port of a prompt pack diagnosed against live test searches after two
+earlier versions returned almost nothing. Five of the eight root causes found
+there are now design constraints in the file, annotated where they apply:
+events not states, inverted appointment polarity, a mid-market target universe
+rather than mega-caps, a source list verified live, and per-collector windows
+(21 days for job postings, 30 for vacancies, 90 for restructures) instead of
+one 90-day window that guaranteed leads which were already gone.
+
+It also uses the **engine default value factor** — multi-service breadth —
+where `nvidia` overrides it with deal scale. So the two configurations exercise
+both halves of the scoring system, not just two query sets.
+
+### Six places hardcoded the market OUTSIDE the profile
+
+Found by reading, before a second profile could work at all. None of them would
+have thrown; a second profile would have loaded cleanly and been processed by a
+model that had been told it was reading GPU news:
+
+| File | Was | Now |
+|---|---|---|
+| `collector-base.js` | `"signal extractor for the AI infrastructure market"` | `profile.market` |
+| `qa-verifier.js` | `"relevance for someone doing BD in AI infrastructure — GPU cloud..."` | `profile.market` + `profile.reader` |
+| `briefing-writer.js` | `"for one reader: a founder selling into GPU cloud..."` | `profile.reader` |
+| `roster-sweep.js` | query suffix `"AI infrastructure announcement"` | `profile.sweepTerms` |
+| `account-watch.js` | same suffix | `profile.sweepTerms` |
+| `collector-tenders.js` | passed profile `terms` but kept compute CPV codes | `profile.tenders.cpvPrefixes` |
+
+Collectors also gained optional `topic` and `includeDomains`, because a job
+advert is not a news article and Tavily's news index will never return one.
+
+### A seventh, found only by running it
+
+`tools/feed-check.mjs` was added to exercise a profile on the **free** path —
+RSS feeds, no Tavily credits — and the first run showed the Feed Collector
+never received the profile's polarity, and declared a `relevance_score` field
+without ever defining what the number meant. The model returned 0 for
+everything.
+
+Checked against the live signal log rather than assumed: all four feed signals
+in the last run carry a `collector_score` of **0 or 1** and a verified score of
+**7-8**. They survived only because Nemotron Ultra independently rescored them.
+The collector's score was meaningless on that path, and anything Ultra did not
+rescue was lost at the floor — consistent with eight feeds yielding four
+signals out of 110.
+
+The fix — send the polarity, define the score — produced the clearest
+demonstration of the polarity engine in the project. Same feed, same day:
+
+- *"Disney's environmental sustainability co-lead leaves the company"* →
+  **scored 9** by `exec-search` (an open mandate) and read as a *stall on an
+  existing account* by `nvidia`.
+- *"Ingka Group appoints Erika Intiso as Chief Sustainability Officer"* →
+  **discarded** by `exec-search` (the fee is gone) and a lead for `nvidia`.
+
+The `nvidia` profile benefits as much. A feed-only check after the fix returned
+**13 signals from 178 items with scores spread 2 to 9** — a 960MW Amazon
+nuclear power agreement at 9, a conference keynote at 2 — where the same path
+previously assigned a collector score of 0 or 1 to everything it found. The
+scoring on that path now discriminates instead of deferring entirely to the
+verifier.
+
+One thing it also exposed, not yet fixed: 144 of 178 feed items passed the
+`nvidia` profile's term filter, which is far too loose and costs an extraction
+call per batch of four. The `exec-search` terms are weighted to movement words
+rather than topic words and passed 11 of 145. Worth tightening.
+
+### Data is now per profile
+
+`data/<profile>/`. Not tidiness: one register holding two markets describes
+nobody, and a shared cross-week URL exclusion list would suppress a story for
+one business because the *other* had already seen it. The profile key is
+threaded through as an argument rather than held as module state — this repo
+has already lost 45 organisations to two runs sharing one mutable view of one
+file, and a module-level "current profile" is the same mistake in a new place.
+
+`.gitignore` needed widening to `data/**/*.json` at the same time: the old
+`data/*.json` only matched the top level, so the register and the whole signal
+log would have been committed to a public repository the moment they moved into
+a subdirectory.
+
+`test/register.test.mjs` previously read, blanked and restored the **live**
+register. It now runs against a throwaway profile key; one interrupted run
+between the blank and the restore would have destroyed the real prospect list.
+
+### Rejection log and counter-reading
+
+Both ported from the operator's most developed tracker, where the rejection log
+is described as *"the proof the method holds"*.
+
+**Every dropped signal is now kept with a reason code** — `UNGROUNDED`,
+`BELOW_FLOOR`, `DUPLICATE`, `UNVERIFIED` — at both stages that drop things:
+grounding during extraction, and the verifier. Two reasons it matters: without
+it a rejected organisation returns next week and is re-judged from scratch at
+full cost, and a rejection that is actually a *defect in the rules* is
+indistinguishable from one that is a correct suppression. `GET /api/rejections`,
+and it is shown on the dashboard next to what was kept.
+
+**Every kept signal can carry a counter-reading** — the argument against acting
+on it, written by the verifier, capped at 400 characters in code. Not a
+confidence score: the reason a competent person might reach the opposite
+conclusion. The three that recur are *the buyer is someone else* (a regulator
+publishing a rule is not a customer — the firms it obliges are), *they will do
+it themselves*, and *the event is real but the trigger is wrong*. The briefing
+writer is instructed to state it, never to soften or drop it.
+
+### Tavily credits — the blocker this surfaced
+
+Queried from the account: **974 of 1,000 used, 26 left**, free Researcher plan,
+pay-as-you-go not enabled, and the plan resets on **1 November — two days after
+the deadline**. A full `nvidia` run costs **112 credits** (56 searches at
+`advanced` depth). Nothing could be run live.
+
+Pay-as-you-go is $0.008/credit, so a full run is about **$0.90**. Nebius is not
+the constraint: at published rates a full run's inference is well under a
+dollar. Everything in this entry was therefore validated on the free paths —
+feeds, dry run, and the test suite.
+
+### Tests: 12 → 14 files
+
+`test/profiles.test.mjs` asserts the two-configuration contract structurally —
+that both profiles declare every field an agent reads, that the polarity
+genuinely inverts, that the value factors differ, and that no store file is
+shared between them. `test/rejections.test.mjs` covers the rejection log and
+the counter-reading.
+
+---
+
 ## 1 October — the build
 
 ### `7ab9544` Initial build — seven agents

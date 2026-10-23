@@ -11,7 +11,8 @@ export default async function updateDashboard({ week, weekLabel, markdown, signa
   // Trend compares against the most recent DIFFERENT week. Re-running the same
   // week replaces its briefing, so without the week filter a re-run would
   // report a delta against itself and always read "+0".
-  const previous = (await getBriefings()).find((b) => b.week !== week) ?? null;
+  const key = profile?.key;
+  const previous = (await getBriefings(key)).find((b) => b.week !== week) ?? null;
 
   const briefing = {
     week,
@@ -54,10 +55,10 @@ export default async function updateDashboard({ week, weekLabel, markdown, signa
       : null,
   };
 
-  const totalBriefings = await saveBriefing(briefing);
+  const totalBriefings = await saveBriefing(briefing, key);
   log.ok(`briefings.json — ${totalBriefings} briefing${totalBriefings === 1 ? '' : 's'} stored (week ${week})`);
 
-  const { added, skipped, total } = await appendSignals(signals);
+  const { added, skipped, total } = await appendSignals(signals, key);
   log.ok(`signal_log.json — ${added} new signals appended, ${skipped} already logged, ${total} total all-time`);
 
   if (briefing.trend) {
@@ -68,7 +69,7 @@ export default async function updateDashboard({ week, weekLabel, markdown, signa
 
   // The dashboard is a static page that reads the API, so there is no HTML to
   // regenerate here — confirming it can see the new data is the useful check.
-  const allTime = (await getSignals()).length;
+  const allTime = (await getSignals(key)).length;
 
   return {
     week,

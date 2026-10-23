@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Signal Bureau — AI Infrastructure BD Intelligence</title>
+<title>Signal Bureau — BD Intelligence</title>
 <style>
   :root {
     --bg: #0f172a; --panel: #16203a; --panel-2: #1c2746; --line: #273458;
@@ -97,6 +97,20 @@
 
   .pill { display: inline-block; font-family: var(--mono); font-size: 11px; padding: 3px 9px; border-radius: 99px; background: var(--panel-2); color: var(--muted); margin-right: 6px; }
   .empty { color: var(--dim); padding: 40px 0; text-align: center; }
+
+  /* Configuration selector. Two profiles ship; the switch is the proof that
+     one engine serves both, so it is in the header rather than buried. */
+  .cfg { display: flex; align-items: center; gap: 8px; }
+  .cfg select {
+    font-family: inherit; font-size: 12.5px; padding: 6px 10px; border-radius: 8px;
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--line); cursor: pointer;
+  }
+  .cfg .measures { font-family: var(--mono); font-size: 10.5px; color: var(--dim); }
+  .rej { font-size: 12px; border-bottom: 1px solid var(--line); padding: 7px 0; }
+  .rej:last-child { border-bottom: 0; }
+  .rej .code { font-family: var(--mono); font-size: 10px; letter-spacing: .04em; color: var(--muted); background: var(--panel-2); padding: 2px 6px; border-radius: 4px; }
+  .rej .why { color: var(--dim); font-size: 11.5px; margin-top: 3px; }
+  .counter { font-size: 12px; color: var(--muted); border-left: 2px solid var(--line); padding-left: 9px; margin-top: 6px; }
   .log { font-family: var(--mono); font-size: 11.5px; color: var(--muted); max-height: 136px; overflow-y: auto; white-space: pre-wrap; }
 
   /* Yield funnel + diagnostics */
@@ -161,7 +175,10 @@
   <div class="brand">
     <h1>Signal Bureau</h1>
     <span id="week">—</span>
-    <span id="profile" class="pill" style="margin:0"></span>
+  </div>
+  <div class="cfg">
+    <select id="profile" title="Which business this deployment is running for"></select>
+    <span class="measures" id="measures"></span>
   </div>
   <div class="spacer"></div>
   <div class="meta" id="meta">loading…</div>
@@ -180,6 +197,12 @@
     <div class="card">
       <h2>Signals by category</h2>
       <div class="bars" id="bars"></div>
+    </div>
+
+    <div class="card">
+      <h2>Rejected, and why</h2>
+      <div id="rejstats" style="font-size:12.5px;color:var(--muted);margin-bottom:10px"></div>
+      <div id="rejlist" style="max-height:220px;overflow-y:auto"></div>
     </div>
 
     <div class="card">
@@ -264,7 +287,10 @@ function renderMarkdown(md) {
     .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\(unconfirmed\)/gi, '<em>(unconfirmed)</em>');
+    .replace(/\(unconfirmed\)/gi, '<em>(unconfirmed)</em>')
+    // The argument against acting on a lead is set apart, not buried in the
+    // sentence that recommends it.
+    .replace(/Counter-reading:\s*([^<\n]+)/gi, '<span class="counter">Counter-reading: $1</span>');
 
   for (const raw of lines) {
     const line = raw.trimEnd();
@@ -428,8 +454,19 @@ function drawBriefing() {
 }
 
 // ── Data ─────────────────────────────────────────────────────────────────────
+// WHICH CONFIGURATION IS BEING VIEWED.
+//
+// Each profile has its own register, signal log and briefings on the server,
+// so every request has to say which one it means. Read from the selector, not
+// from module state that could drift out of step with what the user sees.
+let profileKey = new URLSearchParams(location.search).get('profile') || '';
+
+// Appends ?profile= to any api path, preserving an existing query string.
+const scoped = (path) => !profileKey ? path
+  : `${path}${path.includes('?') ? '&' : '?'}profile=${encodeURIComponent(profileKey)}`;
+
 async function get(path) {
-  const res = await fetch(path);
+  const res = await fetch(scoped(path));
   const data = await res.json().catch(() => ({ ok: false, error: `${res.status} ${res.statusText}` }));
   if (!res.ok || data.ok === false) throw new Error(data.error || `${res.status}`);
   return data;
@@ -453,6 +490,44 @@ async function loadRegister() {
   }
 }
 
+// Drawn from the server's own list, so adding a third profile needs no change
+// here — the dropdown is whatever the loader registers.
+function drawProfiles(profiles, active) {
+  const sel = $('profile');
+  if (!profiles?.length) return;
+  if (sel.options.length !== profiles.length) {
+    sel.innerHTML = profiles.map((p) => `<option value="${esc(p.key)}">${esc(p.name)}</option>`).join('');
+  }
+  sel.value = active.key;
+  profileKey = active.key;
+  // What this configuration MEASURES is the difference worth showing: the same
+  // engine scores commercial value by deal scale for one business and by
+  // service breadth for the other.
+  $('measures').innerHTML = `${active.market ? `${esc(active.market)} · ` : ''}`
+    + `value = ${esc(active.value_factor ?? 'Multi-Service Potential')} · ${active.accounts} accounts`;
+  drawExamples(active.first_practice_area);
+}
+
+// What the pipeline threw away. Shown next to what it kept, deliberately: a
+// tool that only displays its hits cannot be audited, and the reason code
+// separates a correct suppression from a defect in the rules.
+async function loadRejections() {
+  try {
+    const { total, by_code: byCode, rejections } = await get('/api/rejections?limit=25');
+    if (!total) { $('rejstats').textContent = 'Nothing rejected yet.'; $('rejlist').innerHTML = ''; return; }
+    $('rejstats').innerHTML = `<strong style="color:var(--text);font-size:15px">${total}</strong> rejected and kept on record`
+      + `<br>${Object.entries(byCode).map(([c, n]) => `${n} ${c.toLowerCase().replace(/_/g, ' ')}`).join(' · ')}`;
+    $('rejlist').innerHTML = rejections.map((r) => `
+      <div class="rej">
+        <span class="code">${esc(r.reason_code ?? 'UNKNOWN')}</span>
+        <span style="margin-left:7px">${esc(r.company ?? 'unnamed')}</span>
+        <div class="why">${esc(r.reason ?? '')}</div>
+      </div>`).join('');
+  } catch (err) {
+    $('rejstats').textContent = 'No rejection log yet.';
+  }
+}
+
 async function loadStatus() {
   const s = await get('/api/status');
   $('week').textContent = s.current_week;
@@ -460,7 +535,7 @@ async function loadStatus() {
   $('run').disabled = s.running;
   $('run').textContent = s.running ? 'Running…' : 'Run pipeline';
 
-  if (s.profile) $('profile').textContent = s.profile.name;
+  if (s.profile) drawProfiles(s.profiles, s.profile);
   drawDiagnostics(s.diagnostics);
 
   const last = s.last_run;
@@ -487,7 +562,7 @@ async function loadBriefings(keepSelection = false) {
 async function refresh(keepSelection = true) {
   try {
     const s = await loadStatus();
-    await Promise.all([loadBriefings(keepSelection), loadRegister()]);
+    await Promise.all([loadBriefings(keepSelection), loadRegister(), loadRejections()]);
     return s;
   } catch (err) {
     logLine(`error: ${err.message}`);
@@ -509,10 +584,14 @@ $('run').onclick = async () => {
   $('run').disabled = true;
   $('run').textContent = 'Starting…';
   try {
-    const res = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    const res = await fetch('/api/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profile: profileKey || undefined }),
+    });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'failed to start');
-    logLine(`pipeline started${data.dryRun ? ' (dry run)' : ''} — 7 agents`);
+    logLine(`pipeline started${data.dryRun ? ' (dry run)' : ''} — ${data.profile ?? 'default'}, ${data.agents?.length ?? 0} agents`);
     startPolling();
   } catch (err) {
     logLine(`could not start: ${err.message}`);
@@ -521,25 +600,44 @@ $('run').onclick = async () => {
   }
 };
 
+// Switching configuration is a full reload of every panel, not a filter: the
+// two profiles do not share a register, a signal log or a briefing history.
+$('profile').onchange = async (e) => {
+  profileKey = e.target.value;
+  const url = new URL(location.href);
+  url.searchParams.set('profile', profileKey);
+  history.replaceState(null, '', url);
+  selected = null;
+  logLine(`configuration → ${profileKey}`);
+  await refresh(false);
+};
+
 $('refresh').onclick = () => { logLine('refreshed'); refresh(); };
 
 // ── Ask the register ────────────────────────────────────────────────────────
 // Retrieval happens on the server, in code. This only sends the question and
 // renders what comes back, so nothing here can invent a company.
+// Four questions are true of any configuration. The fifth names a practice
+// area, so it comes from the active profile — "critical prospects in compute"
+// is meaningless to a search firm, which sells retained search and interim
+// cover, not GPUs.
 const EXAMPLES = [
   'top 5 multi-service prospects',
   'what is closing in the next 14 days?',
   'which accounts have gone quiet?',
-  'critical prospects in compute',
   'what was flagged for review?',
 ];
 
 let asking = false;
 
-$('examples').innerHTML = EXAMPLES.map((e) => `<button>${esc(e)}</button>`).join('');
-for (const b of $('examples').querySelectorAll('button')) {
-  b.onclick = () => { $('q').value = b.textContent; askQuestion(); };
+function drawExamples(areaKey) {
+  const list = areaKey ? [...EXAMPLES.slice(0, 3), `critical prospects in ${areaKey}`, EXAMPLES[3]] : EXAMPLES;
+  $('examples').innerHTML = list.map((e) => `<button>${esc(e)}</button>`).join('');
+  for (const b of $('examples').querySelectorAll('button')) {
+    b.onclick = () => { $('q').value = b.textContent; askQuestion(); };
+  }
 }
+drawExamples();
 
 async function askQuestion() {
   const question = $('q').value.trim();
@@ -556,7 +654,7 @@ async function askQuestion() {
   try {
     const res = await fetch('/api/ask', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question }),
+      body: JSON.stringify({ question, profile: profileKey || undefined }),
     });
     const data = await res.json();
     if (!res.ok || data.ok === false) throw new Error(data.error || 'failed');

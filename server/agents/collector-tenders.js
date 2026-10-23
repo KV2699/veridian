@@ -30,7 +30,7 @@ export default async function collectTenders({ profile }, ctx = {}, deps = {}) {
   const fetchAll = deps.fetchPortals ?? fetchPortals;
   const ask = deps.completeJSON ?? completeJSON;
   const cfg = profile?.tenders ?? {};
-  const { maxPages = 10, terms, portals = PORTALS } = cfg;
+  const { maxPages = 10, terms, cpvPrefixes, portals = PORTALS } = cfg;
   const days = process.env.BACKFILL === 'true' ? (cfg.days ?? 30) * 3 : (cfg.days ?? 30);
 
   const known = ctx.knownUrlKeys ?? new Set();
@@ -39,7 +39,13 @@ export default async function collectTenders({ profile }, ctx = {}, deps = {}) {
 
   log.step(`fetching procurement notices from ${portals.length} portal(s), last ${days} days`);
   const releases = await fetchAll(portals, { days, maxPages });
-  const matched = relevant(releases, terms ? { terms } : undefined);
+  // Both levers are profile-defined. A vendor profile matches compute CPV
+  // codes; a search firm matches recruitment ones. Passing only `terms` left
+  // the second profile matching the first profile's CPV codes.
+  const filter = {};
+  if (terms) filter.terms = terms;
+  if (cpvPrefixes) filter.cpvPrefixes = cpvPrefixes;
+  const matched = relevant(releases, Object.keys(filter).length ? filter : undefined);
   const matches = cfg.includeClosed ? matched : matched.filter((r) => isOpen(r));
   log.step(`${releases.length} notices → ${matched.length} on topic → ${matches.length} still open to bid`);
 

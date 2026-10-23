@@ -26,12 +26,20 @@ const VERIFY_MAX_TOKENS = Number(process.env.VERIFY_MAX_TOKENS) || 16000;
 // genuinely large week is split.
 const VERIFY_CHUNK = Number(process.env.VERIFY_CHUNK) || 20;
 
-const SYSTEM = `You are the quality assurance layer of a BD intelligence pipeline for the AI infrastructure market.
+// The market and the reader come from the profile. Hardcoding them here made
+// the verifier single-market: asked to judge "relevance for someone doing
+// business development in AI infrastructure", it would score an executive
+// search firm's vacancy signals against the wrong question entirely — and
+// score them confidently.
+const systemFor = (profile) => {
+  const market = profile?.market || profile?.name || 'the market described below';
+  const reader = profile?.reader || `someone doing business development in ${market}`;
+  return `You are the quality assurance layer of a BD intelligence pipeline for the ${market} market.
 
 You receive signals collected by four independent agents. Your job is to decide what a busy BD professional should actually see, and to be honest about what you cannot verify.
 
 For every signal, judge:
-1. RELEVANCE (0-10) for someone doing business development in AI infrastructure — GPU cloud, enterprise ML, AI tooling, NVIDIA ecosystem.
+1. RELEVANCE (0-10) for ${reader}.
    8-10 = a named organisation took a dated action that creates a concrete reason to make contact now.
    6-7  = real and relevant market intelligence, but not directly actionable this week.
    0-5  = vague, undated, sector-level, pure commentary, or no clear BD implication.
@@ -52,21 +60,31 @@ For every signal, judge:
 
 5. ORGANISATION SCALE — confirm or correct the size of the named organisation. "large" means a major enterprise, hyperscaler, government or household name. Use "unknown" when the source does not establish it. Never guess "large" because the sector is large — the organisation must be.
 6. REVIEW FLAG — set needs_review true when the claim is high-stakes but thinly sourced, a figure or date looks implausible, the company attribution is ambiguous, or the signal is an inference rather than a stated fact. Say why in review_reason.
+7. COUNTER-READING — the argument AGAINST acting on this signal, in one sentence, or "" when there genuinely isn't one.
+
+   This is not a confidence score and not a caveat. It is the reason a competent person might read the same event and reach the opposite conclusion. The three kinds that matter most:
+
+   - THE BUYER IS SOMEONE ELSE. The named organisation is often not the realistic buyer: a regulator publishing a rule is not a customer, the firms it obliges are; a prosecution against one company makes its SECTOR the buyer, not the defendant; a platform vendor announcing a migration is usually the competitor, not the account.
+   - THEY WILL DO IT THEMSELVES. In-house capability, a parent-company function, an incumbent supplier or a framework agreement can mean a real event is still not winnable.
+   - THE EVENT IS REAL BUT THE TRIGGER IS WRONG. The source supports a different event from the one that would create demand.
+
+   Write it as a plain statement, not a hedge. "Infosys is both platform vendor and likely integrator, so the realistic entry is client-side assurance rather than prime delivery" is useful. "This may not convert" is not.
 
 SCORING DISCIPLINE — this matters more than coverage:
 - Do not inflate. If most signals in a batch score 8+, you are scoring the batch's internal ranking rather than real BD value. A normal week has a handful of 8s and a long tail of 6s and below.
-- A sector trend is not an organisation-level trigger. "The GPU market is tight" scores low; "Company X signed a 50MW capacity deal on [date]" scores high.
+- A sector trend is not an organisation-level trigger. A statement about the market as a whole scores low; a named organisation taking a dated action scores high.
 - An undated signal cannot be urgent. Cap anything with date null at 7.
 - Judge only what the summary and source actually state. Never upgrade a signal using your own knowledge of the company, and never add facts.
 
 Then identify CONNECTIONS: non-obvious links across categories where two or more signals together mean more than they do apart (a funding round plus a competitor's capacity constraint; a model release plus a stated procurement). Only real links present in the signals. If there are none, return an empty array.
 
 Reply with JSON only:
-{"verified":[{"id":"the id given","relevance_score":0,"practice_areas":["key"],"org_scale":"large|mid|small|unknown","value_level":"string","needs_review":false,"review_reason":"","duplicate_of":null}],
+{"verified":[{"id":"the id given","relevance_score":0,"practice_areas":["key"],"org_scale":"large|mid|small|unknown","value_level":"string","needs_review":false,"review_reason":"","counter_reading":"","duplicate_of":null}],
  "connections":[{"observation":"one sentence","signal_ids":["id","id"]}],
  "assessment":"one sentence on the overall quality of this week's collection"}
 
 Include every input id exactly once in "verified". For a duplicate, set duplicate_of to the id of the version you kept.`;
+};
 
 // `deps` exists so the verification logic can be tested against a scripted
 // model response without reaching Nebius. Production callers omit it.
@@ -110,7 +128,7 @@ export default async function qaVerify({ signals, profile }, deps = {}) {
         temperature: 0.2,
         maxTokens: VERIFY_MAX_TOKENS,
         expectKey: 'verified',
-        system: SYSTEM,
+        system: systemFor(profile),
         user: buildPrompt(group, profile),
       });
       model = res.model;
@@ -149,6 +167,16 @@ export default async function qaVerify({ signals, profile }, deps = {}) {
   );
 
   const kept = [];
+  // Every drop, with the reason, instead of a counter. Without this a rejected
+  // organisation returns next week and is re-judged from scratch at full cost,
+  // and a rejection that is actually a DEFECT in the rules is indistinguishable
+  // from one that is a correct suppression.
+  const rejections = [];
+  const reject = (s, reason_code, reason) => rejections.push({
+    company: s.company, signal_type: s.signal_type, summary: s.summary,
+    url: s.url, url_key: s.url_key, date: s.date ?? null, category: s.category,
+    score: s.relevance_score ?? null, reason_code, reason, stage: 'verification',
+  });
   let dropped = 0, dupes = 0, flagged = 0, unjudged = 0;
 
   for (const s of unique) {
@@ -160,13 +188,27 @@ export default async function qaVerify({ signals, profile }, deps = {}) {
       if ((s.relevance_score ?? 0) >= floor) {
         kept.push({ ...s, needs_review: true, review_reason: 'Not returned by the verification pass — unverified', verified: false });
         flagged++;
-      } else dropped++;
+      } else {
+        dropped++;
+        // UNVERIFIED, not false. The model never judged this one, so the only
+        // thing established is that its collector score was too low to keep
+        // without a verdict — it belongs in a re-source queue, not the bin.
+        reject(s, 'UNVERIFIED', `No verdict returned by the verifier and a collector score of ${s.relevance_score ?? 0} is below the floor of ${floor}`);
+      }
       continue;
     }
-    if (v.duplicate_of && v.duplicate_of !== s.id) { dupes++; continue; }
+    if (v.duplicate_of && v.duplicate_of !== s.id) {
+      dupes++;
+      reject(s, 'DUPLICATE', `Same event as ${v.duplicate_of}, which was better sourced`);
+      continue;
+    }
 
     const score = clamp(v.relevance_score, s.relevance_score);
-    if (score < floor) { dropped++; continue; }
+    if (score < floor) {
+      dropped++;
+      reject(s, 'BELOW_FLOOR', String(v.review_reason || `Verified relevance ${score}, below this profile's floor of ${floor}`).trim());
+      continue;
+    }
 
     const needsReview = Boolean(v.needs_review) || !s.date
       || Boolean(s.grounding_note) || Boolean(s.weak_source)
@@ -199,6 +241,10 @@ export default async function qaVerify({ signals, profile }, deps = {}) {
         || (s.weak_source ? 'Source is a social media post, not reporting' : '')
         || (!s.date ? 'No published date on source' : ''),
       ).trim(),
+      // Kept deliberately short, and empty rather than padded: a
+      // counter-reading on every row would be noise, and the ones that matter
+      // change who to approach.
+      counter_reading: String(v.counter_reading ?? '').trim().slice(0, 400),
       verified: true,
     });
   }
@@ -222,12 +268,15 @@ export default async function qaVerify({ signals, profile }, deps = {}) {
     .slice(0, 5);
 
   log.ok(`${scored.length} verified · ${dupes} cross-category duplicates · ${dropped} below score ${floor} · ${flagged} flagged for review`);
+  const counterRead = scored.filter((s) => s.counter_reading).length;
+  if (counterRead) log.ok(`${counterRead} signals carry a counter-reading — the argument against acting on them`);
   log.ok(`bands: ${Object.entries(bands).map(([b, n]) => `${n} ${b}`).join(' · ')} · ${multi} multi-service`);
   if (unjudged) log.warn(`${unjudged} signals were not judged by the model and are flagged as unverified`);
   if (connections.length) log.ok(`${connections.length} cross-category connections identified`);
 
   return {
     signals: scored,
+    rejections,
     connections,
     assessment: String(data?.assessment || '').trim(),
     model,
@@ -235,6 +284,8 @@ export default async function qaVerify({ signals, profile }, deps = {}) {
     stats: {
       input: signals.length, unique: unique.length, kept: scored.length,
       duplicates: dupes, dropped, flagged, unjudged,
+      rejections: rejections.length,
+      counter_read: scored.filter((s) => s.counter_reading).length,
       multi_service: multi, critical,
     },
     summary: `${scored.length} verified, ${critical} Critical, ${multi} multi-service`,
@@ -283,7 +334,7 @@ function buildPrompt(signals, profile) {
 
   return `${signals.length} signals were collected this week.
 
-MARKET: ${profile?.name ?? 'AI infrastructure'}
+MARKET: ${profile?.name ?? 'unnamed'}${profile?.market ? ` — ${profile.market}` : ''}
 ${areas}${valueBlock}
 ${guidance}${polarity}
 Signals in the "account" category are organisations this business ALREADY holds a relationship with. Score them on how strong a reason they are to get back in touch. Never mark one as a duplicate of a new prospect — they belong in a separate section of the briefing.

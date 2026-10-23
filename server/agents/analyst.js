@@ -68,7 +68,11 @@ RULES:
 - Be brief. A spoken answer should be two or three sentences; a list should be a list.
 - British English.`;
 
-export default async function ask(question, deps = {}) {
+// `profile` scopes the retrieval: the analyst answers about ONE business's
+// register and signal log. Asked "top 5 multi-service prospects" against a
+// merged store it would rank a GPU cloud against a sustainability employer and
+// sound completely confident doing it.
+export default async function ask(question, { profile } = {}, deps = {}) {
   const translate = deps.completeJSON ?? completeJSON;
   const narrate = deps.complete ?? complete;
   const loadOrgs = deps.listRegister ?? listRegister;
@@ -78,7 +82,7 @@ export default async function ask(question, deps = {}) {
   if (!asked) return { answer: 'Ask me something about the pipeline.', spec: null, rows: [] };
 
   // ── 1. Translate ─────────────────────────────────────────────────────────
-  const [organisations, signals] = await Promise.all([loadOrgs({}), loadSignals()]);
+  const [organisations, signals] = await Promise.all([loadOrgs({ profile }), loadSignals(profile)]);
 
   // Ultra is a reasoning model: on an open-ended question it thinks at length
   // before emitting anything. A tight budget truncates it mid-thought, and the

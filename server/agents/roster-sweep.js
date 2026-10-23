@@ -54,7 +54,7 @@ export default async function rosterSweep({ profile, week }, ctx = {}, deps = {}
 
   // The target list is everything already known, plus any seed roster — so the
   // sweep covers held accounts and discovered prospects alike.
-  const known = await load({ limit: maxOrganisations });
+  const known = await load({ limit: maxOrganisations, profile: profile?.key });
   const seeds = (profile?.roster ?? []).map((name) => ({ name, status: 'account' }));
   const targets = dedupeByName([...seeds, ...known]).slice(0, maxOrganisations);
 
@@ -77,7 +77,11 @@ export default async function rosterSweep({ profile, week }, ctx = {}, deps = {}
 
   for (const [i, batch] of batches.entries()) {
     const names = batch.map((t) => t.name);
-    const query = `${names.map((n) => `"${n}"`).join(' OR ')} AI infrastructure announcement`;
+    // The suffix comes from the profile: a list of names with no topic
+    // attached returns the organisations' own homepages, and the right topic
+    // for a search firm ("leadership hiring departure") is nothing like the
+    // right one for a vendor ("AI infrastructure announcement").
+    const query = `${names.map((n) => `"${n}"`).join(' OR ')} ${profile?.sweepTerms ?? 'announcement'}`;
 
     let results = [];
     try {

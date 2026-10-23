@@ -13,6 +13,26 @@ It finds people worth putting *into* a CRM.
 
 ---
 
+## Choosing which business it is working for
+
+There are two configurations, and the dropdown at the top of the dashboard
+switches between them:
+
+- **NVIDIA Ecosystem** — you sell AI infrastructure. A new Head of AI is a
+  *lead*: a budget holder with about 90 days to show progress.
+- **ESG Executive Search** — you place sustainability and ESG leaders. The same
+  appointment is a *dead lead*: the role is filled and the fee is gone. What
+  you want is the opposite — departures with no successor named, the seat left
+  empty behind an internal promotion, and roles advertised by the employer
+  directly with no rival agency named.
+
+They do not share anything. Separate prospect lists, separate signal history,
+separate briefings. Switching is not a filter — it is a different business.
+
+If neither is yours, a third is one file: see `server/profiles/README.md`.
+
+---
+
 ## The two ways you use it
 
 ### 1. Monday morning — the briefing
@@ -142,14 +162,33 @@ flags this automatically.
 
 ## What it costs
 
-**Searching:** a free Tavily allowance of 1,000 credits a month. A weekly run
-uses about 100. You will not run out in normal use.
+**Searching is the real cost, and the free allowance is tighter than it looks.**
+Tavily's free Researcher plan gives 1,000 credits a month and resets on the 1st.
+A full `nvidia` run is **56 searches = 112 credits** at `advanced` depth: 31
+collector queries, 7 regulator sweeps, 15 roster-sweep batches, 3 account-watch
+batches. So the free plan covers roughly **eight full runs a month** — fine for
+a weekly schedule, not fine for a week of iterating.
 
-**Thinking:** Nebius charges for the AI. Run `node tools/cost.mjs` to see the
-token counts, and check studio.nebius.com for the actual bill.
+Pay-as-you-go is $0.008 a credit, which makes a full run about **90p**. Enable
+it before you need it: when the free allowance runs out mid-month it does not
+top itself up until the 1st.
 
-**The expensive mistake** is re-running the whole thing to test a small change.
-Use `pipeline:resume` — it reuses the last search and costs nothing.
+**Four ways to spend less, in order of how much they save:**
+
+| | Saves |
+|---|---|
+| `npm run pipeline:resume` — reuses the last collection | **everything**. Use it for every demo and every change below the collectors |
+| `TAVILY_DEPTH=basic` while iterating on queries | half |
+| Lower `rosterSweep.maxOrganisations` in the profile | 15 searches of the 56 at 120 orgs |
+| Lean on the free layer — RSS feeds and procurement portals | they cost **nothing** and cannot invent a source |
+
+`node tools/feed-check.mjs <profile>` runs the feed path alone: real signals,
+zero search credits. It is the right way to test a profile change.
+
+**Thinking:** Nebius charges for the AI, and it is the smaller bill — a full
+run's inference is well under a dollar at current Nemotron rates. Run
+`node tools/cost.mjs` for token counts and check the Nebius console for the
+actual figure.
 
 ---
 

@@ -13,19 +13,22 @@
 // This is the equivalent of Tab 2 in the predecessor tracker, including its
 // Quarters Tracked column.
 
-import { readJSON, writeJSON, DATA_DIR } from './store.js';
-import { join } from 'node:path';
+import { readJSON, writeJSON, filesFor } from './store.js';
 
-export const REGISTER_FILE = join(DATA_DIR, 'organisations.json');
+// The register is per profile. Two businesses in two markets accumulate two
+// prospect lists; merged, neither list describes anybody. The profile key is
+// threaded in as an argument rather than read from module state — see the note
+// at the top of store.js.
+export const registerFile = (profile) => filesFor(profile).register;
 
-export const getRegister = () => readJSON(REGISTER_FILE, {});
+export const getRegister = (profile) => readJSON(registerFile(profile), {});
 
 /**
  * Fold a week's verified signals into the register.
  * @returns {{total:number, added:number, updated:number, newNames:string[]}}
  */
-export async function updateRegister(signals, { week, roster = [], exclusions = [], aliases = {} } = {}) {
-  const register = await getRegister();
+export async function updateRegister(signals, { week, roster = [], exclusions = [], aliases = {}, profile } = {}) {
+  const register = await getRegister(profile);
   const rosterKeys = new Set(roster.map(keyFor));
   // The business running this is never its own prospect. The profile has
   // always declared exclusions; nothing was enforcing them, so NVIDIA appeared
@@ -109,7 +112,7 @@ export async function updateRegister(signals, { week, roster = [], exclusions = 
     register[key] = entry;
   }
 
-  await writeJSON(REGISTER_FILE, register);
+  await writeJSON(registerFile(profile), register);
   return { total: Object.keys(register).length, added: newNames.length, updated, skipped, newNames };
 }
 
@@ -121,9 +124,9 @@ export async function updateRegister(signals, { week, roster = [], exclusions = 
  * signal in its own right. A topic search can never produce this, because it
  * does not know what it failed to find.
  */
-export async function recordQuiet(names, { week } = {}) {
+export async function recordQuiet(names, { week, profile } = {}) {
   if (!names?.length) return { quiet: 0 };
-  const register = await getRegister();
+  const register = await getRegister(profile);
   let touched = 0;
 
   for (const name of names) {
@@ -142,13 +145,13 @@ export async function recordQuiet(names, { week } = {}) {
     touched++;
   }
 
-  await writeJSON(REGISTER_FILE, register);
+  await writeJSON(registerFile(profile), register);
   return { quiet: touched };
 }
 
 /** The register as a sorted list, best prospects first. */
-export async function listRegister({ status, band, minScore = 0, limit, quietFor } = {}) {
-  const register = await getRegister();
+export async function listRegister({ status, band, minScore = 0, limit, quietFor, profile } = {}) {
+  const register = await getRegister(profile);
   let rows = Object.values(register);
   if (status) rows = rows.filter((r) => r.status === status);
   if (band) rows = rows.filter((r) => r.best_band === band);
@@ -159,8 +162,8 @@ export async function listRegister({ status, band, minScore = 0, limit, quietFor
 }
 
 /** Headline counts for the dashboard. */
-export async function registerStats() {
-  const rows = Object.values(await getRegister());
+export async function registerStats(profile) {
+  const rows = Object.values(await getRegister(profile));
   const bands = rows.reduce((a, r) => { a[r.best_band] = (a[r.best_band] ?? 0) + 1; return a; }, {});
   return {
     total: rows.length,

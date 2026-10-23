@@ -1,13 +1,27 @@
 # Submission plan — audited against the real criteria
 
 **Source:** [nebiusglobalaihackathon.devpost.com](https://nebiusglobalaihackathon.devpost.com)
-**Deadline:** 30 October 2026, **17:00 UTC** · **14 days**
+**Deadline:** 30 October 2026, **17:00 UTC** · **7 days remaining as of 23 October**
+
+> **Updated 23 October.** Finding 1 is DONE — the track is now Best Apps and
+> Agents, re-verified against the live Devpost page. Findings 2 and 3 stand.
+> Two things have changed since this plan was written:
+>
+> 1. **Two configurations now ship**, not one. That strengthens criterion 4
+>    (Quality of the Idea) more than anything else available: the polarity
+>    claim stops being an assertion in a README and becomes something a judge
+>    can watch happen — the same headline kept by one configuration and
+>    discarded by the other.
+> 2. **Tavily credits are the binding constraint.** 26 left of 1,000, resetting
+>    1 November — after the deadline. A full run costs 112. Pay-as-you-go at
+>    $0.008/credit makes a run ~$0.90. Nothing live can be demonstrated until
+>    that is enabled. See HANDOVER.md §0.1.
 
 ---
 
 ## Three findings that change the plan
 
-### 1. We are in the wrong track
+### 1. We are in the wrong track — ✅ FIXED 23 October
 
 The Personal AI track names a specific stack — *"use tools such as NVIDIA
 NemoClaw, OpenShell, Hermes Agent"* — none of which this uses.
@@ -139,7 +153,9 @@ footnotes.
 ### P1 — highest scoring leverage
 | | Days | Criterion |
 |---|---|---|
-| Switch track to Best Apps and Agents | 0 | fit |
+| ~~Switch track to Best Apps and Agents~~ — **done 23 Oct** | 0 | fit |
+| ~~Second sector configuration~~ — **done 23 Oct**, `exec-search` | 0 | 4 |
+| **Enable Tavily pay-as-you-go** — blocks every live run | 0 | all |
 | Deploy on Nebius Serverless (Endpoint + Job) | +0.5 over Vercel | 1 |
 | Clean the register's top entries | 0.5 | 2 |
 | Write the impact story properly | — *(in description)* | 3 |
