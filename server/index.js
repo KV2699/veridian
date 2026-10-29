@@ -415,10 +415,10 @@ if (process.env.CRON_ENABLED !== 'false') {
 }
 
 app.listen(PORT, () => {
-  log.banner('SIGNAL BUREAU');
+  log.banner('VERIDIAN');
   log.ok(`dashboard  http://localhost:${PORT}`);
   log.step(`ULTRA ${MODELS.ultra}`);
-  log.step(`FAST  ${MODELS.fast}`);
+  log.step(`SUPER ${MODELS.fast}`);
   if (!process.env.NEBIUS_API_KEY) log.warn('NEBIUS_API_KEY not set — pipeline runs will fail (use DRY_RUN=true to demo the UI)');
   if (!process.env.TAVILY_API_KEY) log.warn('TAVILY_API_KEY not set — collectors will fail');
 });

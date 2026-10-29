@@ -8,3 +8,10 @@ data/.pipeline.lock
 !data/.gitkeep
 npm-debug.log*
 .DS_Store
+
+# Pre-cleanup register snapshots. These contain the junk entries the register
+# guards now reject ("United Kingdom" scored 90 Critical, and similar). They are
+# useful locally as before/after evidence and must never be public: a reader
+# finds them and reasonably assumes they are the current output.
+data/**/*.backup
+*.backup

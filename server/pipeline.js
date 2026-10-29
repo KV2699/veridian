@@ -115,7 +115,7 @@ export async function runPipeline({
   const { week, weekLabel } = isoWeek();
   const statuses = [];
 
-  log.banner(`SIGNAL BUREAU — ${profile.name} · week ${week} · ${trigger}${dryRun ? ' · DRY RUN' : ''}`);
+  log.banner(`VERIDIAN — ${profile.name} · week ${week} · ${trigger}${dryRun ? ' · DRY RUN' : ''}`);
   log.step(`profile: ${profile.key} — ${profile.collectors.length} collectors, ${profile.roster?.length ?? 0} accounts watched`);
   log.step(`Nemotron ULTRA: ${MODELS.ultra}`);
   log.step(`Nemotron FAST:  ${MODELS.fast}`);

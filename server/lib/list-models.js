@@ -13,7 +13,7 @@ if (nvidia.length) nvidia.forEach((id) => console.log(`  ${id}`));
 else console.log('  (none found — check your account has NVIDIA models enabled)');
 
 console.log('\nCurrently configured in .env:');
-for (const [tier, id] of [['ULTRA', MODELS.ultra], ['FAST', MODELS.fast]]) {
+for (const [tier, id] of [['ULTRA', MODELS.ultra], ['SUPER', MODELS.fast]]) {
   console.log(`  ${tier.padEnd(5)} ${id}  ${ids.includes(id) ? '✓ available' : '✗ NOT in the list above — fix .env'}`);
 }
 console.log('');

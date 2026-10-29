@@ -856,6 +856,9 @@ Pin these up.
 34. **For the state of an external account, open the account.** History records what was pasted, not what was signed up for.
 35. **Every claim bound for the camera gets checked against the run log first.** A sentence in a script is harder to retract than a sentence in a chat.
 36. **A private link is worse than a missing one.** A missing link is obviously unfinished; a private link looks finished and shows the reader nothing.
+37. **A default that contradicts the documentation is worse than no default.** Whatever ships in `.env.example` is what a stranger runs, and they will believe the README over the behaviour.
+38. **Test on the host you will actually deploy to.** A framework convenience — a charset header, a MIME type, a rewrite rule — hides a bug that a plain static host exposes.
+39. **A file nobody reads is a file that does not exist.** Generating an artefact is half the work; the half that counts is the code path that consumes it.
 37. **Audit the clone, not the working copy.** Every fatal finding in the 29 October audit was invisible on the machine that built the project and obvious on a fresh clone.
 38. **The example config is production code.** `.env.example` is the configuration most readers will actually run. A stale default there contradicts the submission in the reader's own terminal.
 39. **Check the file the field actually lives in before reporting it missing.** A feature looks 0% broken when you query the wrong file.
@@ -903,6 +906,79 @@ it: *"Artifacts are private unless shared from the page's share menu."*
 unfinished and gets fixed; a working-but-private link reads as done. Any URL that
 is part of a submission gets opened once in a browser that is not signed in. The
 only proof a link is public is a stranger loading it.
+
+---
+
+## The repository shipped a different model from the one it documents
+
+**What happened.** `server/lib/nebius.js` defaulted the Ultra tier to
+`nvidia/llama-3.1-nemotron-70b-instruct`, and `.env.example` — the file a reader
+copies — named the same older model. The project's actual `.env` uses
+`nvidia/Nemotron-3-Ultra-550b-a55b`, and every document, the dashboard and the
+submission describe the Nemotron-3 family and the measurements that led to it.
+
+So anyone who cloned the repository, copied the example and supplied an API key
+ran **a different, older model** from the one the project claims to have
+benchmarked and chosen. The startup banner printed the contradiction on every
+boot, under a heading that still read `SIGNAL BUREAU` three weeks after the
+project was renamed.
+
+**What it would have cost.** One of the four judging criteria is technological
+implementation, and the repository is public. The strongest evidence for that
+criterion — that all four Nemotron models were measured before Ultra was chosen
+for reasoning and Super for extraction — is contradicted by the first two lines
+a reader sees when they run it.
+
+**How it was found.** By cloning the public repository into a temporary
+directory, running `npm install` and `npm start` with no `.env`, and reading
+what the terminal printed. Not by reading the source.
+
+**The rule.** A default that contradicts the documentation is worse than no
+default. Whatever is in `.env.example` is what a stranger runs. Clone your own
+public repository and run it before you submit it.
+
+---
+
+## The demo payload was built, and nothing ever read it
+
+**What happened.** `tools/export-demo.mjs` baked all seven configurations into
+`public/demo-data.json` — 311KB of real organisations, briefings, scores and
+rejection reasons — and committed it. `public/index.html` never referenced the
+file. The export tool even read `public/index.html` into a variable named
+`shell` and then never used it: the wiring was started and abandoned.
+
+Because `data/**/*.json` is correctly gitignored, a fresh clone had no register,
+no signals and no briefings. The dashboard rendered an empty shell. The fix for
+that was sitting in the same directory, unread.
+
+**What it would have cost.** A judge who cloned the repository saw a product
+that appears to do nothing, with the evidence that it works one unreferenced
+`fetch` away.
+
+**How it was found.** By grepping `public/index.html` for `demo-data` after the
+clone came up empty, and getting no matches.
+
+**The rule.** A file nobody reads is a file that does not exist. When you
+generate an artefact, write the code path that consumes it in the same change,
+and test the consumer — not the generator.
+
+---
+
+## A charset bug that only exists on the host nobody tested
+
+**What happened.** `public/index.html` had no `<meta charset="utf-8">`. Express
+sends `charset=utf-8` in the `Content-Type` header for static HTML, so every
+local run looked perfect for weeks. Served from a plain static host — which is
+what a hosted demo is — the browser fell back to a legacy encoding and every
+en-dash, middot and curly quote rendered as `â€"` and `Â·`.
+
+**How it was found.** By serving `public/` with `python3 -m http.server` — no
+Express, no backend — to reproduce the clone-and-host case, and reading the
+rendered text rather than the source.
+
+**The rule.** Test on the host you will actually deploy to. A framework
+convenience hides a bug that a plain static host exposes, and the failure is
+invisible in every environment where you do your work.
 
 ---
 

@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>Veridian</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="Verified signal intelligence — an autonomous BD intelligence agent on NVIDIA Nemotron and Nebius Token Factory.">
@@ -187,6 +188,17 @@
   }
   .ground-badge .t { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .08em; color: var(--green-ink); }
   .ground-badge .s { font-family: var(--mono); font-size: 10px; font-weight: 500; color: var(--ink); }
+
+  /* Says plainly that this is saved output, not a live pipeline. Calling a
+     baked demo "live" would be the one dishonest thing on the screen. */
+  .demo-note {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px;
+    margin: 0 var(--pad); padding: 9px 14px;
+    background: var(--blue-wash); border: 1px solid var(--blue);
+    border-radius: var(--r-sm);
+  }
+  .demo-note .t { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--blue); }
+  .demo-note .s { font-size: 12.5px; font-weight: 500; color: var(--ink); }
 
   .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line-soft); }
   @media (max-width: 620px) { .stats { grid-template-columns: 1fr 1fr; } }
@@ -504,6 +516,11 @@
   <span id="measures" hidden></span>
   <span id="meta" hidden></span>
 </header>
+
+<div class="demo-note" id="demoNote" hidden>
+  <span class="t">Interactive demonstration</span>
+  <span class="s">Saved results from real pipeline runs — every organisation, briefing, score, engine label and rejection below was produced by NVIDIA Nemotron on Nebius Token Factory. Running the pipeline live needs API keys and a local server.</span>
+</div>
 
 <div class="flow" role="tablist" aria-label="Your signal workflow">
   <span class="flow-lbl lbl">Your signal workflow</span>
@@ -1002,11 +1019,124 @@ const scoped = (path) => !profileKey ? path
   : `${path}${path.includes('?') ? '&' : '?'}profile=${encodeURIComponent(profileKey)}`;
 
 async function get(path) {
+  // Demo mode is decided once at boot and never mixed with live data.
+  if (DEMO.on) {
+    const served = DEMO.serve(path);
+    if (served) return served;
+  }
   const res = await fetch(scoped(path));
   const data = await res.json().catch(() => ({ ok: false, error: `${res.status} ${res.statusText}` }));
   if (!res.ok || data.ok === false) throw new Error(data.error || `${res.status}`);
   return data;
 }
+
+// ── Demo fallback ────────────────────────────────────────────────────────────
+// Anyone who clones this repo gets no data: every register, signal log and
+// briefing lives under data/<profile>/ and is gitignored, because it is
+// collected output rather than source. Without a fallback the dashboard renders
+// an empty shell and shows nothing about what the product does.
+//
+// public/demo-data.json carries one real slice of all seven configurations —
+// the organisations, briefings, score breakdowns, engine panel and rejection
+// reasons from actual runs. When there is no server, or the server has never
+// run, the dashboard serves from that instead and says so on screen.
+const DEMO = {
+  on: false,
+  payload: null,
+
+  async load() {
+    if (this.payload !== null) return this.payload;
+    try {
+      const r = await fetch('demo-data.json');
+      this.payload = r.ok ? await r.json() : false;
+    } catch { this.payload = false; }
+    return this.payload;
+  },
+
+  // Decided once, at boot. This is for a dashboard with no server or no runs
+  // behind it — never a way to paper over a live server that is merely slow.
+  async decide() {
+    let live = null;
+    try {
+      const r = await fetch(scoped('/api/status'));
+      if (r.ok) live = await r.json();
+    } catch { /* no server at all — that is the common case for a static host */ }
+    const empty = !live || live.ok === false
+      || ((live.totals?.briefings ?? 0) === 0 && (live.totals?.signals ?? 0) === 0);
+    if (!empty) return false;
+
+    const p = await this.load();
+    if (!p || !p.profiles?.length) return false;
+    this.on = true;
+    if (!p.data[profileKey]) {
+      profileKey = p.profiles.find((x) => x.is_default)?.key ?? p.profiles[0].key;
+    }
+    const note = $('demoNote'); if (note) note.hidden = false;
+    return true;
+  },
+
+  slice() {
+    const p = this.payload;
+    const key = p.data[profileKey] ? profileKey
+      : (p.profiles.find((x) => x.is_default)?.key ?? p.profiles[0].key);
+    return { key, meta: p.profiles.find((x) => x.key === key) ?? {}, d: p.data[key] ?? {} };
+  },
+
+  serve(path) {
+    if (!this.payload) return null;
+    const p = this.payload;
+    const { key, meta, d } = this.slice();
+
+    if (path.startsWith('/api/status')) return {
+      ok: true,
+      running: false,
+      current_week: d.run?.week ?? d.briefing?.week ?? '—',
+      last_run: d.run ?? null,
+      agents: d.agents ?? [],
+      totals: d.totals ?? {
+        briefings: d.briefing ? 1 : 0,
+        signals: (d.signals ?? []).length,
+        organisations: d.stats?.total ?? 0,
+      },
+      profile: {
+        key,
+        name: meta.name,
+        market: meta.market ?? null,
+        accounts: Number(meta.accounts) || 0,
+        value_factor: meta.value_factor ?? 'Multi-Service Potential',
+        first_practice_area: d.areas?.[0]?.key ?? null,
+      },
+      profiles: p.profiles,
+      diagnostics: d.briefing?.diagnostics ?? null,
+      models: d.models ?? null,
+      schedule: { cron: '0 7 * * 1', enabled: false },
+    };
+
+    if (path.startsWith('/api/organisations')) {
+      return { ok: true, stats: d.stats ?? {}, organisations: d.orgs ?? [] };
+    }
+    if (path.startsWith('/api/signals')) {
+      const sig = d.signals ?? [];
+      return { ok: true, total: sig.length, returned: sig.length, signals: sig };
+    }
+    if (path.startsWith('/api/rejections')) {
+      const rej = d.rejections ?? [];
+      const byCode = {};
+      for (const r of rej) {
+        const c = r.reason_code ?? 'UNKNOWN';
+        byCode[c] = (byCode[c] ?? 0) + 1;
+      }
+      return { ok: true, total: rej.length, by_code: byCode, rejections: rej };
+    }
+    if (path.startsWith('/api/briefings')) {
+      return { ok: true, briefings: d.briefing ? [d.briefing] : [] };
+    }
+    if (path.startsWith('/api/profiles/build')) {
+      return { ok: true, building: false, log: [] };
+    }
+    return null;
+  },
+};
 
 // The prospect list the system has sourced for itself — the thing that grows
 // week on week, as opposed to the briefing, which is one week's slice.
@@ -1115,8 +1245,9 @@ async function loadStatus() {
     ['Schedule', s.schedule?.enabled ? `cron ${s.schedule.cron}` : 'manual'],
   ].map(([k, v]) => `<div class="r"><span class="lbl">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join('');
   drawAgents(s.agents, s.running);
-  $('run').disabled = s.running;
+  $('run').disabled = s.running || DEMO.on;
   $('run').textContent = s.running ? 'Running…' : 'Run pipeline';
+  if (DEMO.on) $('run').title = 'Running the pipeline needs API keys and a local server. Everything on screen is saved output from real runs.';
 
   if (s.profile) drawProfiles(s.profiles, s.profile);
   drawDiagnostics(s.diagnostics);
@@ -1458,6 +1589,7 @@ function speak(text) {
 }
 
 (async () => {
+  await DEMO.decide();
   const s = await refresh(false);
   if (s?.running) startPolling();
 })();

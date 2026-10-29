@@ -3,18 +3,28 @@
 // Token Factory exposes an OpenAI-compatible surface, so this is a thin
 // fetch wrapper rather than a vendor SDK. Two model tiers are used:
 //   ULTRA — deep synthesis (Agent 5 QA verification, Agent 6 briefing)
-//   FAST  — per-source summarisation inside the four collectors
+//   SUPER — per-source summarisation inside the four collectors
 //
-// Model IDs come from the environment, never hardcoded: run `npm run models`
-// (or GET /api/models) to print the exact Nemotron strings your account serves.
+// Model IDs come from the environment: run `npm run models` (or GET /api/models)
+// to print the exact Nemotron strings your account serves.
+//
+// The DEFAULTS below must name the models this project actually benchmarked and
+// selected, because they are what a reader who clones the repo and supplies only
+// an API key will run. They previously defaulted to the older llama-3.1-nemotron
+// family, so a fresh clone silently executed a different model from the one the
+// README, the submission and the measurements all describe. A default that
+// contradicts the documentation is worse than no default.
 
 import { log } from './log.js';
 
 const BASE = (process.env.NEBIUS_BASE_URL || 'https://api.studio.nebius.com/v1').replace(/\/$/, '');
 
 export const MODELS = {
-  get ultra() { return process.env.NEBIUS_MODEL_ULTRA || 'nvidia/llama-3.1-nemotron-70b-instruct'; },
-  get fast() { return process.env.NEBIUS_MODEL_FAST || process.env.NEBIUS_MODEL_ULTRA || 'nvidia/llama-3.1-nemotron-nano-8b-v1'; },
+  get ultra() { return process.env.NEBIUS_MODEL_ULTRA || 'nvidia/Nemotron-3-Ultra-550b-a55b'; },
+  get fast() { return process.env.NEBIUS_MODEL_FAST || 'nvidia/nemotron-3-super-120b-a12b'; },
+  // `super` is the name used in the docs, the dashboard and the briefing; `fast`
+  // is the original internal name and is kept so existing call sites still work.
+  get super() { return this.fast; },
 };
 
 // ── Concurrency limiter ──────────────────────────────────────────────────────

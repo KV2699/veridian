@@ -10,7 +10,11 @@ Built for the **Nebius x NVIDIA Global AI Hackathon** — Best Apps and Agents t
 > [PITFALLS-AND-LESSONS.md](PITFALLS-AND-LESSONS.md) is the log of everything
 > that went wrong and the rule that stops each one recurring.
 
-**Two configurations ship, and they are opposites.** The same twelve agents, the same scoring code, the same verification — serving a GPU infrastructure vendor and an ESG executive search firm, which read the identical event in opposite directions. Switch between them in the dashboard.
+**Seven configurations ship, and two of them are exact opposites.** The same twelve agents, the same scoring code, the same verification — serving a GPU infrastructure vendor, an ESG executive search firm, a policy think tank, a sustainability communications agency, a management consultancy, a serviced-apartment operator and a law firm. Between them they have sourced **247 organisations**, none from a seed list. Switch configuration in the dashboard.
+
+The vendor and the search firm read the identical event in opposite directions, and that inversion is the point of the product.
+
+**[Open the demo](https://claude.ai/code/artifact/83bd6c5e-04aa-4b56-b454-c22ced8f3a44)** · no install, real data from real runs.
 
 ---
 
@@ -34,7 +38,7 @@ Three things here are not standard, and they are the claim:
 
 ### Proof, on real data, from one run of the free feed path
 
-Two headlines, published the same week, read by the two configurations:
+Two headlines, published the same week, read by the two opposed configurations:
 
 | Headline | ESG Executive Search config | Why |
 |---|---|---|
@@ -45,7 +49,23 @@ The NVIDIA configuration reads the second as a lead — a new budget holder with
 
 ---
 
-## The two configurations
+## The seven configurations
+
+All seven run the identical engine. The two below are shown together because they are polarity opposites — the clearest proof that the engine is not written for one market.
+
+| Configuration | Sector | Organisations sourced |
+|---|---|---|
+| `nvidia` | AI infrastructure & hardware | 150 |
+| `think-tank` | Policy & research | 33 |
+| `sustainability-comms` | Sustainability communications | 20 |
+| `exec-search` | ESG executive search | 17 |
+| `serviced-apartments` | Serviced accommodation | 13 |
+| `consultancy` | Management consultancy | 11 |
+| `lawfirm` | Legal services | 3 |
+
+**247 total.** Every one was found by the system from public sources; none was supplied as a starting list.
+
+### The two that are opposites
 
 | | `nvidia` | `exec-search` |
 |---|---|---|
@@ -214,9 +234,9 @@ Polarity is the thing no onboarding form can capture. The same event means oppos
 
 Nothing in a product description implies which applies. A model asked to infer it produces a confident, plausible, wrong answer — and an empty week looks exactly like a quiet market, so nobody finds out for months. So it is declared in plain English and travels with every prompt in the pipeline.
 
-**The pipeline knows nothing about either market.** Everything market-shaped — the system prompts for extraction, verification and synthesis, the sweep query suffixes, the procurement CPV codes — is supplied by the profile. The two configurations prove it: identical code, opposite readings.
+**The pipeline knows nothing about either market.** Everything market-shaped — the system prompts for extraction, verification and synthesis, the sweep query suffixes, the procurement CPV codes — is supplied by the profile. Seven configurations prove it, and two of them prove it twice over: identical code, opposite readings.
 
-**What a third profile costs.** One file. `server/profiles/<key>.js`, registered in `index.js`. The seven questions it must answer — and why this is deliberately a file rather than a settings screen — are in [`server/profiles/README.md`](server/profiles/README.md). Two ship because two is what demonstrates the claim; the think-tank, sustainability-communications and software-consultancy configurations the methodology also covers are the obvious next ones, and none of them needs an engine change.
+**What another profile costs.** One file. `server/profiles/<key>.js`, registered in `index.js`. The seven questions it must answer — and why this is deliberately a file rather than a settings screen — are in [`server/profiles/README.md`](server/profiles/README.md). Three of the seven shipped configurations were written by hand; the rest were built **by the system itself** from a company website, via `+ Add a business` in the dashboard or `node tools/build-profile.mjs`. No engine change was needed for any of them.
 
 Select a configuration in the dashboard, pass `?profile=<key>` to any API route, or set `PROFILE=` in `.env` for the default.
 
@@ -225,14 +245,17 @@ Select a configuration in the dashboard, pass `?profile=<key>` to any API route,
 ## Quick start
 
 ```bash
-git clone <your-repo-url> && cd signal-bureau
+git clone https://github.com/KV2699/veridian.git && cd veridian
 npm install
 cp .env.example .env     # add NEBIUS_API_KEY and TAVILY_API_KEY
 npm run models           # confirm the Nemotron model IDs for your account
 npm start                # dashboard on http://localhost:8080
 ```
 
-Try the dashboard before adding keys — `DRY_RUN=true npm start` runs the full seven-agent sequence on fixtures with zero API calls.
+Try the dashboard before adding keys. Two ways, both free:
+
+- **`npm start` with no `.env` at all.** The dashboard detects that nothing has been run and serves `public/demo-data.json` — a real slice of all seven configurations from actual runs, clearly labelled on screen as saved output. This is also what the hosted demo serves.
+- **`DRY_RUN=true npm start`** runs the full twelve-agent sequence on fixtures with zero API calls.
 
 ```bash
 npm start              # server + scheduler

@@ -719,12 +719,31 @@ left, and three of them are yours.
 | 2 | Credits | You | **Done** — Tavily shows **974 / 4,125** used, so roughly **3,150 search credits** in hand. Nebius Token Factory **$29.36** |
 | 3 | Public GitHub repo | Claude | **Done** — <https://github.com/KV2699/veridian>, verified publicly reachable |
 | 4 | One live run of every configuration | Claude | **Done 29 Oct** — all seven ran with search. **247 organisations**, every one with a real source |
-| 5 | A hosted demo URL | Claude | **Published** — <https://claude.ai/code/artifact/83bd6c5e-04aa-4b56-b454-c22ced8f3a44> ⚠️ **it is private until you open its Share menu.** A judge clicking a private link sees nothing |
+| 5 | A hosted demo URL | Claude | **Published** — <https://claude.ai/code/artifact/83bd6c5e-04aa-4b56-b454-c22ced8f3a44> ⚠️ **still private until you open its Share menu.** A judge clicking a private link sees nothing |
+| 5c | Make a fresh clone actually show something | Claude | **Done 29 Oct** — the dashboard falls back to saved real data when there is no server |
+| 5d | Ship the models the project claims to use | Claude | **Done 29 Oct** — the repo defaulted to an older Nemotron than the one documented |
 | 5b | Nebius Serverless Job | — | **Optional, not doing it.** The rules are satisfied by the Token Factory calls. See `DECISIONS-NEBIUS-TOOLING.md` |
 | 6 | Video script | Claude | **Done 29 Oct** — `SUBMISSION-VIDEO-SCRIPT.md`, and readable on screen at <https://claude.ai/code/artifact/ef679404-b976-47ab-9c58-a9bc89f137db> |
 | 7 | **Record the video** | You | **Not started — required.** The script is a teleprompter. 372 words, 2:39 |
 | 8 | **Write the Devpost description** | You + Claude | **Not started — required.** Ask and it gets drafted from the script |
 | 9 | **Tooling feedback for Nebius / NVIDIA** | Claude | Material exists in `DECISIONS-NEBIUS-TOOLING.md`, not yet written up as the submission answer |
+
+### Part 8a — What the judge's-eye review found, and what was fixed
+
+On 29 October the repository was cloned into a clean directory and run the way a
+judge would run it: no `.env`, no data, nothing but `npm install` and
+`npm start`. Four things were wrong, and three are now fixed.
+
+| What was wrong | Why it mattered | Status |
+|---|---|---|
+| The repo **defaulted to the wrong model** — `llama-3.1-nemotron-70b` in both `.env.example` and the code, while the project actually runs `Nemotron-3-Ultra-550b`. The startup banner printed it, under the old name `SIGNAL BUREAU` | The central claim of the whole submission is that the Nemotron models were measured and chosen deliberately. The repository contradicted that claim out loud, on every boot | **Fixed** — defaults now name the real models, the tier is labelled SUPER to match the docs, and the banner says VERIDIAN |
+| **A fresh clone showed an empty dashboard.** Collected data is gitignored, as it should be. `public/demo-data.json` held a real slice of all seven configurations — and nothing in the dashboard ever read it | A judge who cloned the repo saw a product that appears to do nothing | **Fixed** — with no server or no runs behind it, the dashboard now serves the saved payload and says so on screen |
+| **The pre-cleanup register was public.** `data/nvidia/organisations.json.backup` was committed, and showed "United Kingdom" scored 90 Critical as a sales lead | It reads as the current output, and it contradicts the cleanup this very document describes | **Fixed** — untracked, and `*.backup` added to `.gitignore` |
+| **The hosted demo is private** | A judge clicking it sees nothing. It is a hard requirement | **Yours** — see below |
+
+One more was found by testing on a plain static host rather than the local
+server: the page had no `<meta charset="utf-8">`, so every dash and middot would
+have rendered as mojibake once hosted. Express had been hiding it. Also fixed.
 
 ### The one thing that would quietly fail
 
