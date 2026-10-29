@@ -34,7 +34,24 @@ import writeBriefing from './agents/briefing-writer.js';
 import updateDashboard from './agents/dashboard-updater.js';
 
 /** The agent roster for a profile — drives the dashboard status panel. */
+// Which engine does each job, named on every agent.
+//
+// The judges said this explicitly: "show which model is doing what". It is the
+// cheapest evidence available for the Token Factory criterion, because a judge
+// can see the tiering on screen without opening a file — Ultra reserved for the
+// two jobs that need the whole week in context, Super doing the repetitive
+// extraction, and two collectors that touch no paid service at all.
+const ENGINE = {
+  collector:      { tier: 'super', label: 'SUPER', cost: 'tavily' },
+  enumerated:     { tier: 'super', label: 'SUPER', cost: 'tavily' },
+  feeds:          { tier: 'super', label: 'SUPER', cost: 'free' },
+  procurement:    { tier: 'none',  label: 'NO MODEL', cost: 'free' },
+  'nemotron-ultra': { tier: 'ultra', label: 'ULTRA', cost: 'nebius' },
+  persistence:    { tier: 'none',  label: 'NO MODEL', cost: 'free' },
+};
+
 export function agentList(profile = loadProfile()) {
+  const withEngine = (a) => ({ ...a, ...ENGINE[a.kind] });
   const collectors = profile.collectors.map((c, i) => ({ number: i + 1, name: c.name, kind: 'collector' }));
   let n = collectors.length;
   const extra = [];
@@ -50,7 +67,7 @@ export function agentList(profile = loadProfile()) {
     { number: ++n, name: 'QA Verifier', kind: 'nemotron-ultra' },
     { number: ++n, name: 'Briefing Writer', kind: 'nemotron-ultra' },
     { number: ++n, name: 'Dashboard Updater', kind: 'persistence' },
-  ];
+  ].map(withEngine);
 }
 
 // One run at a time: concurrent runs would double-append to the signal log.

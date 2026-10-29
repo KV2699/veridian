@@ -706,6 +706,28 @@ organisations is a real result, not a broken one, and the fix is search rather
 than more feeds. The floor was deliberately NOT lowered to inflate it: of 21
 rejections only 2 were near-misses, and both were marginal.
 
+### C19. Three weeks of sessions could not answer "which email is this under"
+
+The question *"what email did I use for Nebius and Tavily"* could not be
+answered from eleven session transcripts. API keys had been pasted; signup
+details never had. The transcripts contained only two addresses, and **neither
+was the right one**.
+
+Logging into the services answered it in four minutes: both accounts sit under
+**vincentkerrie13@gmail.com**, under the name *kerrie vincent* — a third
+identity that appears nowhere in any transcript, and which differs from both the
+Claude account and the git identity.
+
+The same four minutes also settled a question that had been open for days and
+had been listed as a blocking risk: **the Devpost registration exists, and a
+draft submission with it.**
+
+**The rule.** When a question is about the state of an external account, do not
+mine the history for it. Open the account. Session transcripts record what was
+pasted, which is rarely the thing being asked about, and absence of evidence in
+them is not evidence of absence — it had been read that way here, and the
+conclusion was wrong.
+
 ---
 
 ## Part D — Working rules, distilled
@@ -745,6 +767,7 @@ Pin these up.
 31. **Ask who a source is written for.** Your industry's trade press reports your competitors, not your customers.
 32. **If the scoring guidance names a list, put the list in the profile.** A criterion the verifier cannot evaluate becomes a penalty, not a neutral.
 33. **Do not lower the floor to make a thin week look better.** Check the near-misses first; if they are marginal, the number is the truth.
+34. **For the state of an external account, open the account.** History records what was pasted, not what was signed up for.
 
 ---
 

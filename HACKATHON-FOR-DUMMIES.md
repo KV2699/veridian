@@ -282,6 +282,32 @@ identical to a real one and nothing can check it afterwards.
 
 ---
 
+## Part 2c — Your accounts, in one place
+
+Verified on 29 October by logging into each service.
+
+| | |
+|---|---|
+| **Devpost** | ✅ **Registered.** A draft submission exists — "Untitled", **1 of 5 steps done** |
+| **Nebius Token Factory** | ✅ Live · **vincentkerrie13@gmail.com** · account name *kerrie vincent* · org *Kerrielouisedesign-g4s* · **balance $29.36** |
+| **Nebius AI Cloud** | ✅ Tenant `white-worm-tenant-zdf`, project `default-project-eu-west2` |
+| **Tavily** | ✅ Live · same email · Researcher plan · **974 of 1,000 used** · pay-as-you-go disabled |
+| **GitHub** | ✅ Authenticated as **KV2699** with repo scope — the public repo can be created on request |
+| **Claude / git identity** | kerrielouisedesign@outlook.com |
+
+**The identity thread:** everything hackathon-related sits under *kerrie vincent*
+and **vincentkerrie13@gmail.com** — not the Outlook address used for Claude and
+git. Worth knowing when hunting for a confirmation email.
+
+**The one unblocking action:** Tavily's dashboard has a **Coupon** box at
+app.tavily.com/home — *"enter a coupon code to receive free API credits"*. The
+Nebius Builder Program grants $25 of Tavily credit, and the Devpost to-do for it
+is already ticked, so the code is most likely sitting in an email at
+vincentkerrie13@gmail.com. Pasting it into that box turns 26 remaining credits
+into roughly 3,000.
+
+---
+
 ## Part 3 — How the hackathon's rules are met
 
 The competition has hard requirements. Here they are, and how we meet each.
@@ -799,8 +825,16 @@ where to act · 03 Proof, why it scored · 04 Ask, query the register*. Someone
 seeing it for the first time can follow the numbers. Someone who knows where
 they are going uses the tabs instead. Same journey, described twice.
 
-**4. It opens with a sentence, not a chart.** *"Good afternoon. Here is what
-changed."* Then the grounding badge, then four numbers, then the briefing.
+**4. It opens with the aha, not a chart.** The judges' own guidance was *"get to
+the aha moment fast — 30 seconds in the demo"*. So the first panel on the page
+is one real headline read by two configurations, reaching opposite verdicts,
+with the reason stated underneath. Then the greeting, the grounding badge, four
+numbers, and the briefing.
+
+**5. Every agent says which engine ran it.** The judges also asked to *"show
+which model is doing what"*. Each row is labelled **ULTRA**, **SUPER** or **NO
+MODEL**, and separately **FREE** where the step touches no paid service at all.
+That is the Token Factory criterion made visible without opening a file.
 
 ### Three design decisions worth knowing
 
