@@ -25,6 +25,19 @@ const app = express();
 app.use(express.json());
 app.use(express.static(join(ROOT, 'public')));
 
+
+// How much real data sits behind each sector, so the chooser can say
+// "9 prospects found" rather than leaving a visitor to guess whether a
+// configuration has ever been run.
+async function profilesWithCounts() {
+  const list = listProfiles();
+  await Promise.all(list.map(async (p) => {
+    try { p.organisations = (await registerStats(p.key)).total; }
+    catch { p.organisations = 0; }
+  }));
+  return list;
+}
+
 // Which configuration a request is about.
 //
 // Every read route is scoped to one profile, because each profile has its own
@@ -145,7 +158,7 @@ app.get('/api/status', async (req, res) => {
         // in THIS market rather than the one it was first written for.
         first_practice_area: active.practiceAreas?.[0]?.key ?? null,
       },
-      profiles: listProfiles(),
+      profiles: await profilesWithCounts(),
       diagnostics: last?.diagnostics ?? null,
       models: { ultra: MODELS.ultra, fast: MODELS.fast },
       schedule: { cron: CRON_SCHEDULE, enabled: process.env.CRON_ENABLED !== 'false' },
@@ -178,10 +191,10 @@ const keySet = (name) => {
 
 // What this deployment is configured to sell, and to whom. The profile is the
 // strategy — exposing it makes the configuration auditable from outside.
-app.get('/api/profiles', (req, res) => {
+app.get('/api/profiles', async (req, res) => {
   try {
     const active = loadProfile(profileOf(req));
-    res.json({ ok: true, active: active.key, default: DEFAULT_PROFILE, profiles: listProfiles(), detail: {
+    res.json({ ok: true, active: active.key, default: DEFAULT_PROFILE, profiles: await profilesWithCounts(), detail: {
       key: active.key, name: active.name, description: active.description,
       market: active.market ?? null, reader: active.reader ?? null,
       polarity: active.polarity, roster: active.roster, exclusions: active.exclusions,

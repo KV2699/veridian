@@ -88,6 +88,49 @@ export function loadProfile(key = DEFAULT_PROFILE) {
   return profile;
 }
 
+// Plain-English sector cards. Written for someone arriving cold and asking
+// "is my kind of business in here?" — so each one names the kind of company,
+// the people inside it who would use this, and the single event that most
+// often starts a deal for them. That last line is the one that makes a reader
+// recognise their own business.
+const SECTOR_LABELS = {
+  nvidia: {
+    sector: 'AI Infrastructure & Hardware',
+    who: 'Vendors, neoclouds, systems integrators and channel partners selling compute, networking and AI software.',
+    trigger: 'A funded buildout, a sovereign AI programme, or a new AI leader with a budget.',
+  },
+  'exec-search': {
+    sector: 'Executive Search & Recruitment',
+    who: 'Retained search firms, recruiters and interim providers placing senior people.',
+    trigger: 'A departure with no successor named — an open mandate, contested within days.',
+  },
+  consultancy: {
+    sector: 'Technology & Data Consultancy',
+    who: 'Software, data and transformation consultancies selling into regulated industries.',
+    trigger: 'A regulator publishing rules with a deadline, or a merger that must be integrated.',
+  },
+  'serviced-apartments': {
+    sector: 'Hospitality & Serviced Accommodation',
+    who: 'Aparthotel and extended-stay operators selling corporate rates, leases and offsites.',
+    trigger: 'A company opening an office in a city you operate in — about six weeks before booking habits set.',
+  },
+  'think-tank': {
+    sector: 'Policy, Research & Non-profit',
+    who: 'Think tanks, research institutes and campaigning organisations funded by partners and foundations.',
+    trigger: 'A consultation opening with a closing date, or a grant programme announced.',
+  },
+  'sustainability-comms': {
+    sector: 'Communications, Creative & Agencies',
+    who: 'Comms, brand and campaign agencies working on sustainability and purpose.',
+    trigger: 'A greenwashing ruling or an NGO challenge — the client needs a credible answer this week.',
+  },
+  lawfirm: {
+    sector: 'Legal & Professional Services',
+    who: 'Law firms and professional services firms selling advisory across practice groups.',
+    trigger: 'A regulator opening an investigation into a sector, or a restructure with redundancies.',
+  },
+};
+
 export const listProfiles = () =>
   [...Object.values(PROFILES), ...GENERATED.values()].map(({ key, name, description, market, roster = [], collectors = [], practiceAreas = [], scoring = {}, generated = false, polarity = [], polarityQuestions = [] }) =>
     ({
@@ -101,6 +144,13 @@ export const listProfiles = () =>
       // Named so the dashboard can show WHAT each configuration measures,
       // which is the difference a reader should notice between the two.
       value_factor: scoring.valueFactor?.name ?? 'Multi-Service Potential',
+      // What a business looking at this needs to know, in its own words: who
+      // this is for, and what it treats as a lead. The dropdown was showing an
+      // internal key, which tells a visitor nothing about whether their own
+      // sector is covered.
+      sector: SECTOR_LABELS[key]?.sector ?? name,
+      who: SECTOR_LABELS[key]?.who ?? description,
+      trigger: SECTOR_LABELS[key]?.trigger ?? null,
       is_default: key === DEFAULT_PROFILE,
       generated,
       // A generated profile whose polarity is still empty will run and will

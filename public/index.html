@@ -197,6 +197,31 @@
   .stat.is-critical .v { color: var(--critical); }
   .stat.is-multi .v { color: var(--green-ink); }
 
+  /* ── Sector chooser ──────────────────────────────────────────────────── */
+  .sectorbtn { display: inline-flex; align-items: center; gap: 9px; font-weight: 600; max-width: 260px; }
+  .sectorbtn .caret { color: var(--label); font-size: 10px; }
+  .sheet-inner.wide { width: min(880px, 100%); }
+  .sectorgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 700px) { .sectorgrid { grid-template-columns: 1fr; } }
+  .sectorcard {
+    text-align: left; background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--r); padding: 14px 15px; cursor: pointer;
+    display: flex; flex-direction: column; gap: 5px;
+  }
+  .sectorcard:hover { border-color: var(--green); background: var(--card-2); }
+  .sectorcard[aria-current="true"] { border-color: var(--green); border-width: 2px; padding: 13px 14px; }
+  .sectorcard .s { font-family: var(--display); font-size: 15.5px; font-weight: 700; }
+  .sectorcard .w { font-size: 12.5px; font-weight: 400; }
+  .sectorcard .t { font-size: 12px; font-weight: 400; padding-left: 11px; border-left: 2px solid var(--green); margin-top: 3px; }
+  .sectorcard .t b { font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--green-ink); display: block; }
+  .sectorcard .meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .sectorcard .meta span {
+    font-family: var(--mono); font-size: 9.5px; font-weight: 600; padding: 2px 6px;
+    border-radius: 4px; background: var(--card-2); color: var(--label); border: 1px solid var(--line-soft);
+  }
+  .sectorcard .meta .live { background: var(--green-wash); color: var(--green-ink); border-color: transparent; }
+  .sectorcard .meta .draft { background: var(--amber-wash); color: var(--amber); border-color: transparent; }
+
   /* ── The aha ─────────────────────────────────────────────────────────── */
   .aha .headline {
     margin: 0 0 14px; padding: 12px 15px; border-radius: var(--r-sm);
@@ -456,8 +481,11 @@
   </div>
 
   <div class="cfgbox">
-    <span class="lbl">Active configuration</span>
-    <select id="profile" aria-label="Which business Veridian is configured for"></select>
+    <span class="lbl">Sector</span>
+    <button class="btn sectorbtn" id="sectorBtn" aria-haspopup="dialog">
+      <span id="sectorName">—</span><span class="caret">▾</span>
+    </button>
+    <select id="profile" hidden aria-hidden="true"></select>
     <button class="btn dashed" id="addBiz">+ Add a business</button>
   </div>
 
@@ -494,6 +522,24 @@
     <div class="ground-badge" id="groundBadge" hidden>
       <span class="t">Grounding pass</span>
       <span class="s" id="groundSub">—</span>
+    </div>
+  </div>
+</div>
+
+<!-- WHICH SECTORS DOES THIS WORK FOR?
+     The dropdown answered that with an internal key, which tells a visitor
+     nothing. This answers it the way someone arriving cold actually asks it:
+     here are the kinds of business, here is who inside them uses this, and
+     here is the single event that most often starts a deal for each. -->
+<div class="sheet" id="sectorSheet" hidden>
+  <div class="sheet-inner wide">
+    <div class="step"><span class="n">01</span><span class="lbl">Choose your sector</span></div>
+    <h2>Which kind of business is this for?</h2>
+    <p class="sub">Veridian reads the same market news differently depending on who it is working for. Pick the closest match — or add your own business and it will configure itself.</p>
+    <div class="sectorgrid" id="sectorGrid"></div>
+    <div class="sheet-actions">
+      <button class="btn dashed" id="sectorAdd">+ My sector isn't here — add my business</button>
+      <button class="btn" id="sectorCancel">Close</button>
     </div>
   </div>
 </div>
@@ -997,13 +1043,12 @@ async function loadSignals() {
 // Drawn from the server's own list, so adding a configuration needs no change
 // here — the dropdown is whatever the loader registers.
 function drawProfiles(profiles, active) {
-  const sel = $('profile');
   if (!profiles?.length) return;
-  if (sel.options.length !== profiles.length) {
-    sel.innerHTML = profiles.map((p) => `<option value="${esc(p.key)}">${esc(p.name)}</option>`).join('');
-  }
-  sel.value = active.key;
+  allProfiles = profiles;
   profileKey = active.key;
+  const meta0 = profiles.find((p) => p.key === active.key) ?? {};
+  $('sectorName').textContent = meta0.sector ?? active.name;
+  $('sectorBtn').title = meta0.who ?? '';
   $('measures').innerHTML = `${active.market ? `${esc(active.market)} · ` : ''}`
     + `value = ${esc(active.value_factor ?? 'Multi-Service Potential')} · ${active.accounts} accounts`;
 
@@ -1141,15 +1186,9 @@ $('run').onclick = async () => {
 
 // Switching configuration is a full reload of every panel, not a filter: the
 // two profiles do not share a register, a signal log or a briefing history.
-$('profile').onchange = async (e) => {
-  profileKey = e.target.value;
-  const url = new URL(location.href);
-  url.searchParams.set('profile', profileKey);
-  history.replaceState(null, '', url);
-  selected = null;
-  logLine(`configuration → ${profileKey}`);
-  await refresh(false);
-};
+// Kept so a deep link or a programmatic change still works; the visible
+// control is now the sector chooser above.
+$('profile').onchange = (e) => switchProfile(e.target.value);
 
 $('refresh').onclick = () => { logLine('refreshed'); refresh(); };
 
@@ -1189,6 +1228,54 @@ function setView(next) {
 for (const b of document.querySelectorAll('[role="tab"][data-view]')) {
   b.onclick = () => setView(b.dataset.view);
 }
+
+
+// ── The sector chooser ───────────────────────────────────────────────────
+// "Does this work for my kind of business?" is the first question anyone asks,
+// and a dropdown of internal keys answered it badly. Each card names the kind
+// of business, who inside it uses this, and the event that most often starts a
+// deal for them — plus whether that sector has live data behind it yet.
+let allProfiles = [];
+
+function drawSectorGrid() {
+  $('sectorGrid').innerHTML = allProfiles.map((p) => {
+    const live = (p.organisations ?? 0) > 0;
+    return `<button class="sectorcard" data-key="${esc(p.key)}" aria-current="${p.key === profileKey}">
+      <span class="s">${esc(p.sector ?? p.name)}</span>
+      <span class="w">${esc(p.who ?? '')}</span>
+      ${p.trigger ? `<span class="t"><b>What starts a deal</b>${esc(p.trigger)}</span>` : ''}
+      <span class="meta">
+        <span>${p.practice_areas} practice areas</span>
+        <span>${esc(p.value_factor)}</span>
+        ${live ? `<span class="live">${p.organisations} prospects found</span>`
+               : '<span class="draft">not yet run</span>'}
+        ${p.needs_polarity ? '<span class="draft">needs polarity</span>' : ''}
+      </span>
+    </button>`;
+  }).join('');
+
+  for (const b of $('sectorGrid').querySelectorAll('.sectorcard')) {
+    b.onclick = async () => {
+      $('sectorSheet').hidden = true;
+      await switchProfile(b.dataset.key);
+    };
+  }
+}
+
+async function switchProfile(key) {
+  profileKey = key;
+  const url = new URL(location.href);
+  url.searchParams.set('profile', key);
+  history.replaceState(null, '', url);
+  selected = null;
+  logLine(`sector → ${key}`);
+  await refresh(false);
+}
+
+$('sectorBtn').onclick = () => { drawSectorGrid(); $('sectorSheet').hidden = false; };
+$('sectorCancel').onclick = () => { $('sectorSheet').hidden = true; };
+$('sectorSheet').onclick = (e) => { if (e.target === $('sectorSheet')) $('sectorSheet').hidden = true; };
+$('sectorAdd').onclick = () => { $('sectorSheet').hidden = true; $('addBiz').click(); };
 
 // ── Onboarding a new business ──────────────────────────────────────────────
 // The question every judge and every prospect asks is "would this work for MY
