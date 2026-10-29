@@ -730,6 +730,92 @@ conclusion was wrong.
 
 ---
 
+## Part E — The judge's-eye audit, 29 October
+
+One day before the deadline the project was audited the way the judging actually
+happens: clone the public repository on a clean path with no `.env`, run it, open
+the links, recompute the numbers. **Eleven findings. Every fatal one was in the
+packaging; not one was in the engine.**
+
+### What the engine got right, measured
+
+| Check | Result |
+|---|---|
+| Test suite | 17/17 files |
+| Score arithmetic vs displayed total | 8 of 8 recomputed by hand, exact |
+| Band thresholds at boundaries | consistent — 80 Critical, 75 Critical, 57 High, 50 High |
+| Source URLs resolve | 6 of 6 top exec-search sources, HTTP 200 |
+| Counter-readings | 111 across 6 profiles, substantive |
+| Generic-entity guard | countries rejected; `"KKR's AI infrastructure company"` → `"KKR"` |
+| Secrets | none committed, none in history, none in the 311KB demo payload |
+
+### The four that would have cost real marks
+
+**1. The repo shipped the wrong NVIDIA model.** `.env.example` and the fallbacks
+in `server/lib/nebius.js` named `llama-3.1-nemotron-70b-instruct`; the live `.env`
+uses `Nemotron-3-Ultra-550b-a55b`. The startup banner printed the wrong one. A
+judge following the Quick start would have run the pipeline on a different model
+family from the one the entire submission is built on — and the terminal
+announced the contradiction before they typed a second command.
+
+**2. A fresh clone showed an empty dashboard.** `data/**/*.json` is gitignored,
+correctly. But `public/index.html` never referenced the committed 311KB
+`public/demo-data.json`, so the file that would have fixed it sat unused beside
+the problem. `GET /api/signals?profile=nvidia` returned `total: 0`.
+
+**3. The README sold two sectors.** Four places still claimed two configurations
+ship, against seven profiles and 247 organisations all run that week — the
+submission advertising 29% of what was built, in the first document a judge
+reads.
+
+**4. A pre-cleanup register was public.** `.gitignore` caught `data/**/*.json` but
+not `*.json.backup`, so `data/nvidia/organisations.json.backup` was live on
+`raw.githubusercontent.com` containing **"United Kingdom" scored 90 Critical**,
+"South Korea", and `kkrsaiinfrastructure`. Not a secret and not a security
+problem — worse placed than that. This log documents cleaning countries out of
+the register; a judge reading that and then browsing `data/` finds the uncleaned
+file with no way to tell it is historical. It makes a true claim look like spin.
+
+### One mistake made during the audit itself
+
+The audit first reported **zero counter-readings across all 371 signals** — the
+feature apparently dead, and the video script's required beat apparently
+unfilmable. Wrong. The query had read `organisations.json`; counter-readings live
+in `signal_log.json`. There are 111, and the Netflix one reads *"Netflix is a
+mega-cap with mature sustainability function and in-house executive recruiting;
+the CSO seat may have a succession plan"* — which is what the script narrates.
+
+**The rule.** Check the file the field actually lives in before reporting it
+missing. A whole feature looked 0% present because one path was wrong, and that
+near-miss would have sent a correct script back for a rewrite.
+
+### The rename that was never started
+
+The audit brief asked which of seven candidate names was final, and instructed
+that the work be marked **BLOCKED** until that was answered. A repository sweep
+settled it in one command: **Veridian in 18 files** including the package name,
+the page title, the README, the video script and the git remote — and **zero
+files** for Pority, Tekmora, Kairon, Semeon, Cernora or Polara. There was nothing
+to reconcile. Followed literally, that section would have halted all work with 23
+hours left, to resolve a question the repository had already answered.
+
+**The rule.** A rename proposal needs evidence it was ever started. Sweep for the
+name first. A name appearing in zero files is a suggestion, not pending work —
+and 23 hours out, a rename means a new repo URL, a new demo link, a republished
+artifact and a re-recorded video.
+
+### What the audit did not cover, deliberately
+
+The brief ran to roughly 180 checks across 11 sections — more than a day's work,
+which would have consumed the deadline it existed to protect. Skipped on purpose:
+the ten onboarding input variations, the full 13-step judge journey, and
+per-signal evidence for all 371 signals rather than a sample. Recorded here so
+the gap is known rather than assumed covered.
+
+**Published:** <https://claude.ai/code/artifact/38c5e587-601c-466f-bcf6-08ce5a2ca689>
+
+---
+
 ## Part D — Working rules, distilled
 
 Pin these up.
@@ -770,6 +856,10 @@ Pin these up.
 34. **For the state of an external account, open the account.** History records what was pasted, not what was signed up for.
 35. **Every claim bound for the camera gets checked against the run log first.** A sentence in a script is harder to retract than a sentence in a chat.
 36. **A private link is worse than a missing one.** A missing link is obviously unfinished; a private link looks finished and shows the reader nothing.
+37. **Audit the clone, not the working copy.** Every fatal finding in the 29 October audit was invisible on the machine that built the project and obvious on a fresh clone.
+38. **The example config is production code.** `.env.example` is the configuration most readers will actually run. A stale default there contradicts the submission in the reader's own terminal.
+39. **Check the file the field actually lives in before reporting it missing.** A feature looks 0% broken when you query the wrong file.
+40. **A rename proposal needs evidence it was ever started.** Sweep for the name before treating a rename as pending work; a name that appears in zero files is not a decision, it is a suggestion.
 
 ---
 

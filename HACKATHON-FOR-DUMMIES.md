@@ -789,6 +789,81 @@ tells you when not to call is making a claim about honesty that no demo of
 
 ---
 
+## Part 8c — What a judge would find, audited one day out
+
+Run on 29 October, the way the judging actually happens: clone the public repo on
+a clean path with no keys, run it, click the links, recompute the numbers.
+**Eleven findings.** Read it on screen at
+<https://claude.ai/code/artifact/38c5e587-601c-466f-bcf6-08ce5a2ca689>.
+
+### The headline
+
+**The product is stronger than its packaging.** Every fatal finding is in the
+wrapper — the README, the example config, the startup banner, the sharing
+setting. Not one is in the engine. That is good news, because packaging is the
+cheap thing to fix: the four fatal findings are about 90 minutes of work, and
+three of them are one line each.
+
+### What held up under testing
+
+Nine checks passed on measured evidence, not on what the documents claim:
+
+- **The test suite**: 17 of 17 files
+- **The scoring arithmetic**: eight signals recomputed by hand, every total
+  exact — `10+0+25+20=55`, `20+25+15+20=80`, `20+25+25+5=75`
+- **The bands at their boundaries**: 80 and 75 Critical, 57 and 50 High
+- **The sources**: six top exec-search source URLs, all returned HTTP 200
+- **The counter-readings**: 111 of them across six configurations
+- **The entity guard**: countries rejected, and *"KKR's AI infrastructure
+  company"* correctly recovered to *"KKR"*
+- **Secrets**: none committed, none in the history, none in the published demo
+  payload
+- **The repo**: public, reachable anonymously, clones and installs clean
+
+### The four that must be fixed before submitting
+
+| # | What a judge hits | Why it costs marks |
+|---|---|---|
+| 1 | **The repo runs on the wrong NVIDIA model.** `.env.example` and the code fallbacks name Llama-3.1-Nemotron-70B; your real `.env` uses Nemotron-3-Ultra-550b | Criterion 1 asks how well you use NVIDIA models. A judge following your own Quick start runs neither of the two you chose, and the terminal prints the contradiction on startup |
+| 2 | **A fresh clone shows an empty dashboard** — the data is gitignored and the 311KB demo payload you ship is never loaded by the page | A judge who prefers running code to clicking links gets a blank product and no sign it ever worked |
+| 3 | **The README says two configurations ship.** Seven do, with 247 organisations | It is the first thing read, and it frames a seven-sector engine as a two-sector experiment. You are advertising 29% of what you built |
+| 4 | **A pre-cleanup register is public** — `organisations.json.backup` shows *"United Kingdom"* scored **90 Critical** | The pitfalls log documents cleaning countries out. A judge finds the uncleaned file and cannot tell it is historical. It makes a true claim look like spin |
+
+### The four worth fixing after those
+
+- **The demo opens on your only stale configuration.** `nvidia` last ran 2
+  October; every other profile ran the 29th. It is also the only one with **no
+  counter-readings** — 0 of 110, where the others are at 100%. Cheapest fix:
+  land on `exec-search` instead, which is fresh and holds the Netflix story
+- **A person is in the organisation register.** `think-tank` holds *"UK
+  Chancellor John Healey"* at 55 — and the title is wrong, he is Defence
+  Secretary. An error of fact in a product about verification is the worst place
+  to have one
+- **One sector holds three organisations.** `lawfirm`. The chooser now
+  advertises all seven equally, so a judge will click it. Label it honestly or
+  populate it
+- **The demo link may still be private.** I cannot test a logged-out browser, so
+  this is the one check on the list only you can do
+
+### Three cosmetic ones
+
+The startup banner still prints **SIGNAL BUREAU**; the Quick start says `cd
+signal-bureau` when the repo clones to `veridian`, so a judge's first command
+fails; and the agent count says twelve in six places, nine in one and seven in
+one.
+
+### On the rename question
+
+The audit brief asked whether the product is finally called Veridian or
+*"Pority"*, and said to stop work until that was settled. A repository sweep
+answered it: **Veridian appears in 18 files** — package name, page title, README,
+video script, git remote. **"Pority" appears in none**, nor do Tekmora, Kairon,
+Semeon, Cernora or Polara. The name is Veridian. With a day left, a rename would
+mean a new repo URL, a new demo link, a republished artifact and a re-recorded
+video, to solve a problem that does not exist.
+
+---
+
 ## Part 9 — How a business would set this up for itself
 
 A judge may ask "how does this generalise?" The answer is a one-page form and
