@@ -768,6 +768,51 @@ Pin these up.
 32. **If the scoring guidance names a list, put the list in the profile.** A criterion the verifier cannot evaluate becomes a penalty, not a neutral.
 33. **Do not lower the floor to make a thin week look better.** Check the near-misses first; if they are marginal, the number is the truth.
 34. **For the state of an external account, open the account.** History records what was pasted, not what was signed up for.
+35. **Every claim bound for the camera gets checked against the run log first.** A sentence in a script is harder to retract than a sentence in a chat.
+36. **A private link is worse than a missing one.** A missing link is obviously unfinished; a private link looks finished and shows the reader nothing.
+
+---
+
+## A script claimed the free runs threw everything away. The log said otherwise
+
+**What happened.** Drafting the demo narration, a line was written to the effect
+that the free RSS path collected signals and discarded them all — a neat,
+dramatic way of explaining why search was needed. It was checked against the
+live pipeline log before it went any further. The log contradicted it: the
+collector had indeed scored those items 0 and 1, but **Nemotron Ultra then
+verified several of them at 7 and 8** and they reached the briefing. The
+collector's score is a cheap pre-filter, not a verdict. Ultra overrules it, and
+that rescue is one of the better things the architecture does.
+
+**What it would have cost.** Nothing, because it was caught. Had it not been, a
+three-minute film submitted to a judging panel would have contained a factual
+claim about the system's own behaviour that the repository's logs disprove — in
+a competition where one criterion is technological implementation and the code is
+public. It would also have talked the project out of its own best mechanism.
+
+**How it was found.** By opening `data/<profile>/runs` and reading the stage
+counts rather than reasoning from the design.
+
+**The rule.** Every claim bound for the camera gets checked against the run log
+first. Chat is retractable, a committed script is awkward, and a recorded video
+is permanent. The same check costs thirty seconds at each of those three stages
+and the value of doing it rises steeply.
+
+---
+
+## The demo was published and left private, which is the failure mode that hides
+
+**What happened.** The hosted demo — a hard submission requirement — was
+published successfully and the URL recorded. It defaults to **private**. A judge
+opening it would be asked to sign in to an account that cannot see it.
+
+**How it was found.** By reading the publish confirmation rather than skimming
+it: *"Artifacts are private unless shared from the page's share menu."*
+
+**The rule.** A private link is worse than a missing one. A missing link reads as
+unfinished and gets fixed; a working-but-private link reads as done. Any URL that
+is part of a submission gets opened once in a browser that is not signed in. The
+only proof a link is public is a stranger loading it.
 
 ---
 

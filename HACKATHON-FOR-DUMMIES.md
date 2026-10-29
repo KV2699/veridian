@@ -710,35 +710,82 @@ by something breaking:
 
 ## Part 8 — What is left to do
 
+Rewritten 29 October, after the live runs and the demo publish. Four things are
+left, and three of them are yours.
+
 | # | Task | Who | Status |
 |---|---|---|---|
-| 1 | **Confirm you clicked "Join hackathon" on Devpost** | You, 1 minute | **Unverified — no record of it in any session. No registration, no submission** |
-| 1b | **Claim the $25 Token Factory credit** at the resources-page form, activation code `NEBIUS-DEVPOST-GLOBAL26` | You, 5 minutes | **Separate from the Builder Program — this is a second, additional $25** |
-| 1c | **Join the Nebius Builder Program** — adds another $25 Token Factory **and** the $25 Tavily | You, 5 minutes | **Not claimed. Verified 23 Oct: Tavily still reports the free Researcher plan with no credit applied** |
-| 2 | Push the code to a public GitHub repo | Either | Not started |
-| 3 | ~~Clean the rubbish out of the register~~ | Claude | **Done 23 Oct** — 165 → 150, top ten defensible |
-| 4 | One full live run of each configuration | Claude, once credits land | Blocked on #1 — but **both configurations already produce a real briefing for free** via `npm run pipeline:free` |
-| 5 | **A hosted demo URL** — anywhere, not necessarily Nebius | Claude | Not started — **genuinely required by the rules** |
-| 5b | Nebius Serverless Job for the pipeline | Claude | Not started — **optional**, a scoring enhancer only. See DECISIONS-NEBIUS-TOOLING.md |
-| 6 | Record the 3-minute video | You + Claude | Not started — **required** |
-| 7 | Write the Devpost description | You + Claude | Not started — **required** |
-| 8 | Write the tooling feedback | Claude | Material exists |
-| 9 | ~~Redesign the dashboard from your Figma~~ | Claude | **Done 23 Oct** — built from the published Figma at need-shed-66175757.figma.site |
+| 1 | Devpost registration | You | **Done** — registered, with a draft submission open at **1 of 5 steps** |
+| 2 | Credits | You | **Done** — Tavily shows **974 / 4,125** used, so roughly **3,150 search credits** in hand. Nebius Token Factory **$29.36** |
+| 3 | Public GitHub repo | Claude | **Done** — <https://github.com/KV2699/veridian>, verified publicly reachable |
+| 4 | One live run of every configuration | Claude | **Done 29 Oct** — all seven ran with search. **247 organisations**, every one with a real source |
+| 5 | A hosted demo URL | Claude | **Published** — <https://claude.ai/code/artifact/83bd6c5e-04aa-4b56-b454-c22ced8f3a44> ⚠️ **it is private until you open its Share menu.** A judge clicking a private link sees nothing |
+| 5b | Nebius Serverless Job | — | **Optional, not doing it.** The rules are satisfied by the Token Factory calls. See `DECISIONS-NEBIUS-TOOLING.md` |
+| 6 | Video script | Claude | **Done 29 Oct** — `SUBMISSION-VIDEO-SCRIPT.md`, and readable on screen at <https://claude.ai/code/artifact/ef679404-b976-47ab-9c58-a9bc89f137db> |
+| 7 | **Record the video** | You | **Not started — required.** The script is a teleprompter. 372 words, 2:39 |
+| 8 | **Write the Devpost description** | You + Claude | **Not started — required.** Ask and it gets drafted from the script |
+| 9 | **Tooling feedback for Nebius / NVIDIA** | Claude | Material exists in `DECISIONS-NEBIUS-TOOLING.md`, not yet written up as the submission answer |
 
-### What the video should show
+### The one thing that would quietly fail
 
-Not the system working. **The system catching itself.** Nobody else will have
-that.
+**The demo link is private.** Everything else on the list is visibly unfinished,
+so you will not forget it. A private link looks finished and isn't — it
+resolves, it just shows the judge nothing. Open it, use the Share menu, confirm
+it loads in a browser you are not signed into.
 
-| Time | What to show |
-|---|---|
-| 0:00–0:20 | The problem. One person cannot read the whole internet every week |
-| 0:20–0:50 | Ask it a question out loud. Real answer, real company, clickable source |
-| 0:50–1:20 | Where the answer came from: twelve agents, Ultra checking, Super extracting |
-| 1:20–2:00 | **The catch.** A claim about a national laboratory, sourced to a post about a physicist, dropped automatically before it reached the briefing |
-| 2:00–2:30 | **The two configurations.** Same headline, opposite verdicts. Switch the dropdown on camera |
-| 2:30–2:50 | The register: 165 organisations it found itself, scored by arithmetic you can audit |
-| 2:50–3:00 | What's next, named honestly |
+---
+
+## Part 8b — The video script, and the argument it makes
+
+Written 29 October. Two places to read it:
+
+- `SUBMISSION-VIDEO-SCRIPT.md` in the repo
+- <https://claude.ai/code/artifact/ef679404-b976-47ab-9c58-a9bc89f137db> — the
+  same script laid out to be read off while filming, with the spoken lines in
+  large type and the camera directions small beside them
+
+**372 spoken words. 2:39 at a normal pace, 2:59 if you read it slowly.** The cap
+is three minutes, so it is written with twenty seconds of headroom rather than
+racing.
+
+### The position it takes
+
+The script was built from a reference film you liked — an AI product that works
+a sales **pipeline**, answering *"which of my deals needs attention today?"*
+That is a good product, and it has one hard limit:
+
+> **A CRM can only ever tell you about people you have already met.**
+
+Veridian answers the question underneath that one: *what happened last week that
+you don't know about yet?* The whole film holds that contrast, and never names a
+competitor — it just occupies ground they cannot reach.
+
+### The seven beats
+
+| Time | Beat | What it does |
+|---|---|---|
+| 0:00 | The Monday problem | The feeling, not the product. Something happened last week and nobody sent it to you |
+| 0:18 | **The wedge** | *"The lead you lose isn't the one you forgot to chase. It's the one you never heard about"* |
+| 0:32 | **The aha** | One Disney headline hitting two configurations in opposite directions. The judges asked for the aha inside thirty seconds — this is it |
+| 1:05 | **Proof** | The real Netflix signal, scored 80 Critical, **and the counter-reading arguing against it** |
+| 1:40 | **How it works** | Nemotron on Token Factory, Ultra and Super named out loud, the score taken apart into four factors |
+| 2:12 | Breadth | Seven sectors, 247 organisations it found itself, then `+ Add a business` live |
+| 2:38 | Close | *"Your pipeline knows who you've met. This tells you who you haven't"* |
+
+### Two beats you must not cut
+
+The rules require the film to show the project working **and** to show NVIDIA
+Nemotron on Nebius Token Factory actually in the loop. The 0:32 and 1:40 beats
+carry that, and the script marks them. Everything else is yours to trim; those
+two are evidence.
+
+### Why it leads with the catch, not the capability
+
+The strongest thirty seconds in this project is not a lead it found. It is the
+**counter-reading** — Veridian arguing against its own best signal, telling you
+Netflix has an internal recruiting team and may never go to market. A tool that
+tells you when not to call is making a claim about honesty that no demo of
+"look how much it found" can make.
 
 ---
 
