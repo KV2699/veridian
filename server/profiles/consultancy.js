@@ -141,8 +141,9 @@ export default {
       { name: 'ukauthority.com', url: 'https://ukauthority.com/rss' },
       { name: 'datacenterdynamics.com', url: 'https://datacenterdynamics.com/rss' },
       { name: 'computing.co.uk', url: 'https://computing.co.uk/rss.xml' },
-    ],
-    // Weighted to EVENT words rather than topic words: a feed full of relevant
+      { name: 'itpro.com', url: 'https://itpro.com/rss' },
+      { name: 'diginomica.com', url: 'https://diginomica.com/feed/' },
+    ],    // Weighted to EVENT words rather than topic words: a feed full of relevant
     // subject matter is useless unless something is actually happening. An
     // empty list here reads EVERY item in EVERY feed, which is both expensive
     // and noisy — 144 of 178 items passed the first profile's filter.

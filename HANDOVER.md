@@ -249,7 +249,14 @@ Agreed scope, roughly a day, then **stop building and make the video**:
 - [x] Track identified — **Best Apps and Agents** (switched 23 Oct, verified against the live Devpost page)
 - [ ] **Feedback on Nebius/NVIDIA tooling** — required, and there is unusually strong material: the Lightning no-answer behaviour, empty-200 throttling, and truncation handling are all measured and reproducible
 - [ ] Devpost written description
-- [ ] **Deployment — Nebius Serverless**, not Vercel: Endpoint for the dashboard/API, Job for the weekly pipeline. The track text names both, and criterion 1 asks how effectively the project uses Nebius
+- [ ] **A working demo URL — THIS is the mandatory one.** The rules require "a URL to a working
+      demo, hosted application, or test build". It does NOT have to be on Nebius. Host the
+      dashboard free; see DECISIONS-NEBIUS-TOOLING.md
+- [ ] **Nebius Serverless Job for the weekly pipeline — optional, not required.** Verified against
+      the live rules 23 Oct: "runs on Nebius" is DEFINED as making a runtime Token Factory call
+      **or** running on AI Cloud compute, and the track text says Serverless is encouraged
+      "though neither is required". Token Factory calls already satisfy eligibility. A Job is a
+      criterion-1 enhancer and bills only while running, unlike an Endpoint which bills idle
 - [ ] **Enable Tavily Pay-As-You-Go** — see section 0.1. Nothing can be run live until this is done
 
 **Demo advice from review feedback, endorsed:** lead with the *diagnostic story* — how the measurement failure was caught — not just the final scores. That is what demonstrates the system works.

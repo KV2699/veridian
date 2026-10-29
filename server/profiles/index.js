@@ -25,8 +25,22 @@ import execSearch from './exec-search.js';
 // research brief and six past wins — in about a minute, for no search credits.
 // Proof that a third market is a file, not an engine change.
 import consultancy from './consultancy.js';
+// Three more sectors, ported from the operator's own tested prompt packs. Each
+// is a genuinely different business — hospitality sold city by city, a think
+// tank funded by foundations, an agency paid when a claim is challenged — and
+// none of them needed a line of engine code.
+import servicedApartments from './serviced-apartments.js';
+import thinkTank from './think-tank.js';
+import sustainabilityComms from './sustainability-comms.js';
 
-const PROFILES = { nvidia, 'exec-search': execSearch, consultancy };
+const PROFILES = {
+  nvidia,
+  'exec-search': execSearch,
+  consultancy,
+  'serviced-apartments': servicedApartments,
+  'think-tank': thinkTank,
+  'sustainability-comms': sustainabilityComms,
+};
 
 export const DEFAULT_PROFILE = process.env.PROFILE || 'nvidia';
 

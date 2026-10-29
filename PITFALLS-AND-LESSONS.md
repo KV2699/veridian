@@ -625,6 +625,87 @@ uppercase and tracked, is unmistakably subordinate at full contrast.
 **The rule.** De-emphasise with weight, size and letterform. Reach for lower
 contrast only when all three are already spent.
 
+### C17. The yield problem was three separate things, and none of them was the window
+
+Three configurations were producing one organisation each. The assumed cause was
+the scan window not covering 30 days. **It was already 30 days everywhere** —
+`feeds.days: 30` on every profile and `windowDays: 30` on every collector. An
+hour would have been lost confirming that.
+
+The actual causes, in order of how much yield each was costing:
+
+**1. Too few free sources.** With no search budget, the RSS feed list and the
+procurement portals ARE the system. `exec-search` had 11 feeds covering the ESG
+press and none covering the HR press — half of its market's events are reported
+in the half it was not reading. `consultancy` had 6.
+
+**2. A term filter weighted only to movement verbs.** `exec-search` matched on
+*steps down, promoted, recruit* and almost nothing else, so it passed **11 items
+of 145** before a model ever saw them. The opposite error is just as bad:
+`nvidia` matched on topic nouns and passed 144 of 178, paying for extraction on
+everything. The right filter pairs the sector's nouns with the events that
+create demand, and lets the model — the thing actually qualified to judge —
+decide.
+
+**3. Procurement codes that matched almost nothing.** The CPV prefixes were all
+compute and data-centre codes, inherited from the first profile. A think tank
+needs research and evaluation codes; a serviced-apartment operator needs
+accommodation and travel codes. With the right ones, one profile went from
+**1 tender to 24, 18 of them with published deadlines.**
+
+**The result of fixing all three**, on the same free path and still zero search
+credits: 1 organisation → **9**, with a 803-word briefing naming real UK
+government tenders at £85k and £120k with real closing dates.
+
+**The rule.** When yield is low, measure the funnel before theorising about it.
+`searched → hits → fresh → extracted → verified` is printed on every run and it
+names the stage that is losing the signal. All three of these were visible in
+that line and none of them was the window.
+
+**The second rule.** A filter that runs BEFORE the model is the most dangerous
+thing in a pipeline, because what it drops is never seen again and leaves no
+trace. Tune it loose and let the model refuse; do not tune it tight and let the
+run look like a quiet market.
+
+### C18. The trade press for your own industry reports your competitors
+
+The serviced-apartment profile's first run extracted 18 signals and verified
+**none**. The rejection log named every one: Rosewood, Accor, Hyatt, IHG,
+Aimbridge — scored 1 to 3 and dropped.
+
+The feed list had been built from the hospitality trade press, which was the
+obvious choice and the wrong one. **Hotel Dive, Hotel News Resource and
+Boutique Hotel News report on hotel operators** — which is to say, on this
+business's competitors. They are the right sources for knowing what rivals are
+doing and the wrong ones for finding customers.
+
+The customers of a serviced-apartment operator are companies that need
+accommodation and landlords who own buildings. So the feed list was rebuilt
+around European startup and business press (Sifted, Tech.eu, EU-Startups,
+Silicon Canals, City AM) plus property press, with a single hospitality source
+kept for buildings changing hands. Yield went 0 → 2.
+
+A second defect surfaced in the same run. The profile's polarity said *"an
+organisation with no presence in a city we serve is not a prospect"* — and the
+profile never listed the cities. The verifier was told geography mattered, given
+no way to test it, and marked everything down. Eighteen cities are now named in
+the file and in the scoring guidance.
+
+**The rule.** Ask who the sources are written FOR. A trade publication serves an
+industry, and if that industry is yours, it is reporting your rivals. The
+sources that find customers are the ones your customers read.
+
+**The second rule.** If a profile's scoring guidance refers to a list —
+cities, products, regions — the list has to be IN the profile. A criterion the
+verifier cannot evaluate does not become neutral; it becomes a penalty.
+
+**And the honest finding worth keeping:** this is the hardest of the six sectors
+to serve without a search budget. Its trigger — a company opening an office in
+one of eighteen named cities — is genuinely rare in thirty days of RSS. Two
+organisations is a real result, not a broken one, and the fix is search rather
+than more feeds. The floor was deliberately NOT lowered to inflate it: of 21
+rejections only 2 were near-misses, and both were marginal.
+
 ---
 
 ## Part D — Working rules, distilled
@@ -658,3 +739,69 @@ Pin these up.
 25. **Parse every file you edit with a script.** `node --check` is seconds; finding one unbalanced brace by hand is an hour.
 26. **Print what a splice removes before removing it.** A silently deleted function parses fine and fails quietly.
 27. **De-emphasise with weight and size, not with grey.** Faded text reads as unfinished and fails contrast on the people who need it most.
+28. **Measure the funnel before theorising about yield.** `searched → hits → fresh → extracted → verified` names the stage that is losing the signal.
+29. **A filter that runs before the model is the most dangerous thing in a pipeline.** What it drops leaves no trace. Tune it loose and let the model refuse.
+30. **Inherited configuration is wrong configuration.** Procurement codes, feed lists and filter terms copied from the first profile fit only the first profile.
+31. **Ask who a source is written for.** Your industry's trade press reports your competitors, not your customers.
+32. **If the scoring guidance names a list, put the list in the profile.** A criterion the verifier cannot evaluate becomes a penalty, not a neutral.
+33. **Do not lower the floor to make a thin week look better.** Check the near-misses first; if they are marginal, the number is the truth.
+
+---
+
+## Advisory documents argued for stack breadth; the judges said they don't score it
+
+**What happened.** Two advisory documents (23 October) recommended adding Nebius
+tooling to strengthen criterion 1: a GPU Devlab for prototyping, vLLM/SGLang for
+benchmarking, Ray/SkyPilot for orchestration, n8n to sketch a model router, and a
+multimodal Super-VL step. One of them ranked the Devlab "high value, do second".
+
+**What it would have cost.** Every one of those items except Serverless
+Endpoints and Jobs is a GPU rental. This account's own Devlab creation screen,
+from 1 October, priced a single B300 instance at **$9.51/hour**. The hackathon's
+promotional credits are Token Factory credits only — the official FAQ states
+there is no published AI Cloud credit grant — so GPU time is paid at list price
+with no credit cover. The Devlab recommendation was to prototype a Tavily +
+Token Factory research loop that already exists and runs locally for free.
+
+**What the judges actually said**, one day before the advice was written, in the
+Devpost recording summary from six judges across Nebius, Tavily and NVIDIA:
+
+> "One thing done well beats a big stack. There's no minimum number of tools,
+> and every integration should support the main story."
+
+**The rule.** Check an advisory recommendation against two things before acting
+on it: whether the capability it names exists on this account, and whether the
+judges have said they score it. One document recommended
+`Nemotron-3-Nano-Omni`; the account exposes five Nemotron models and that is not
+one of them. Another recommended replacing code rules with a model router, which
+would have reversed this project's core design decision. Advice that sounds
+sophisticated can still be more expensive than everything else combined and
+score nothing.
+
+**Recorded in full:** `DECISIONS-NEBIUS-TOOLING.md`.
+
+---
+
+## "Deployment on Nebius is required" was wrong, and it distorted the plan
+
+**What happened.** The submission plan and handover both recorded Nebius
+Serverless deployment as **required** and "the single biggest scoring gap".
+Re-reading the live rules on 23 October showed otherwise. The rules define the
+platform requirement explicitly:
+
+> "Runs on Nebius Token Factory or Nebius AI Cloud" means the project makes a
+> runtime call to the Token Factory inference API, **or** is deployed/run using
+> Nebius AI Cloud compute.
+
+The project already satisfies that through Token Factory calls. The track text
+adds that Serverless is encouraged "though neither is required", and the FAQ
+confirms the rest of an app need not be hosted on Nebius.
+
+**What was actually required and had been missed:** a URL to a working demo,
+hosted anywhere. That is a hard submission requirement, it is free to satisfy,
+and it had been filed behind an optional item.
+
+**The rule.** Read the rules page for the definition of a requirement, not a
+summary of it. A requirement phrased as a platform name ("must run on Nebius")
+may be defined far more loosely than it reads, and an optional item written in
+bold can displace a mandatory one written in plain text.

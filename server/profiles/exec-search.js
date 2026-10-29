@@ -333,6 +333,12 @@ export default {
       // Vertical trade press — catches moves the ESG outlets never report
       { name: 'Packaging Dive', url: 'https://www.packagingdive.com/feeds/news/' },
       { name: 'Food Dive', url: 'https://www.fooddive.com/feeds/news/' },
+      // HR and recruitment trade press — added 29 October. The original feed
+      // list covered the ESG press but not the people press, which is where
+      // half of this market's events are actually reported.
+      { name: 'HR Grapevine', url: 'https://hrgrapevine.com/rss' },
+      { name: 'The HR Director', url: 'https://thehrdirector.com/feed/' },
+      { name: 'Global Recruiter', url: 'https://globalrecruiter.com/feed/' },
     ],
     // Matched against headline and standfirst before anything reaches a model.
     // Weighted to MOVEMENT words rather than topic words: a feed full of
@@ -347,6 +353,15 @@ export default {
       'hire', 'hiring', 'recruit', 'vacancy', 'job cuts', 'layoff', 'restructur',
       'reorganis', 'eliminat', 'executive moves', 'people moves',
       'csrd', 'uk srs', 'issb', 'ifrs s1', 'ifrs s2', 'sdr',
+      // Widened 29 October. Weighted only to movement verbs, this filter passed
+      // 11 items of 145 and the run produced one signal. Sector nouns are now
+      // included so an item about a sustainability function reaches the model,
+      // which is the thing actually qualified to judge whether it is a lead.
+      'sustainability', 'esg', 'climate', 'net zero', 'impact',
+      'chief people', 'chro', 'talent', 'recruit', 'headcount', 'team',
+      'leadership', 'executive', 'director', 'officer', 'board',
+      'restructure', 'redundanc', 'cuts', 'reorganisation', 'new role',
+      'joins', 'joining', 'takes over', 'interim', 'acting',
     ],
   },
 

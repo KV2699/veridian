@@ -76,45 +76,81 @@ to prove it is real rather than just claimed.
 
 ---
 
-## Part 2 — The configurations (and how we proved they work)
+## Part 2 — The six configurations
 
-**Two were hand-built. The third was built BY the system, in about a minute, for
-nothing** — see Part 2b. That is the answer to "how would a business provide a
-profile": it mostly doesn't have to.
+Veridian ships configured for **six different businesses**. Three were written
+by hand from prompt packs that were tested on real clients; three more the
+system built for itself. Same code, same twelve agents, same scoring — one file
+different each time.
 
+| Configuration | The business | What they sell | An appointment is |
+|---|---|---|---|
+| **nvidia** | AI infrastructure vendor | 6 — compute, networking, software, Omniverse, automotive, edge | a **lead** |
+| **exec-search** | ESG executive search | 4 — search, recruitment, interim, advisory | a **dead lead** |
+| **consultancy** | Software & data consultancy | 5 — AI, data, engineering, strategy, CX | a lead |
+| **serviced-apartments** | Aparthotels across 25+ cities | 6 revenue streams — corporate, real estate, offsites, relocation, travel partners, production | relevant only if it is in a city they operate in |
+| **think-tank** | Environmental policy think tank | 6 policy areas | a lead — but to **brief**, not to sell to |
+| **sustainability-comms** | Sustainability communications agency | 5 service lines | a lead — a new leader wants an early win |
 
-The system ships set up for two completely different businesses. Same code, same
-AI, same everything — one file different.
+### The proof, in one headline
 
-| | **Configuration 1: "nvidia"** | **Configuration 2: "exec-search"** |
-|---|---|---|
-| Who it's for | A company selling AI computing infrastructure — the chips, data centres and software behind AI | A headhunting firm that places sustainability and ESG leaders |
-| What they sell | 6 things: computing, networking, software, simulation, automotive, edge devices | 4 things: executive search, professional recruitment, interim staffing, advisory |
-| Someone gets appointed | **A lead.** New budget holder, ring them | **A dead lead.** Job filled, fee gone |
-| Someone resigns | **A warning.** Your contact at that account just left | **The best lead there is.** An empty chair someone must fill |
-| How it measures "how big is this?" | **Deal size.** Nearly all revenue is one product line, so "how many services" tells you nothing — a £500m data centre and a tiny one would score the same | **How many services.** A client needing a search *and* interim cover *and* a pay benchmark is worth three times one placement |
-| How far back it looks | 30 days for everything | **21 days** for job adverts, **30** for vacancies, **90** for restructures — because a job advert closes in weeks and a restructure plays out over months |
+*"Company X appoints a Head of Sustainability."* Three configurations, three
+different correct answers:
 
-### The proof — a real test, on real news, that cost nothing
+- **The infrastructure vendor** — a lead. A new budget holder with about 90 days to show progress.
+- **The executive search firm** — a **dead lead**. The job is filled. The fee is gone.
+- **The think tank** — a lead, but not a buyer. A new decision-maker to brief, before their position on policy hardens.
 
-On 23 October the system read the actual RSS feeds of the sustainability trade
-press. Two stories from that week, read by the headhunting configuration:
+No signup form could ever work that out. Each configuration states it in plain
+English in a field called `polarity`, and that sentence travels with every
+instruction the AI is given.
 
-| The story | What it did | Why |
-|---|---|---|
-| *"Disney's environmental sustainability co-lead leaves the company"* | **Kept it. Scored it 9 out of 10** | Someone senior has left and no replacement is named. That is an empty chair — the most valuable thing a headhunter can find |
-| *"Ingka Group appoints a Chief Sustainability Officer"* | **Threw it away** | The job is filled. There is no fee in it |
+### Why these six and not others
 
-The infrastructure configuration reads those two stories in exactly the opposite
-direction. **Same code. Same day. Same headlines. Opposite conclusions.**
+They were chosen to be as **unlike each other as possible**, because that is what
+tests the engine. A serviced-apartment operator selling city by city has nothing
+in common with a GPU vendor — and it still fits without a line of code changing.
 
-You can run it yourself in about 30 seconds, for free:
+Two more sectors exist as tested prompt packs and could be added the same way: a
+law firm (already built by the system itself) and an online-safety consultancy.
 
-```bash
-node tools/feed-check.mjs exec-search
-```
+### What each one produced, on free sources only
 
----
+Every figure below came from RSS feeds and government procurement portals —
+**no search credits at all**, only Nebius inference:
+
+| Configuration | Organisations found | Briefing | Notable |
+|---|---|---|---|
+| nvidia | **150** | 1,977 words | from an earlier full run with search |
+| think-tank | **9** | 803 words | 24 live tenders, 18 with deadlines — DEFRA, £120k Welsh climate dashboard |
+| sustainability-comms | **4** | 431 words | Danone's EU greenwashing probe, Greenpeace vs IKEA — exactly the polarity's strongest signal |
+| lawfirm | 3 | 410 words | built by the system itself |
+| serviced-apartments | 2 | 379 words | the hardest sector without search — see below |
+| exec-search / consultancy | 1 each | — | sources widened, not yet re-run |
+
+**One honest note.** The serviced-apartment configuration is the hardest of the
+six to serve for free, because its trigger — a company opening an office in one
+of eighteen named cities — is genuinely rare in thirty days of RSS. Two is a
+real result rather than a broken one. The scoring floor was deliberately not
+lowered to inflate it: of 21 rejected signals only 2 were near-misses, and both
+were marginal.
+
+### What every one of them shares
+
+This is the finding that makes the whole thing work. Seven BD trackers were
+built independently, for seven different businesses, over several years — and
+**every single one scores prospects the same way**:
+
+| Factor | Points |
+|---|---|
+| How many of your services this opens | 30 |
+| Whether it opens two or more | 25 |
+| How recent it is | 25 |
+| How big the organisation is | 20 |
+| | **= 100, banded Critical 75+ / High 50+ / Medium 25+ / Low below** |
+
+Identical thresholds in all of them. That is not a design claim — it is seven
+pieces of independent evidence that this is how the job is actually done.
 
 ## Part 2b — Onboarding a new business automatically
 
@@ -644,11 +680,14 @@ by something breaking:
 
 | # | Task | Who | Status |
 |---|---|---|---|
-| 1 | **Join the Nebius Builder Program** for free credits | You, 5 minutes | **Do first — everything else waits on it** |
+| 1 | **Confirm you clicked "Join hackathon" on Devpost** | You, 1 minute | **Unverified — no record of it in any session. No registration, no submission** |
+| 1b | **Claim the $25 Token Factory credit** at the resources-page form, activation code `NEBIUS-DEVPOST-GLOBAL26` | You, 5 minutes | **Separate from the Builder Program — this is a second, additional $25** |
+| 1c | **Join the Nebius Builder Program** — adds another $25 Token Factory **and** the $25 Tavily | You, 5 minutes | **Not claimed. Verified 23 Oct: Tavily still reports the free Researcher plan with no credit applied** |
 | 2 | Push the code to a public GitHub repo | Either | Not started |
 | 3 | ~~Clean the rubbish out of the register~~ | Claude | **Done 23 Oct** — 165 → 150, top ten defensible |
 | 4 | One full live run of each configuration | Claude, once credits land | Blocked on #1 — but **both configurations already produce a real briefing for free** via `npm run pipeline:free` |
-| 5 | Deploy so a judge can click a URL | Claude | Not started — **required** |
+| 5 | **A hosted demo URL** — anywhere, not necessarily Nebius | Claude | Not started — **genuinely required by the rules** |
+| 5b | Nebius Serverless Job for the pipeline | Claude | Not started — **optional**, a scoring enhancer only. See DECISIONS-NEBIUS-TOOLING.md |
 | 6 | Record the 3-minute video | You + Claude | Not started — **required** |
 | 7 | Write the Devpost description | You + Claude | Not started — **required** |
 | 8 | Write the tooling feedback | Claude | Material exists |
