@@ -114,26 +114,32 @@ in common with a GPU vendor — and it still fits without a line of code changin
 Two more sectors exist as tested prompt packs and could be added the same way: a
 law firm (already built by the system itself) and an online-safety consultancy.
 
-### What each one produced, on free sources only
+### What each one actually found — live runs, 29 October
 
-Every figure below came from RSS feeds and government procurement portals —
-**no search credits at all**, only Nebius inference:
+Every configuration has now been run live, with Tavily search and Nemotron on
+Token Factory. These are real organisations with real sources:
 
-| Configuration | Organisations found | Briefing | Notable |
+| Sector | Before | **After a live run** | Briefing |
 |---|---|---|---|
-| nvidia | **150** | 1,977 words | from an earlier full run with search |
-| think-tank | **9** | 803 words | 24 live tenders, 18 with deadlines — DEFRA, £120k Welsh climate dashboard |
-| sustainability-comms | **4** | 431 words | Danone's EU greenwashing probe, Greenpeace vs IKEA — exactly the polarity's strongest signal |
-| lawfirm | 3 | 410 words | built by the system itself |
-| serviced-apartments | 2 | 379 words | the hardest sector without search — see below |
-| exec-search / consultancy | 1 each | — | sources widened, not yet re-run |
+| AI Infrastructure & Hardware | 150 | **150** | 1,977 words |
+| Policy, Research & Non-profit | 9 | **33** | 1,402 words |
+| Communications, Creative & Agencies | 4 | **20** | 1,199 words |
+| Executive Search & Recruitment | 1 | **17** | 1,222 words |
+| Hospitality & Serviced Accommodation | 2 | **13** | 805 words |
+| Technology & Data Consultancy | 1 | **11** | 771 words |
+| Legal & Professional Services | 3 | 3 | 410 words |
+| | | **247 organisations across 7 sectors** | |
 
-**One honest note.** The serviced-apartment configuration is the hardest of the
-six to serve for free, because its trigger — a company opening an office in one
-of eighteen named cities — is genuinely rare in thirty days of RSS. Two is a
-real result rather than a broken one. The scoring floor was deliberately not
-lowered to inflate it: of 21 rejected signals only 2 were near-misses, and both
-were marginal.
+The executive search briefing now leads with *"Netflix lost its first chief
+sustainability officer Emma Stewart after six years, with no named successor"* —
+which is exactly the signal type the original Acre diagnosis said the old method
+was missing entirely. The system found the thing the methodology was rebuilt to
+find.
+
+**What the free-only runs taught us stands.** The serviced-apartment
+configuration produced 2 organisations on RSS alone and 13 with search — the
+earlier note said its trigger was too rare for feeds and that the fix was search
+rather than more feeds. That turned out to be right.
 
 ### What every one of them shares
 
