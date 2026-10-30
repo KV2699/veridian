@@ -6,45 +6,58 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap">
 <style>
-  /* ═══ VERIDIAN ═════════════════════════════════════════════════════════
+  /* ═══ AUSPIUS ══════════════════════════════════════════════════════════
      Verified Signal Intelligence.
 
-     Built to the published Figma. Two deliberate departures from it, both
-     asked for:
+     Two colours carry the whole interface: NAVY and ACID YELLOW. Light grey
+     does the structural work between them.
 
-     1. NO GREY TEXT. The Figma sets secondary copy in #6A7074. Here every
-        word is the ink or the green label colour, and hierarchy comes from
-        WEIGHT and SIZE instead. Faded type is the quickest way to make an
-        interface look cheap and to fail a contrast check.
-     2. THE PAGE GROUND IS NOT WHITE. Cards are white; the surface they sit
-        on is a soft neutral, so panels separate by value and a hairline.
+     1. NO GREY TEXT, and no black either. Type is navy on light, acid on
+        navy. Hierarchy comes from WEIGHT and SIZE, never from fading copy
+        out, and the one accent is rationed so it keeps its meaning.
+     2. NOTHING IS LIGHT BLUE. The old cyan-to-blue gradient and the pale
+        blue washes read as generic SaaS chrome and competed with the acid.
+        Where a surface needs to separate, it separates in grey.
+     3. THE PAGE GROUND IS GREY, cards are white. Panels read by value and a
+        hairline rather than by a drawn border everywhere.
      ══════════════════════════════════════════════════════════════════════ */
   :root {
-    /* ── Ink. Black and white do the work; nothing is grey-for-the-sake-of-it.
-       Hierarchy comes from weight and size, never from fading text out. ── */
-    --ink: #0B0D12;
-    --ink-soft: #1C212B;
-    --label: #38414F;
-    --ground: #FFFFFF;
-    --card: #FFFFFF;
-    --card-2: #F6F8FB;
-    --line: #DFE5EE;
-    --line-soft: #EDF1F6;
+    /* ── Navy is the ink. Deepest at the bottom of the ramp, where it is a
+       surface rather than a letterform. ── */
+    --navy: #061233;
+    --navy-2: #0B1C45;
+    --navy-3: #16295C;
+    --ink: #0B1C45;
+    --ink-soft: #16295C;
+    --label: #44568C;
 
-    /* ── The brand gradient, lifted from the opener. Cyan to blue, 118deg. ── */
-    --grad-a: #0FC6FF;
-    --grad-mid: #1BA6FF;
-    --grad-b: #2B6BF6;
+    /* ── Light grey is the structure: the ground the cards sit on, the fill
+       inside a panel, and the hairlines. This is what breaks the interface
+       up now that the blue washes are gone. ── */
+    --ground: #F3F5FA;
+    --card: #FFFFFF;
+    --card-2: #E9EDF4;
+    --card-3: #DFE5EF;
+    --line: #D4DBE8;
+    --line-soft: #E4E9F2;
+
+    /* ── The brand gradient is navy on navy. It darkens left to right so the
+       acid type sitting on it holds contrast across the whole card. ── */
+    --grad-a: #123E96;
+    --grad-mid: #0D2C6E;
+    --grad-b: #05112C;
     --grad: linear-gradient(118deg, var(--grad-a) 0%, var(--grad-mid) 42%, var(--grad-b) 100%);
-    --blue: #1F62E0;
-    --blue-wash: #E8F1FE;
-    --blue-ink: #10336F;
+
+    /* ── A link still has to look like a link without a pale blue. This is
+       the deep end of the navy ramp, underlined, never a cyan. ── */
+    --link: #1A3FA0;
 
     /* ── Acid yellow is the accent, and it is rationed: the live state, the
-       primary action, the one number that matters. Spend it anywhere else and
-       it stops meaning anything. ── */
+       primary action, the one number that matters. It is also the TYPE
+       colour on every navy surface — black on navy is a muddy non-colour. ── */
     --acid: #E4FF1A;
-    --acid-deep: #B9CF00;
+    --acid-deep: #8F9F00;
+    --on-navy: var(--acid);
 
     /* ── Priority bands. The ramp a BD team already reads at a glance —
        red urgent, through amber, to a resting green. Carried from the
@@ -53,8 +66,8 @@
     --critical-wash: #FBECE9;
     --high: #C9762E;
     --high-wash: #FDF1E6;
-    --medium: #C9A227;
-    --medium-wash: #FCF6E2;
+    --medium: #4A5C8F;
+    --medium-wash: #E9EDF4;
     --low: #5C8463;
     --low-wash: #EDF3EE;
 
@@ -71,8 +84,8 @@
     --r: 14px;
     --r-sm: 9px;
     --r-lg: 20px;
-    --shadow: 0 1px 2px rgba(11,13,18,.04), 0 14px 38px -20px rgba(11,13,18,.22);
-    --shadow-lift: 0 24px 60px -28px rgba(16,51,111,.42);
+    --shadow: 0 1px 2px rgba(6,18,51,.05), 0 14px 38px -20px rgba(6,18,51,.24);
+    --shadow-lift: 0 24px 60px -28px rgba(6,18,51,.45);
     --pad: clamp(18px, 3.4vw, 44px);
   }
 
@@ -85,9 +98,9 @@
     -webkit-font-smoothing: antialiased;
   }
   h1, h2, h3, h4 { margin: 0; font-family: var(--display); letter-spacing: -.015em; text-wrap: balance; }
-  a { color: var(--blue); text-decoration: none; font-weight: 500; }
+  a { color: var(--link); text-decoration: underline; text-underline-offset: 2px; font-weight: 600; }
   a:hover { text-decoration: underline; }
-  :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
+  :focus-visible { outline: 2px solid var(--link); outline-offset: 2px; border-radius: 4px; }
   button { font: inherit; font-family: var(--sans); cursor: pointer; }
 
   .lbl, .label {
@@ -134,7 +147,7 @@
     font-size: 13.5px; font-weight: 500; color: var(--ink);
   }
   nav.tabs button:hover { background: var(--card-2); }
-  nav.tabs button[aria-selected="true"] { background: var(--ink); color: #fff; font-weight: 600; }
+  nav.tabs button[aria-selected="true"] { background: var(--navy-2); color: var(--on-navy); font-weight: 600; }
 
   .btn {
     font-size: 13.5px; font-weight: 600; padding: 8px 15px; border-radius: var(--r-sm);
@@ -145,8 +158,8 @@
     background: var(--lime); border-color: var(--lime-deep); color: var(--ink); font-weight: 700;
     display: inline-flex; align-items: center; gap: 7px;
   }
-  .btn.primary::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--ink); }
-  .btn.primary:hover { background: #E3FF5C; }
+  .btn.primary::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--navy); }
+  .btn.primary:hover { background: #EEFF66; }
   .btn:disabled { opacity: .5; cursor: default; }
   .btn.dashed { border-style: dashed; }
 
@@ -218,7 +231,11 @@
      baked demo "live" would be the one dishonest thing on the screen. */
   /* A quiet fact under the wordmark, not a banner competing with the product
      for the first thing you read. */
-  .demo-note { display: block; margin: 0 var(--pad); padding: 7px 0 0; background: none; border: 0; }
+  .demo-note {
+    display: flex; align-items: center; gap: 10px; margin: 0; padding: 9px var(--pad);
+    background: var(--card-2); border: 0; border-bottom: 1px solid var(--line);
+  }
+  .demo-note::before { content: ''; flex: 0 0 3px; align-self: stretch; background: var(--acid); border-radius: 2px; }
   .demo-note .s { font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: .04em; color: var(--label); }
   .demo-note .s b { font-weight: 700; color: var(--ink); }
 
@@ -293,7 +310,7 @@
   }
   .pill.critical { background: var(--critical-wash); color: var(--critical); }
   .pill.high     { background: var(--amber-wash); color: var(--amber); }
-  .pill.medium   { background: var(--blue-wash); color: var(--blue); }
+  .pill.medium   { background: var(--medium-wash); color: var(--medium); }
   .pill.low      { background: var(--card-2); color: var(--label); }
   .pill.plain    { background: var(--card-2); color: var(--label); }
   .pill.ok       { background: var(--green-wash); color: var(--green-ink); }
@@ -340,10 +357,10 @@
   .agent .t { font-family: var(--mono); font-size: 10.5px; font-weight: 500; white-space: nowrap; }
   .tier {
     font-family: var(--mono); font-size: 8.5px; font-weight: 700; letter-spacing: .08em;
-    padding: 2px 5px; border-radius: 3px; background: var(--ink); color: #fff;
+    padding: 2px 5px; border-radius: 3px; background: var(--navy-2); color: var(--on-navy);
   }
   .tier.free { background: var(--green-wash); color: var(--green-ink); }
-  .tier.super { background: var(--blue-wash); color: var(--blue); }
+  .tier.super { background: var(--card-2); color: var(--ink); }
   .tier.none { background: var(--card-2); color: var(--label); }
 
   .org { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 9px 15px; border-bottom: 1px solid var(--line-soft); align-items: baseline; }
@@ -353,7 +370,7 @@
   .org .sub { grid-column: 1 / -1; font-family: var(--mono); font-size: 9.5px; font-weight: 500; letter-spacing: .05em; text-transform: uppercase; color: var(--label); }
   .org.critical .sc { color: var(--critical); }
   .org.high .sc { color: var(--amber); }
-  .org.medium .sc { color: var(--blue); }
+  .org.medium .sc { color: var(--medium); }
 
   .bandcounts { display: flex; gap: 14px; padding: 11px 15px; border-bottom: 1px solid var(--line-soft); }
   .bandcounts span { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; }
@@ -364,7 +381,7 @@
   .bd .f { font-size: 12.5px; font-weight: 500; }
   .bd .p { font-family: var(--mono); font-size: 12.5px; font-weight: 600; text-align: right; }
   .bd .trk { grid-column: 1 / -1; height: 3px; background: var(--line-soft); border-radius: 2px; overflow: hidden; margin: 1px 0 9px; }
-  .bd .trk i { display: block; height: 100%; background: var(--green); }
+  .bd .trk i { display: block; height: 100%; background: var(--ink); }
   .bd .tot { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 2px; font-weight: 700; font-size: 13px; }
   .bd .tot-p { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 2px; font-family: var(--mono); font-weight: 700; font-size: 17px; text-align: right; }
 
@@ -381,7 +398,7 @@
 
   .fstep, .bar-row { display: grid; grid-template-columns: 86px 1fr 40px; gap: 9px; align-items: center; }
   .ftrack, .bar-track { height: 13px; background: var(--card-2); border: 1px solid var(--line-soft); border-radius: 3px; overflow: hidden; }
-  .ffill, .bar-fill { display: block; height: 100%; background: var(--blue); }
+  .ffill, .bar-fill { display: block; height: 100%; background: var(--ink); }
   .fstep:last-of-type .ffill { background: var(--green); }
   .fstep .val, .bar-row .val { font-family: var(--mono); font-size: 11.5px; font-weight: 600; text-align: right; }
   .fstep .lbl, .bar-row .lbl { letter-spacing: .04em; font-size: 10px; }
@@ -532,7 +549,7 @@
   }
   header .brand h1::after {
     content: ''; width: 7px; height: 7px; border-radius: 50%;
-    background: var(--grad-b); margin-left: 4px;
+    background: var(--acid-deep); margin-left: 4px;
   }
   header .brand .tagline {
     font-family: var(--mono); font-size: 9.5px; font-weight: 600;
@@ -556,7 +573,7 @@
   .btn.primary {
     background: var(--acid); border-color: var(--acid-deep); color: var(--ink); font-weight: 700;
   }
-  .btn.primary:hover { background: #EEFF5C; }
+  .btn.primary:hover { background: #EEFF66; }
   .btn.primary:disabled { opacity: .5; cursor: not-allowed; }
 
   /* ── One navigation. The four cards below ARE the nav, so the old header
@@ -588,34 +605,35 @@
 
   /* ── Navigation cards. Black, generous, one job each. ─────────────── */
   .flow {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
-    padding: 0 var(--pad) clamp(30px, 4vw, 48px); background: var(--ground);
-    max-width: 1680px; margin: 0 auto;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(14px, 1.5vw, 26px);
+    padding: 0 var(--pad) clamp(34px, 4.4vw, 56px); background: var(--ground);
+    max-width: 1300px; margin: 0 auto;
   }
   @media (max-width: 1000px) { .flow { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 560px)  { .flow { grid-template-columns: 1fr; } }
+  @media (max-width: 1000px) { .flow button { aspect-ratio: auto; } }
   .flow .flow-lbl { display: none; }
   .flow button {
     position: relative; text-align: left; cursor: pointer;
-    background: var(--ink); color: #FFFFFF; border: 1px solid var(--ink);
-    border-radius: var(--r-lg); padding: 26px 24px 24px; min-height: 160px;
+    background: var(--navy-2); color: var(--on-navy); border: 1px solid var(--navy-2);
+    border-radius: var(--r-lg); padding: 28px 26px 26px; aspect-ratio: 470 / 346; min-height: 190px;
     display: flex; flex-direction: column; justify-content: flex-end; gap: 7px;
     transition: transform .18s ease, box-shadow .18s ease;
   }
   .flow button:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift); }
-  .flow button[aria-selected="true"] { background: var(--grad); border-color: transparent; }
+  .flow button[aria-selected="true"] { background: var(--grad); border-color: var(--acid); }
   .flow button .n {
     position: absolute; top: 18px; right: 18px;
     font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .1em;
-    background: #FFFFFF; color: var(--ink); border-radius: 999px; padding: 4px 11px;
+    background: var(--acid); color: var(--navy); border-radius: 999px; padding: 4px 11px;
   }
   .flow button .t {
     font-family: var(--display); font-size: 21px; letter-spacing: -.02em;
-    color: #FFFFFF; display: block;
+    color: var(--on-navy); display: block;
   }
   .flow button .s {
-    font-size: 13px; font-weight: 500; color: rgba(255,255,255,.88);
-    line-height: 1.45; display: block; max-width: 30ch;
+    font-size: 13px; font-weight: 500; color: rgba(228,255,26,.82);
+    line-height: 1.45; display: block; max-width: 30ch; min-height: 2.9em;
   }
   .flow button br { display: none; }
 
@@ -665,7 +683,7 @@
   }
   .sig > details > summary::-webkit-details-marker { display: none; }
   .sig > details > summary:hover { background: var(--card-2); }
-  .sig > details > summary:focus-visible { outline: 3px solid var(--blue); outline-offset: -3px; background: var(--card-2); }
+  .sig > details > summary:focus-visible { outline: 3px solid var(--link); outline-offset: -3px; background: var(--card-2); }
   .sig > details[open] > summary { background: var(--card-2); }
 
   .sig .co { font-family: var(--display); font-size: clamp(17px, 1.7vw, 23px); letter-spacing: -.02em; flex: none; }
@@ -680,8 +698,8 @@
     transition: transform .18s ease, background .18s ease, border-color .18s ease;
   }
   .sig > details > summary:hover .chev,
-  .sig > details > summary:focus-visible .chev { background: var(--ink); color: #fff; border-color: var(--ink); }
-  .sig > details[open] .chev { transform: rotate(45deg); background: var(--ink); color: #fff; border-color: var(--ink); }
+  .sig > details > summary:focus-visible .chev { background: var(--navy-2); color: var(--on-navy); border-color: var(--navy-2); }
+  .sig > details[open] .chev { transform: rotate(45deg); background: var(--navy-2); color: var(--on-navy); border-color: var(--navy-2); }
   @media (prefers-reduced-motion: reduce) { .sig .chev { transition: none; } }
   @media (max-width: 760px) {
     .sig > details > summary { flex-wrap: wrap; gap: 10px 12px; padding: 18px; }
@@ -704,7 +722,7 @@
   }
   .act .v { font-size: 13px; font-weight: 700; }
   .act .next { flex-basis: 100%; font-size: 13.5px; font-weight: 500; }
-  .act .next b { font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--blue); display: block; margin-bottom: 3px; }
+  .act .next b { font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--label); display: block; margin-bottom: 3px; }
   .act .sp { flex: 1; }
   .mini {
     font-family: var(--sans); font-size: 12.5px; font-weight: 600;
@@ -712,11 +730,11 @@
     border-radius: 999px; padding: 6px 13px; cursor: pointer;
   }
   .mini:hover { border-color: var(--ink); }
-  .mini.go { background: var(--ink); color: #FFF; border-color: var(--ink); }
+  .mini.go { background: var(--navy-2); color: var(--on-navy); border-color: var(--navy-2); }
   .state {
     font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .11em;
     text-transform: uppercase; padding: 4px 10px; border-radius: 999px;
-    background: var(--blue-wash); color: var(--blue-ink); border: 1px solid var(--blue);
+    background: var(--card-2); color: var(--ink); border: 1px solid var(--line);
   }
   .state.done { background: var(--green-wash); color: var(--green-ink); border-color: var(--green); }
 
@@ -725,7 +743,7 @@
     font-family: var(--mono); font-size: 9.5px; font-weight: 700;
     letter-spacing: .14em; text-transform: uppercase; color: var(--label);
   }
-  .demo-note { margin: 0 var(--pad) 0; border-radius: var(--r); }
+  .demo-note { border-radius: 0; }
 
 
   /* ── Diagnostics, folded away ─────────────────────────────────────────
@@ -751,17 +769,17 @@
      invisible to anyone driving this from a keyboard. */
   .btn:focus-visible, .mini:focus-visible, .flow button:focus-visible,
   a:focus-visible, summary:focus-visible, select:focus-visible, input:focus-visible {
-    outline: 3px solid var(--blue); outline-offset: 2px;
+    outline: 3px solid var(--link); outline-offset: 2px;
   }
   .btn:hover, .btn:focus-visible { border-color: var(--ink); background: var(--card-2); }
   .mini:hover, .mini:focus-visible { border-color: var(--ink); background: var(--card-2); }
-  .mini.go:hover, .mini.go:focus-visible { background: #000; color: #fff; border-color: #000; }
+  .mini.go:hover, .mini.go:focus-visible { background: var(--navy); color: var(--acid); border-color: var(--navy); }
   .flow button:focus-visible { outline-offset: 3px; }
   .src:hover, .src:focus-visible { color: var(--ink); }
 
   .runhint { font-family: var(--mono); font-size: 10px; font-weight: 600;
-    letter-spacing: .04em; color: var(--label); max-width: 15ch; line-height: 1.35; }
-  @media (max-width: 900px) { .runhint { display: none; } }
+    letter-spacing: .04em; color: var(--label); line-height: 1.35; white-space: nowrap; }
+  @media (max-width: 1500px) { .runhint { display: none; } }
   /* ── The Monday three ─────────────────────────────────────────────────
      The artifact the reader actually needs: three things to say in a meeting
      that starts in forty-five minutes. Nobody reads a 1,900-word briefing
@@ -815,6 +833,19 @@
   <span class="s">Saved results from real runs · <b>NVIDIA Nemotron</b> on <b>Nebius Token Factory</b></span>
 </div>
 
+<div class="greet">
+  <div class="greet-row">
+    <div style="flex:1;min-width:240px">
+      <div class="when lbl" id="when">Monday briefing</div>
+      <h2 id="greeting">Good morning. Here is what changed.</h2>
+    </div>
+    <div class="ground-badge" id="groundBadge" hidden>
+      <span class="t">Grounding pass</span>
+      <span class="s" id="groundSub">—</span>
+    </div>
+  </div>
+</div>
+
 <div class="flow" role="tablist" aria-label="Sections">
   <button role="tab" data-view="overview" aria-selected="true">
     <span class="n">01</span>
@@ -836,19 +867,6 @@
     <span class="t">Ask Auspius</span>
     <span class="s">Query the register in plain English.</span>
   </button>
-</div>
-
-<div class="greet">
-  <div class="greet-row">
-    <div style="flex:1;min-width:240px">
-      <div class="when lbl" id="when">Monday briefing</div>
-      <h2 id="greeting">Good morning. Here is what changed.</h2>
-    </div>
-    <div class="ground-badge" id="groundBadge" hidden>
-      <span class="t">Grounding pass</span>
-      <span class="s" id="groundSub">—</span>
-    </div>
-  </div>
 </div>
 
 <!-- WHICH SECTORS DOES THIS WORK FOR?
