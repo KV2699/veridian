@@ -12,9 +12,11 @@
      Two colours carry the whole interface: NAVY and ACID YELLOW. Light grey
      does the structural work between them.
 
-     1. NO GREY TEXT, and no black either. Type is navy on light, acid on
-        navy. Hierarchy comes from WEIGHT and SIZE, never from fading copy
-        out, and the one accent is rationed so it keeps its meaning.
+     1. NO GREY TEXT, and no black anywhere. On light, type is navy. On navy,
+        HEADERS are acid and BODY COPY IS WHITE — a paragraph set in acid is
+        a highlighter pen, and nothing stays emphatic when everything is.
+        Hierarchy otherwise comes from WEIGHT and SIZE, never from fading
+        copy out.
      2. NOTHING IS LIGHT BLUE. The old cyan-to-blue gradient and the pale
         blue washes read as generic SaaS chrome and competed with the acid.
         Where a surface needs to separate, it separates in grey.
@@ -52,12 +54,14 @@
        the deep end of the navy ramp, underlined, never a cyan. ── */
     --link: #1A3FA0;
 
-    /* ── Acid yellow is the accent, and it is rationed: the live state, the
-       primary action, the one number that matters. It is also the TYPE
-       colour on every navy surface — black on navy is a muddy non-colour. ── */
+    /* ── Acid yellow is the accent, and it is rationed: the logo, headers on
+       a navy ground, the live state, the primary action, the one number that
+       matters. Body copy on navy is white (--on-navy); acid is reserved for
+       the line above it (--head-navy). ── */
     --acid: #E4FF1A;
     --acid-deep: #8F9F00;
-    --on-navy: var(--acid);
+    --on-navy: #FFFFFF;
+    --head-navy: var(--acid);
 
     /* ── Priority bands. The ramp a BD team already reads at a glance —
        red urgent, through amber, to a resting green. Carried from the
@@ -629,10 +633,10 @@
   }
   .flow button .t {
     font-family: var(--display); font-size: 21px; letter-spacing: -.02em;
-    color: var(--on-navy); display: block;
+    color: var(--head-navy); display: block;
   }
   .flow button .s {
-    font-size: 13px; font-weight: 500; color: rgba(228,255,26,.82);
+    font-size: 13px; font-weight: 500; color: rgba(255,255,255,.86);
     line-height: 1.45; display: block; max-width: 30ch; min-height: 2.9em;
   }
   .flow button br { display: none; }
