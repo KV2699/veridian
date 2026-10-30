@@ -15,3 +15,10 @@ npm-debug.log*
 # finds them and reasonably assumes they are the current output.
 data/**/*.backup
 *.backup
+
+# Internal handoff notes and render artefacts. These documented problems
+# with the submission video and timings; a judge browsing the repo should not
+# be reading our own notes on what was wrong with it. Kept locally.
+*-HANDOFF.md
+auspius-demo.mp4
+*.mp4
