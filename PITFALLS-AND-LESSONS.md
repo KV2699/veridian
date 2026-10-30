@@ -859,6 +859,9 @@ Pin these up.
 37. **A default that contradicts the documentation is worse than no default.** Whatever ships in `.env.example` is what a stranger runs, and they will believe the README over the behaviour.
 38. **Test on the host you will actually deploy to.** A framework convenience — a charset header, a MIME type, a rewrite rule — hides a bug that a plain static host exposes.
 39. **A file nobody reads is a file that does not exist.** Generating an artefact is half the work; the half that counts is the code path that consumes it.
+40. **Two names for the same four things is a duplicated control.** If a reader can reach a view from two places under two labels, one of them is wrong — delete it rather than restyling both.
+41. **Intelligence that ends without a decision is a newsletter.** Every item a product surfaces needs an owner, a state and one next step, or the reader has nowhere to put the work.
+42. **Never claim a loop you have not closed.** Recording an outcome is not the same as learning from it; dress one as the other and the whole product's honesty is in question.
 37. **Audit the clone, not the working copy.** Every fatal finding in the 29 October audit was invisible on the machine that built the project and obvious on a fresh clone.
 38. **The example config is production code.** `.env.example` is the configuration most readers will actually run. A stale default there contradicts the submission in the reader's own terminal.
 39. **Check the file the field actually lives in before reporting it missing.** A feature looks 0% broken when you query the wrong file.
@@ -979,6 +982,59 @@ rendered text rather than the source.
 **The rule.** Test on the host you will actually deploy to. A framework
 convenience hides a bug that a plain static host exposes, and the failure is
 invisible in every environment where you do your work.
+
+---
+
+## The interface explained the system instead of doing the work
+
+**What happened.** An outside critique put the question plainly: *who opens this
+on Monday, and what do they do after they have read it?* The honest answer was
+"a dashboard" — and a dashboard is not a workflow. Overview, Signals, Proof and
+Ask are a good structure for *explaining* how a system reasons, which is what
+they were designed for. None of them let a reader finish a piece of work.
+
+The same review found a duplicated control hiding in plain sight: the header
+carried **Intelligence / Register / Briefings / Ask** while the workflow strip
+carried **Overview / Signals / Proof / Ask**. Four views, two navigations, two
+sets of names — built at different times, each sensible alone.
+
+**What it cost.** Nothing yet, because it was caught before judging. But the
+entry was framed as a technology demonstration rather than a product, and three
+of the four judging criteria reward the opposite.
+
+**The fix.** One navigation, not two. Every signal now carries an owner, a state
+and one next action, with controls to mark it actioned, send it to CRM or
+dismiss it. The next action is *derived* from the signal rather than invented: a
+counter-reading means verify before contact, a Critical band means approach
+within seven days.
+
+**What was deliberately not claimed.** The decision is stored per-reader in the
+browser and is not fed back into scoring. The outcome model that would learn
+from wins and losses is not built. Showing where the work goes is honest;
+implying the system learns from it would not be.
+
+**The rule.** Intelligence that ends without a decision is a newsletter. And
+never claim a loop you have not closed.
+
+---
+
+## Type over a screenshot is unreadable, and the storyboard was built that way
+
+**What happened.** The first film board rendered the voiceover centred over the
+product captures. On a laptop, reviewing one frame at a time, it read fine. At
+1080p over a dense dashboard it destroys both: the words fight the interface and
+the interface is lost behind the words.
+
+**How it was found.** By someone looking at it rather than by any check — the
+failure is invisible unless you ask "could I read this at video size?"
+
+**The fix.** Two states that never mix. Words on screen means the frame is the
+brand gradient and nothing else. A capture on screen means it fills the frame
+clean, in a browser chrome, with no type over it. The player alternates
+automatically, so the board now demonstrates the rule rather than describing it.
+
+**The rule.** Overlaid type and dense UI cannot share a frame. Alternate instead
+of layering, and judge every frame at the size it will actually be watched.
 
 ---
 

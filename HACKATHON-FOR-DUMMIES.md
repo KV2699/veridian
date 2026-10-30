@@ -883,6 +883,60 @@ video, to solve a problem that does not exist.
 
 ---
 
+## Part 8c — The Auspius rebrand and the workflow rebuild
+
+Done 30 October, the morning of the deadline.
+
+### The name
+
+**Auspius**, everywhere: the interface, the briefings the system writes, the
+docs, the package, and the narration. `auspius.com` is registered. An *auspex*
+was the Roman official whose job was reading signs in the world and advising
+whether to act — which is a job description for this product, not a metaphor.
+
+One thing is deliberately **not** done: the GitHub remote still reads
+`/veridian`. Renaming a repository invalidates every link already pointing at
+it, and the submission is hours away. That is a job for next week.
+
+### What changed in the interface, and why
+
+| Change | Why |
+|---|---|
+| **Archivo Black** for the wordmark and every heading, **Archivo** for reading | The two are a designed pair. Headings now carry weight without shouting |
+| The **cyan-to-blue brand gradient** on the active state, taken from the opener | One brand across the film and the product |
+| **Acid yellow rationed** to the primary action only | An accent used everywhere stops meaning anything |
+| **Two navigations became one** | The header carried *Intelligence / Register / Briefings / Ask* while the workflow strip carried *Overview / Signals / Proof / Ask* — the same four views under different names. The header row is gone; the four cards are the navigation |
+| The greeting is **the only thing on its line** | It was competing with a toolbar. Now it reads as the answer to "what changed?" |
+| **Padding scales with the viewport** instead of sitting at a fixed 14px | The old interface was cluttered because it was cramped, not because it held too much |
+| A **coloured dot top-right of every signal** | Priority readable at a glance, on the red-amber-green ramp a BD team already knows. The band is always written in words beside it, so colour is never the only cue |
+
+### The bigger change: a signal now ends in a decision
+
+An outside critique asked the question that mattered: *who opens this on Monday,
+and what do they do after reading it?* The honest answer was "a dashboard" — and
+a dashboard is not a workflow.
+
+Every signal card now carries:
+
+```text
+Owner:       Unassigned
+Status:      New
+Next action: Verify the counter-reading before making contact.
+             [ Mark actioned ]  [ Send to CRM ]  [ Dismiss ]
+```
+
+The next action is **derived, not invented**. A signal with a counter-reading
+says verify first. A Critical band says approach within seven days. A
+multi-service signal says open with the broader conversation.
+
+**What is honestly not built.** The decision is kept per reader in the browser
+and is **not** fed back into scoring. A system that learned which signals
+actually produce work would be the obvious next step, and it needs real outcome
+data over months. Showing where the work goes is honest; implying the system
+learns from it would not be.
+
+---
+
 ## Part 9 — How a business would set this up for itself
 
 A judge may ask "how does this generalise?" The answer is a one-page form and
