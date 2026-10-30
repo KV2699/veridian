@@ -1,0 +1,43 @@
+It's Monday morning. Your pipeline is full. Your calendar is already packed.
+
+And somewhere last week, something happened that should have been your next deal. A funding round. An executive walking out. A regulator setting a deadline.
+
+Nobody sent it to you. It just happened.
+
+Your CRM is very good at the deals you already have. But it can only ever tell you about people you have already met.
+
+The lead you lose isn't the one you forgot to chase. It's the one you never knew existed.
+
+This is Auspius. You tell it what your business sells. Every week it reads the market and tells you who to call, why now, and what the opportunity is worth.
+
+It is not a news feed. It reads what happened, works out whether it matters to you, and tells you what to do about it.
+
+Here is what makes it different. The same news means two different things to two different businesses.
+
+Disney's environmental sustainability co-lead leaves the company.
+
+To a company selling AI infrastructure, that is bad news. The person who signs the cheque just walked out.
+
+To an executive search firm, the same sentence is the best news of the week. An empty seat. A live mandate.
+
+One headline. Two opposite answers. Same code, same model, same source. The only difference is one sentence describing who it works for.
+
+Here is a real one. Netflix lost its first chief sustainability officer. No successor named. Scored eighty out of a hundred. Critical.
+
+Then it does something most tools won't. It argues against itself. Netflix has its own recruiting team, so they may never go to market. It tells you that before you waste the call.
+
+None of this is a model remembering things. Every week, Tavily searches the live web and brings back the actual pages. Filings. Postings. Press releases. Auspius reads only those. A claim with no source behind it is thrown away.
+
+Twelve agents did the work. NVIDIA Nemotron, running on Nebius Token Factory. Super does the fast reading. Ultra does the judging, and wrote the briefing you just saw.
+
+And the score is not an opinion. Four factors, added up in code. Open any number and see where it came from. Nothing here is a black box.
+
+It keeps what it threw away, too. Every rejection, with the reason it was rejected.
+
+This isn't one industry. Seven sectors. Executive search. Law. Policy. Hospitality. AI infrastructure. Two hundred and forty-seven organisations nobody handed it.
+
+And if your sector isn't there, point it at a company website. It configures itself in about two minutes.
+
+Auspius. Verified signal intelligence.
+
+Your pipeline knows who you have met. This tells you who you haven't.
