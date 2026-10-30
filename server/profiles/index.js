@@ -42,7 +42,7 @@ const PROFILES = {
   'sustainability-comms': sustainabilityComms,
 };
 
-export const DEFAULT_PROFILE = process.env.PROFILE || 'nvidia';
+export const DEFAULT_PROFILE = process.env.PROFILE || 'exec-search';
 
 // Profiles the system generated for itself, loaded from data/profiles/*.json.
 //
@@ -126,6 +126,10 @@ const SECTOR_LABELS = {
   },
   lawfirm: {
     sector: 'Legal & Professional Services',
+    // Three organisations after one run. Said plainly in the chooser rather
+    // than presented alongside sectors with 150 — a breadth claim that does
+    // not survive a click costs more than it buys.
+    pilot: true,
     who: 'Law firms and professional services firms selling advisory across practice groups.',
     trigger: 'A regulator opening an investigation into a sector, or a restructure with redundancies.',
   },
@@ -151,6 +155,7 @@ export const listProfiles = () =>
       sector: SECTOR_LABELS[key]?.sector ?? name,
       who: SECTOR_LABELS[key]?.who ?? description,
       trigger: SECTOR_LABELS[key]?.trigger ?? null,
+      pilot: Boolean(SECTOR_LABELS[key]?.pilot),
       is_default: key === DEFAULT_PROFILE,
       generated,
       // A generated profile whose polarity is still empty will run and will

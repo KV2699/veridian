@@ -759,6 +759,31 @@
   .flow button:focus-visible { outline-offset: 3px; }
   .src:hover, .src:focus-visible { color: var(--ink); }
 
+  .runhint { font-family: var(--mono); font-size: 10px; font-weight: 600;
+    letter-spacing: .04em; color: var(--label); max-width: 15ch; line-height: 1.35; }
+  @media (max-width: 900px) { .runhint { display: none; } }
+  /* ── The Monday three ─────────────────────────────────────────────────
+     The artifact the reader actually needs: three things to say in a meeting
+     that starts in forty-five minutes. Nobody reads a 1,900-word briefing
+     first. Everything here is already in the signal — this just stops it
+     being buried in prose. */
+  .m3 { display: grid; grid-template-columns: 34px minmax(0,1fr); gap: 0 14px;
+    padding: 18px 26px; border-top: 1px solid var(--line-soft); }
+  .m3:first-child { border-top: 0; }
+  .m3 .n { font-family: var(--display); font-size: 21px; line-height: 1; color: var(--line); }
+  .m3 .who { font-family: var(--display); font-size: 17px; letter-spacing: -.015em; margin-bottom: 3px; }
+  .m3 .why { font-size: 14px; font-weight: 500; line-height: 1.55; max-width: 72ch; }
+  .m3 .meta { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 9px; align-items: center; }
+  .m3 .person { font-size: 13px; font-weight: 600; }
+  .m3 .person b { font-weight: 700; }
+  .m3 .unver { font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--high); background: var(--high-wash);
+    border: 1px solid var(--high); border-radius: 999px; padding: 3px 8px; }
+  .m3 .own { font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--label); }
+  .rejline { padding: 11px 26px; border-top: 1px solid var(--line-soft);
+    font-size: 13px; font-weight: 500; color: var(--ink); background: var(--card-2); }
+  .rejline b { font-weight: 700; }
 </style>
 
 <header>
@@ -780,6 +805,7 @@
 
   <button class="btn" id="refresh">Refresh</button>
   <button class="btn primary" id="run">Run pipeline</button>
+  <span class="runhint" id="runhint" hidden>Live runs need API keys — see the README</span>
   <span id="week" hidden></span>
   <span id="measures" hidden></span>
   <span id="meta" hidden></span>
@@ -931,6 +957,12 @@
         </div>
         <p class="foot">Identical code, identical model, identical source. The only difference is one sentence of <strong>polarity</strong> declared in the configuration — the thing no onboarding form can ask.</p>
       </div>
+    </section>
+
+    <section class="card" id="mondayCard">
+      <h2>Your Monday three <span class="c">before the partners' meeting</span></h2>
+      <div class="rejline" id="rejLine" hidden></div>
+      <div id="mondayList"></div>
     </section>
 
     <section class="card" id="statsCard">
@@ -1096,6 +1128,65 @@ function drawStats(b, totals = {}) {
 // ── Signal cards — the design's centrepiece ──────────────────────────────
 // Rendered from the signal log rather than the briefing prose, so each card
 // can carry its own score, band, age, practice areas and counter-reading.
+// Pull the named human out of the prose. The schema has no person field, so
+// this reads the summary the verifier already wrote — and says so when it
+// finds nobody, because inventing a contact is worse than admitting there
+// isn't one. Role words anchor it, so "Emma Stewart left Netflix" resolves and
+// "Hewlett Packard Enterprise signed" does not.
+const ROLE = /(chief|head|director|officer|manager|partner|lead|president|executive|analyst|vp|vice[- ]president)/i;
+// A job title is not a person. "Climate Adaptation Director" is the vacancy,
+// not the contact, and naming it as a human would be worse than saying nothing.
+const TITLE_WORD = /\b(sustainability|climate|adaptation|resilience|environmental|operations|strategy|technology|finance|marketing|communications|procurement|talent)\b/i;
+const ORG_WORD = /\b(county|office|group|company|corp|inc|ltd|plc|university|council|department|ministry|agency|bank|holdings|partners|associates)\b/i;
+function personIn(text, company) {
+  if (!text) return null;
+  const re = /\b([A-Z][a-z]{1,14} (?:[A-Z][a-z]{1,14} )?[A-Z][a-z]{1,14})\b/g;
+  const co = String(company ?? '').toLowerCase();
+  let m;
+  while ((m = re.exec(text))) {
+    const name = m[1];
+    // The organisation is not the contact. Anything overlapping the company
+    // name, or carrying an organisation word, is a false positive.
+    const lower = name.toLowerCase();
+    if (ORG_WORD.test(name) || ROLE.test(name) || TITLE_WORD.test(name)) continue;
+    // Only match on a company token long enough to mean something — "N" in
+    // "N Brown Group" would otherwise veto every name containing an n.
+    const tok = co.split(/\s+/).find((w) => w.length >= 4) ?? '';
+    if (co && (co.includes(lower) || (tok && lower.includes(tok)))) continue;
+    const near = text.slice(Math.max(0, m.index - 70), m.index + name.length + 70);
+    if (ROLE.test(near) || /\b(left|joined|departed|steps? down|appointed|resigned|hired)\b/i.test(near)) {
+      const hit = near.match(new RegExp(ROLE.source + "[a-z]*(?:\\s+[a-z]+){0,3}", "i"));
+      let role = hit ? hit[0].trim().replace(/\s+/g, ' ') : null;
+      if (role && role.length > 42) role = role.slice(0, 42).replace(/\s+\S*$/, '');
+      return { name, role };
+    }
+  }
+  return null;
+}
+
+function drawMondayThree(signals) {
+  const el = $('mondayList');
+  if (!el) return;
+  const top = [...signals].sort((a, b) => (b.priority_score ?? 0) - (a.priority_score ?? 0)).slice(0, 3);
+  if (!top.length) { el.innerHTML = '<div class="pad">Nothing scored this week.</div>'; return; }
+  el.innerHTML = top.map((x, n) => {
+    const p = personIn(x.summary, x.company);
+    const w = workOn(x);
+    return `<div class="m3">
+      <div class="n">${n + 1}</div>
+      <div>
+        <div class="who">${esc(x.company)}</div>
+        <div class="why">${esc(nextActionFor(x))}</div>
+        <div class="meta">
+          ${p ? `<span class="person">Ask for <b>${esc(p.name)}</b>${p.role ? ` — ${esc(p.role)}` : ''}</span>`
+              : '<span class="unver">No contact named in the source</span>'}
+          <span class="own">Owner · ${esc(w.owner)}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 function drawSignals(signals) {
   const el = $('siglist');
   if (!signals.length) { $('topSignals').hidden = true; return; }
@@ -1159,6 +1250,7 @@ function drawSignals(signals) {
     };
   }
   drawBreakdown(signals[0]);
+  drawMondayThree(signals);
 }
 
 // ── The work layer ───────────────────────────────────────────────────────────
@@ -1536,7 +1628,15 @@ async function loadRejections() {
   try {
     const { total, by_code: byCode, rejections } = await get('/api/rejections?limit=25');
     if (!total) { $('rejTotal').textContent = '0'; $('rejstats').textContent = 'Nothing rejected yet.'; $('rejlist').innerHTML = ''; return; }
-    $('rejstats').innerHTML = Object.entries(byCode).map(([c, n]) => `${n} ${c.toLowerCase().replace(/_/g, ' ')}`).join(' · ');
+    const parts = Object.entries(byCode).map(([c, n]) => `${n} ${c.toLowerCase().replace(/_/g, ' ')}`);
+    $('rejstats').innerHTML = parts.join(' · ');
+    // Say it in the briefing too: what a tool throws away is the clearest
+    // evidence it is reading rather than relaying.
+    const line = $('rejLine');
+    if (line) {
+      line.hidden = false;
+      line.innerHTML = `<b>${total} discarded this run</b> — ${esc(parts.join(', '))}. Every one kept with its reason.`;
+    }
     $('rejTotal').textContent = total;
     $('rejlist').innerHTML = rejections.slice(0, 6).map((r) => `
       <div class="rej">
@@ -1582,7 +1682,10 @@ async function loadStatus() {
   drawAgents(s.agents, s.running);
   $('run').disabled = s.running || DEMO.on;
   $('run').textContent = s.running ? 'Running…' : 'Run pipeline';
-  if (DEMO.on) $('run').title = 'Running the pipeline needs API keys and a local server. Everything on screen is saved output from real runs.';
+  if (DEMO.on) {
+    $('run').title = 'Running the pipeline needs API keys and a local server. Everything on screen is saved output from real runs.';
+    const h = $('runhint'); if (h) h.hidden = false;
+  }
 
   if (s.profile) drawProfiles(s.profiles, s.profile);
   drawDiagnostics(s.diagnostics);
@@ -1665,8 +1768,8 @@ $('refresh').onclick = () => { logLine('refreshed'); refresh(); };
 // they are the same journey described twice: one for someone who knows where
 // they are going, one for someone seeing it for the first time.
 const VIEWS = {
-  overview:  { show: ['ahaCard', 'statsCard', 'signalsCard', 'topSignals', 'bdCard'], rails: true },
-  register:  { show: ['statsCard', 'topSignals', 'bdCard'], rails: true },
+  overview:  { show: ['ahaCard', 'mondayCard', 'statsCard', 'signalsCard', 'topSignals', 'bdCard'], rails: true },
+  register:  { show: ['mondayCard', 'statsCard', 'topSignals', 'bdCard'], rails: true },
   briefings: { show: ['statsCard', 'signalsCard'], rails: true },
   ask:       { show: ['askCard'], rails: false },
 };
@@ -1679,7 +1782,7 @@ function setView(next) {
     b.setAttribute('aria-selected', String(b.dataset.view === next));
   }
   const cfg = VIEWS[next];
-  for (const id of ['ahaCard', 'statsCard', 'signalsCard', 'topSignals', 'askCard']) {
+  for (const id of ['ahaCard', 'mondayCard', 'statsCard', 'signalsCard', 'topSignals', 'askCard']) {
     const el = $(id);
     if (!el) continue;
     // The question box is always reachable, but only the Ask view leads with it.
@@ -1716,6 +1819,7 @@ function drawSectorGrid() {
         ${live ? `<span class="live">${p.organisations} prospects found</span>`
                : '<span class="draft">not yet run</span>'}
         ${p.needs_polarity ? '<span class="draft">needs polarity</span>' : ''}
+        ${p.pilot ? '<span class="draft">pilot — one run so far</span>' : ''}
       </span>
     </button>`;
   }).join('');

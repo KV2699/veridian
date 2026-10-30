@@ -365,9 +365,9 @@ this one", which is a different class of answer.
 ## Part 4 — How it works, step by step
 
 Twelve pieces, which we call "agents". Nine of them run at the same time, then
-three run in order.
+three run in order. Nine collectors plus three synthesis agents is the twelve.
 
-### Stage 1 — Finding things (nine agents, all at once)
+### Stage 1 — Finding things (nine collectors, all at once)
 
 | # | Agent | What it does | Costs search credits? |
 |---|---|---|---|
