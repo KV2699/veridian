@@ -22,3 +22,7 @@ data/**/*.backup
 *-HANDOFF.md
 auspius-demo.mp4
 *.mp4
+
+# The Devpost entry text itself. It is filled in on Devpost; a judge
+# reading the draft in the repo gains nothing and sees scaffolding.
+DEVPOST-SUBMISSION.md
