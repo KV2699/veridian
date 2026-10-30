@@ -1,4 +1,4 @@
-# Veridian — pitfalls, blockers and lessons learned
+# Auspius — pitfalls, blockers and lessons learned
 
 Written in the house style of `GA-BD-Pitfalls-Blockers.md`: every entry is
 something that actually went wrong, what it cost, how it was found, and the rule
@@ -793,7 +793,7 @@ near-miss would have sent a correct script back for a rewrite.
 
 The audit brief asked which of seven candidate names was final, and instructed
 that the work be marked **BLOCKED** until that was answered. A repository sweep
-settled it in one command: **Veridian in 18 files** including the package name,
+settled it in one command: **Auspius in 18 files** including the package name,
 the page title, the README, the video script and the git remote — and **zero
 files** for Pority, Tekmora, Kairon, Semeon, Cernora or Polara. There was nothing
 to reconcile. Followed literally, that section would have halted all work with 23

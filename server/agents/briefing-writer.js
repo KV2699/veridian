@@ -13,7 +13,7 @@ import { log } from '../lib/log.js';
 // on who it is written for — "a founder selling into GPU cloud" and "a search
 // consultant who earns nothing from a filled role" want opposite things said
 // about the same event — so neither can be hardcoded here.
-const systemFor = (profile) => `You write Veridian, a weekly BD intelligence briefing on the ${profile?.market || profile?.name || 'market described below'} market, for one reader: ${profile?.reader || 'a business development professional working this market'}.
+const systemFor = (profile) => `You write Auspius, a weekly BD intelligence briefing on the ${profile?.market || profile?.name || 'market described below'} market, for one reader: ${profile?.reader || 'a business development professional working this market'}.
 
 They will read this in four minutes on a Monday morning and decide what to do this week.
 
@@ -126,7 +126,7 @@ function buildPrompt({ signals, connections, assessment, weekLabel, counts, CATE
     `## ${heading} (${counts[key]} signals)\n[${counts[key] ? '3-5 bullets, most important first, each ending with [source](url)' : 'write "No signals this week."'}]`
   ).join('\n\n');
 
-  return `Write the Veridian briefing for the week of ${weekLabel}.
+  return `Write the Auspius briefing for the week of ${weekLabel}.
 
 MARKET: ${profile?.name ?? 'unnamed'} — ${profile?.description ?? ''}
 
@@ -144,7 +144,7 @@ VERIFICATION PASS ASSESSMENT: ${assessment || 'none given'}
 
 Produce exactly this structure:
 
-# Veridian — Week of ${weekLabel}
+# Auspius — Week of ${weekLabel}
 
 ## This Week's Headline
 [One sentence: the single most important thing that happened, naming the organisation.]
@@ -167,9 +167,9 @@ function tidy(text, weekLabel) {
     .replace(/^```(?:markdown|md)?\s*/i, '')
     .replace(/```\s*$/, '')
     .trim();
-  const h1 = md.indexOf('# Veridian');
+  const h1 = md.indexOf('# Auspius');
   if (h1 > 0) md = md.slice(h1);
-  if (h1 === -1) md = `# Veridian — Week of ${weekLabel}\n\n${md}`;
+  if (h1 === -1) md = `# Auspius — Week of ${weekLabel}\n\n${md}`;
   return `${md.replace(/\n{3,}/g, '\n\n')}\n`;
 }
 
@@ -185,7 +185,7 @@ function emptyBriefing(weekLabel, CATEGORIES, diagnostics) {
         '3. Re-run the pipeline manually before treating this as a true read on the market.',
       ];
 
-  return `# Veridian — Week of ${weekLabel}
+  return `# Auspius — Week of ${weekLabel}
 
 ## This Week's Headline
 No signals cleared verification this week.

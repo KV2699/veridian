@@ -1,6 +1,6 @@
 
 
-# Veridian — the hackathon submission, in plain English
+# Auspius — the hackathon submission, in plain English
 
 **Who this is for:** you, or anyone who needs to understand this system without
 reading code. No jargon that isn't explained. Nothing assumed.
@@ -27,7 +27,7 @@ first usually wins the work. Nobody can read the whole internet every week, so
 in practice people check a few sources, miss most of it, and call the result a
 pipeline.
 
-### What Veridian does about it
+### What Auspius does about it
 
 Every Monday morning at 7am, without anyone pressing anything, it reads the
 market, checks what it found, throws away what it can't prove, scores what's
@@ -78,7 +78,7 @@ to prove it is real rather than just claimed.
 
 ## Part 2 — The six configurations
 
-Veridian ships configured for **six different businesses**. Three were written
+Auspius ships configured for **six different businesses**. Three were written
 by hand from prompt packs that were tested on real clients; three more the
 system built for itself. Same code, same twelve agents, same scoring — one file
 different each time.
@@ -775,7 +775,7 @@ That is a good product, and it has one hard limit:
 
 > **A CRM can only ever tell you about people you have already met.**
 
-Veridian answers the question underneath that one: *what happened last week that
+Auspius answers the question underneath that one: *what happened last week that
 you don't know about yet?* The whole film holds that contrast, and never names a
 competitor — it just occupies ground they cannot reach.
 
@@ -801,7 +801,7 @@ two are evidence.
 ### Why it leads with the catch, not the capability
 
 The strongest thirty seconds in this project is not a lead it found. It is the
-**counter-reading** — Veridian arguing against its own best signal, telling you
+**counter-reading** — Auspius arguing against its own best signal, telling you
 Netflix has an internal recruiting team and may never go to market. A tool that
 tells you when not to call is making a claim about honesty that no demo of
 "look how much it found" can make.
@@ -873,11 +873,11 @@ one.
 
 ### On the rename question
 
-The audit brief asked whether the product is finally called Veridian or
+The audit brief asked whether the product is finally called Auspius or
 *"Pority"*, and said to stop work until that was settled. A repository sweep
-answered it: **Veridian appears in 18 files** — package name, page title, README,
+answered it: **Auspius appears in 18 files** — package name, page title, README,
 video script, git remote. **"Pority" appears in none**, nor do Tekmora, Kairon,
-Semeon, Cernora or Polara. The name is Veridian. With a day left, a rename would
+Semeon, Cernora or Polara. The name is Auspius. With a day left, a rename would
 mean a new repo URL, a new demo link, a republished artifact and a re-recorded
 video, to solve a problem that does not exist.
 

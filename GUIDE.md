@@ -1,4 +1,4 @@
-# Veridian — the plain English guide
+# Auspius — the plain English guide
 
 ## What this is, in one paragraph
 

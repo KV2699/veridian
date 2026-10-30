@@ -1,4 +1,4 @@
-# Veridian — demo video script
+# Auspius — demo video script
 
 **Length:** **372 spoken words** — 2:39 at a normal pace, 2:59 read slowly.
 Deliberately under the three-minute cap, because read-aloud with pauses runs
@@ -13,7 +13,7 @@ deal needs my attention?" It is a good product and it has one hard limit: **it
 can only tell you about people you have already met.** Everything it knows came
 from your CRM.
 
-Veridian answers the question that comes before that one: **what happened last
+Auspius answers the question that comes before that one: **what happened last
 week that you don't know about yet?** Keep that contrast in the edit. Never say
 a competitor's name — just occupy the ground they can't.
 
@@ -51,7 +51,7 @@ the whole film hangs on.
 
 ### 0:32 – 1:05 · The idea, and the aha ★
 
-> **VO:** This is Veridian. You tell it what your business sells. It reads the
+> **VO:** This is Auspius. You tell it what your business sells. It reads the
 > market every week and tells you who to call.
 >
 > And here's the part that makes it work. Watch the same headline hit two
@@ -68,7 +68,7 @@ already this. Zoom into it slowly:
 > To a headhunter, the same sentence is the best news of the week. An empty
 > chair. A live mandate.
 >
-> Same story. Opposite answers. Because Veridian knows who it's working for.
+> Same story. Opposite answers. Because Auspius knows who it's working for.
 
 ---
 
@@ -133,7 +133,7 @@ log ticking through. Cut before it finishes.
 
 ### 2:38 – 2:50 · Close
 
-> **VO:** Veridian. Verified signal intelligence.
+> **VO:** Auspius. Verified signal intelligence.
 >
 > Your pipeline knows who you've met. This tells you who you haven't.
 

@@ -1,7 +1,7 @@
 {
-  "name": "veridian",
+  "name": "auspius",
   "version": "1.0.0",
-  "description": "Veridian — verified signal intelligence. A twelve-agent BD intelligence pipeline, configurable per market. Nebius Token Factory + NVIDIA Nemotron + Tavily.",
+  "description": "Auspius — verified signal intelligence. A twelve-agent BD intelligence pipeline, configurable per market. Nebius Token Factory + NVIDIA Nemotron + Tavily.",
   "type": "module",
   "main": "server/index.js",
   "scripts": {

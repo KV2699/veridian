@@ -1,4 +1,4 @@
-# Veridian — change log
+# Auspius — change log
 
 Chronological record of every change, with the reason. Written for a fork
 session picking this up cold. Companion to `HANDOVER.md`, which covers current
@@ -72,9 +72,9 @@ now the step after any scripted edit to a code file.
 
 ---
 
-## 23 October — fifth batch: Veridian, and configuring itself from the interface
+## 23 October — fifth batch: Auspius, and configuring itself from the interface
 
-### The product is now Veridian
+### The product is now Auspius
 
 *Verified Signal Intelligence.* Renamed throughout — dashboard, briefing header,
 package, documentation. `FIGMA-BRIEF.md` carries the full brand direction for a

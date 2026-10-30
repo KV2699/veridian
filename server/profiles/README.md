@@ -1,6 +1,6 @@
 # Profiles
 
-A profile is the **strategy** of a Signal Bureau deployment. The pipeline is
+A profile is the **strategy** of a Auspius deployment. The pipeline is
 generic; the profile is not.
 
 Changing target market means writing a new profile — not retraining anything,

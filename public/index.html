@@ -1,10 +1,10 @@
 <meta charset="utf-8">
-<title>Veridian</title>
+<title>Auspius</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Verified signal intelligence — an autonomous BD intelligence agent on NVIDIA Nemotron and Nebius Token Factory.">
+<meta name="description" content="Auspius — a weekly market-intelligence workflow for business development teams. Finds the events that create work, scores them, and assigns the follow-up.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap">
 <style>
   /* ═══ VERIDIAN ═════════════════════════════════════════════════════════
      Verified Signal Intelligence.
@@ -20,35 +20,60 @@
         on is a soft neutral, so panels separate by value and a hairline.
      ══════════════════════════════════════════════════════════════════════ */
   :root {
-    --ink: #171A1C;
-    --ink-soft: #2C3134;        /* same family, for lighter weights */
-    --label: #4A5155;
-    --ground: #F2F3F1;
+    /* ── Ink. Black and white do the work; nothing is grey-for-the-sake-of-it.
+       Hierarchy comes from weight and size, never from fading text out. ── */
+    --ink: #0B0D12;
+    --ink-soft: #1C212B;
+    --label: #38414F;
+    --ground: #FFFFFF;
     --card: #FFFFFF;
-    --card-2: #F7F8F7;
-    --line: #E3E5E3;
-    --line-soft: #EDEFED;
+    --card-2: #F6F8FB;
+    --line: #DFE5EE;
+    --line-soft: #EDF1F6;
 
-    --lime: #D7FF28;
-    --lime-deep: #A8C800;
+    /* ── The brand gradient, lifted from the opener. Cyan to blue, 118deg. ── */
+    --grad-a: #0FC6FF;
+    --grad-mid: #1BA6FF;
+    --grad-b: #2B6BF6;
+    --grad: linear-gradient(118deg, var(--grad-a) 0%, var(--grad-mid) 42%, var(--grad-b) 100%);
+    --blue: #1F62E0;
+    --blue-wash: #E8F1FE;
+    --blue-ink: #10336F;
+
+    /* ── Acid yellow is the accent, and it is rationed: the live state, the
+       primary action, the one number that matters. Spend it anywhere else and
+       it stops meaning anything. ── */
+    --acid: #E4FF1A;
+    --acid-deep: #B9CF00;
+
+    /* ── Priority bands. The ramp a BD team already reads at a glance —
+       red urgent, through amber, to a resting green. Carried from the
+       Green Alliance tracker so the colour means the same thing here. ── */
+    --critical: #B5362A;
+    --critical-wash: #FBECE9;
+    --high: #C9762E;
+    --high-wash: #FDF1E6;
+    --medium: #C9A227;
+    --medium-wash: #FCF6E2;
+    --low: #5C8463;
+    --low-wash: #EDF3EE;
+
     --green: #76B900;
     --green-wash: #EEF8D8;
-    --green-ink: #46670A;
-    --blue: #1557A0;
-    --blue-wash: #E4EDF7;
-    --critical: #8D3E24;
-    --critical-wash: #F8E9E2;
-    --amber: #975D00;
+    --green-ink: #3D5C08;
+    --amber: #8A5A00;
     --amber-wash: #FBF0DC;
 
-    --display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
-    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --display: 'Archivo Black', 'Arial Black', Impact, sans-serif;
+    --sans: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
 
-    --r: 10px;
-    --r-sm: 7px;
-    --shadow: 0 1px 2px rgba(23,26,28,.05), 0 10px 28px -16px rgba(23,26,28,.18);
-    --pad: clamp(14px, 2.4vw, 26px);
+    --r: 14px;
+    --r-sm: 9px;
+    --r-lg: 20px;
+    --shadow: 0 1px 2px rgba(11,13,18,.04), 0 14px 38px -20px rgba(11,13,18,.22);
+    --shadow-lift: 0 24px 60px -28px rgba(16,51,111,.42);
+    --pad: clamp(18px, 3.4vw, 44px);
   }
 
   * { box-sizing: border-box; }
@@ -484,11 +509,231 @@
     #railRight { order: 3; }
     .warnbar { order: 0; }
   }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     AUSPIUS LAYER
+     Appended last so it wins the cascade without fighting specificity.
+     Three rules govern everything below:
+       1. Archivo Black for anything that is a heading. Archivo for reading.
+       2. One navigation, never two. A control appears in exactly one place.
+       3. Space is the feature. If a panel feels tight, it is wrong.
+     ════════════════════════════════════════════════════════════════════ */
+
+  body { font-family: var(--sans); background: var(--ground); color: var(--ink); }
+  h1, h2, h3, h4 { font-family: var(--display); font-weight: 400; letter-spacing: -.015em; }
+
+  /* ── Header ───────────────────────────────────────────────────────── */
+  header {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 20px var(--pad); background: var(--card);
+    border-bottom: 1px solid var(--line);
+  }
+  header .brand { display: flex; align-items: baseline; gap: 12px; }
+  header .brand h1 {
+    font-family: var(--display); font-size: 21px; letter-spacing: .005em;
+    text-transform: uppercase; margin: 0; display: inline-flex; align-items: baseline;
+  }
+  header .brand h1::after {
+    content: ''; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--grad-b); margin-left: 4px;
+  }
+  header .brand .tagline {
+    font-family: var(--mono); font-size: 9.5px; font-weight: 600;
+    letter-spacing: .15em; text-transform: uppercase; color: var(--label);
+  }
+  @media (max-width: 900px) { header .brand .tagline { display: none; } }
+
+  header .cfgbox { display: flex; align-items: center; gap: 9px; }
+  header .cfgbox .lbl {
+    font-family: var(--mono); font-size: 9.5px; font-weight: 700;
+    letter-spacing: .13em; text-transform: uppercase; color: var(--label);
+  }
+  .btn {
+    font-family: var(--sans); font-size: 13.5px; font-weight: 600;
+    border: 1px solid var(--line); background: var(--card); color: var(--ink);
+    border-radius: 999px; padding: 9px 17px; cursor: pointer;
+  }
+  .btn:hover { border-color: var(--ink); }
+  .btn.sectorbtn { font-weight: 700; padding-right: 13px; }
+  .btn.dashed { border-style: dashed; }
+  .btn.primary {
+    background: var(--acid); border-color: var(--acid-deep); color: var(--ink); font-weight: 700;
+  }
+  .btn.primary:hover { background: #EEFF5C; }
+  .btn.primary:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* ── One navigation. The four cards below ARE the nav, so the old header
+     tab row is gone — it addressed the same four views under different
+     names, which is the definition of a duplicated control. ── */
+  header nav.tabs { display: none !important; }
+
+  /* ── The greeting. Big, centred, and the only thing on its line. ──── */
+  .greet { padding: clamp(42px, 7vw, 88px) var(--pad) clamp(26px, 4vw, 44px); background: var(--ground); }
+  .greet-row { display: block; text-align: center; }
+  .greet .when {
+    font-family: var(--mono); font-size: 10px; font-weight: 700;
+    letter-spacing: .18em; text-transform: uppercase; color: var(--label); margin-bottom: 18px;
+  }
+  .greet h2 {
+    font-family: var(--display); font-size: clamp(30px, 5.6vw, 62px);
+    line-height: 1.06; letter-spacing: -.025em; margin: 0 auto; max-width: 16ch; text-wrap: balance;
+  }
+  .ground-badge {
+    display: inline-flex; flex-direction: row; align-items: center; gap: 9px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 999px;
+    padding: 8px 17px; margin: 22px auto 0;
+  }
+  .ground-badge .t {
+    font-family: var(--mono); font-size: 9.5px; font-weight: 700;
+    letter-spacing: .13em; text-transform: uppercase; color: var(--green-ink);
+  }
+  .ground-badge .s { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--ink); }
+
+  /* ── Navigation cards. Black, generous, one job each. ─────────────── */
+  .flow {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+    padding: 0 var(--pad) clamp(30px, 4vw, 48px); background: var(--ground);
+    max-width: 1680px; margin: 0 auto;
+  }
+  @media (max-width: 1000px) { .flow { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px)  { .flow { grid-template-columns: 1fr; } }
+  .flow .flow-lbl { display: none; }
+  .flow button {
+    position: relative; text-align: left; cursor: pointer;
+    background: var(--ink); color: #FFFFFF; border: 1px solid var(--ink);
+    border-radius: var(--r-lg); padding: 26px 24px 24px; min-height: 160px;
+    display: flex; flex-direction: column; justify-content: flex-end; gap: 7px;
+    transition: transform .18s ease, box-shadow .18s ease;
+  }
+  .flow button:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift); }
+  .flow button[aria-selected="true"] { background: var(--grad); border-color: transparent; }
+  .flow button .n {
+    position: absolute; top: 18px; right: 18px;
+    font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .1em;
+    background: #FFFFFF; color: var(--ink); border-radius: 999px; padding: 4px 11px;
+  }
+  .flow button .t {
+    font-family: var(--display); font-size: 21px; letter-spacing: -.02em;
+    color: #FFFFFF; display: block;
+  }
+  .flow button .s {
+    font-size: 13px; font-weight: 500; color: rgba(255,255,255,.88);
+    line-height: 1.45; display: block; max-width: 30ch;
+  }
+  .flow button br { display: none; }
+
+  /* ── Panels. Fewer borders, more air. ─────────────────────────────── */
+  main { max-width: 1680px; margin: 0 auto; padding: 0 var(--pad) 80px; }
+  .panel, .card, .box {
+    border-radius: var(--r); border: 1px solid var(--line); background: var(--card);
+  }
+  .stats {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+    background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden;
+  }
+  @media (max-width: 760px) { .stats { grid-template-columns: 1fr 1fr; } }
+  .stat { background: var(--card); padding: 24px 26px; }
+  .stat .k {
+    font-family: var(--mono); font-size: 9.5px; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--label);
+  }
+  .stat .v {
+    font-family: var(--display); font-size: 40px; line-height: 1.05;
+    letter-spacing: -.03em; margin: 10px 0 6px;
+  }
+  .stat .s { font-size: 13px; font-weight: 500; color: var(--ink); }
+
+  /* ── The band dot. One circle, top-right, on anything that carries a
+     priority. Colour alone is never the only cue — the band is always
+     written next to it in words. ── */
+  .dot-band {
+    position: absolute; top: 16px; right: 16px;
+    width: 13px; height: 13px; border-radius: 50%;
+    border: 2px solid var(--card); box-shadow: 0 0 0 1px currentColor;
+  }
+  .dot-band.critical { background: var(--critical); color: var(--critical); }
+  .dot-band.high     { background: var(--high);     color: var(--high); }
+  .dot-band.medium   { background: var(--medium);   color: var(--medium); }
+  .dot-band.low      { background: var(--low);      color: var(--low); }
+
+  /* ── Signal cards ─────────────────────────────────────────────────── */
+  .sig {
+    position: relative; border: 1px solid var(--line); border-radius: var(--r);
+    background: var(--card); padding: 24px 26px 20px; margin-bottom: 14px;
+  }
+  .sig:hover { border-color: #C3CEDE; }
+  .sig .top { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-bottom: 10px; padding-right: 26px; }
+  .sig .co { font-family: var(--display); font-size: 16px; letter-spacing: -.01em; }
+  .sig h3 { font-family: var(--display); font-size: 19px; margin: 0 0 8px; letter-spacing: -.02em; }
+  .sig p { font-size: 15px; font-weight: 450; line-height: 1.62; margin: 0 0 12px; max-width: 76ch; }
+  .pill {
+    font-family: var(--mono); font-size: 9.5px; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--card-2); color: var(--ink);
+  }
+  .pill.critical { background: var(--critical-wash); border-color: var(--critical); color: var(--critical); }
+  .pill.high     { background: var(--high-wash);     border-color: var(--high);     color: var(--high); }
+  .pill.medium   { background: var(--medium-wash);   border-color: var(--medium);   color: #7A6210; }
+  .pill.low      { background: var(--low-wash);      border-color: var(--low);      color: var(--low); }
+  .counter {
+    display: block; background: var(--high-wash); border-left: 3px solid var(--high);
+    border-radius: 0 var(--r-sm) var(--r-sm) 0; padding: 13px 16px; margin: 0 0 13px;
+    font-size: 14px; font-weight: 500; line-height: 1.6; max-width: 76ch;
+  }
+  .counter b {
+    display: block; font-family: var(--mono); font-size: 9.5px; font-weight: 700;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--high); margin-bottom: 5px;
+  }
+  .chip {
+    font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .05em;
+    background: var(--card-2); border: 1px solid var(--line);
+    border-radius: 999px; padding: 4px 10px; margin: 0 5px 5px 0; display: inline-block;
+  }
+  .chip.ms { background: var(--blue-wash); border-color: var(--blue); color: var(--blue-ink); font-weight: 700; }
+  .src { font-family: var(--mono); font-size: 11.5px; font-weight: 600; color: var(--blue); text-decoration: none; }
+  .src:hover { text-decoration: underline; }
+
+  /* ── The action bar. A signal that ends without a decision is a
+     newsletter. Every card names an owner, a state and one next step. ── */
+  .act {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    border-top: 1px solid var(--line-soft); margin-top: 15px; padding-top: 14px;
+  }
+  .act .fld { display: flex; align-items: baseline; gap: 6px; }
+  .act .k {
+    font-family: var(--mono); font-size: 9px; font-weight: 700;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--label);
+  }
+  .act .v { font-size: 13px; font-weight: 700; }
+  .act .next { flex-basis: 100%; font-size: 13.5px; font-weight: 500; }
+  .act .next b { font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--blue); display: block; margin-bottom: 3px; }
+  .act .sp { flex: 1; }
+  .mini {
+    font-family: var(--sans); font-size: 12.5px; font-weight: 600;
+    border: 1px solid var(--line); background: var(--card); color: var(--ink);
+    border-radius: 999px; padding: 6px 13px; cursor: pointer;
+  }
+  .mini:hover { border-color: var(--ink); }
+  .mini.go { background: var(--ink); color: #FFF; border-color: var(--ink); }
+  .state {
+    font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .11em;
+    text-transform: uppercase; padding: 4px 10px; border-radius: 999px;
+    background: var(--blue-wash); color: var(--blue-ink); border: 1px solid var(--blue);
+  }
+  .state.done { background: var(--green-wash); color: var(--green-ink); border-color: var(--green); }
+
+  /* ── Section headings ─────────────────────────────────────────────── */
+  .lbl, .cap {
+    font-family: var(--mono); font-size: 9.5px; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--label);
+  }
+  .demo-note { margin: 0 var(--pad) 0; border-radius: var(--r); }
+
 </style>
 
 <header>
   <div class="brand">
-    <h1>Veridian</h1>
+    <h1>Auspius</h1>
     <span class="tagline lbl">Verified Signal Intelligence</span>
   </div>
 
@@ -503,13 +748,6 @@
 
   <div class="spacer"></div>
 
-  <nav class="tabs" role="tablist" aria-label="Sections">
-    <button role="tab" data-view="overview" aria-selected="true">Intelligence</button>
-    <button role="tab" data-view="register" aria-selected="false">Register</button>
-    <button role="tab" data-view="briefings" aria-selected="false">Briefings</button>
-    <button role="tab" data-view="ask" aria-selected="false">Ask</button>
-  </nav>
-
   <button class="btn" id="refresh">Refresh</button>
   <button class="btn primary" id="run">Run pipeline</button>
   <span id="week" hidden></span>
@@ -522,12 +760,27 @@
   <span class="s">Saved results from real pipeline runs — every organisation, briefing, score, engine label and rejection below was produced by NVIDIA Nemotron on Nebius Token Factory. Running the pipeline live needs API keys and a local server.</span>
 </div>
 
-<div class="flow" role="tablist" aria-label="Your signal workflow">
-  <span class="flow-lbl lbl">Your signal workflow</span>
-  <button role="tab" data-view="overview" aria-selected="true"><span class="n">01</span><span><span class="t">Overview</span><br><span class="s">What changed</span></span></button>
-  <button role="tab" data-view="register" aria-selected="false"><span class="n">02</span><span><span class="t">Signals</span><br><span class="s">Where to act</span></span></button>
-  <button role="tab" data-view="briefings" aria-selected="false"><span class="n">03</span><span><span class="t">Proof</span><br><span class="s">Why it scored</span></span></button>
-  <button role="tab" data-view="ask" aria-selected="false"><span class="n">04</span><span><span class="t">Ask</span><br><span class="s">Query the register</span></span></button>
+<div class="flow" role="tablist" aria-label="Sections">
+  <button role="tab" data-view="overview" aria-selected="true">
+    <span class="n">01</span>
+    <span class="t">Overview</span>
+    <span class="s">What changed this week, and what needs a decision.</span>
+  </button>
+  <button role="tab" data-view="register" aria-selected="false">
+    <span class="n">02</span>
+    <span class="t">Signals</span>
+    <span class="s">Where to act. Every lead with an owner and a next step.</span>
+  </button>
+  <button role="tab" data-view="briefings" aria-selected="false">
+    <span class="n">03</span>
+    <span class="t">Proof</span>
+    <span class="s">Why it scored, and what was thrown away.</span>
+  </button>
+  <button role="tab" data-view="ask" aria-selected="false">
+    <span class="n">04</span>
+    <span class="t">Ask Auspius</span>
+    <span class="s">Query the register in plain English.</span>
+  </button>
 </div>
 
 <div class="greet">
@@ -552,7 +805,7 @@
   <div class="sheet-inner wide">
     <div class="step"><span class="n">01</span><span class="lbl">Choose your sector</span></div>
     <h2>Which kind of business is this for?</h2>
-    <p class="sub">Veridian reads the same market news differently depending on who it is working for. Pick the closest match — or add your own business and it will configure itself.</p>
+    <p class="sub">Auspius reads the same market news differently depending on who it is working for. Pick the closest match — or add your own business and it will configure itself.</p>
     <div class="sectorgrid" id="sectorGrid"></div>
     <div class="sheet-actions">
       <button class="btn dashed" id="sectorAdd">+ My sector isn't here — add my business</button>
@@ -564,8 +817,8 @@
 <div class="sheet" id="sheet" hidden>
   <div class="sheet-inner">
     <div class="step"><span class="n">01</span><span class="lbl">New business configuration</span></div>
-    <h2>What should Veridian understand?</h2>
-    <p class="sub">Point Veridian at a business. It will learn what they sell, where demand appears and which signals deserve action.</p>
+    <h2>What should Auspius understand?</h2>
+    <p class="sub">Point Auspius at a business. It will learn what they sell, where demand appears and which signals deserve action.</p>
 
     <div class="duo">
       <div class="field">
@@ -580,19 +833,19 @@
 
     <div class="field important">
       <label for="bizWins">Deals they have already won <span class="tag">The important one</span></label>
-      <div class="hint">What published event started each deal? Include deals you <b>lost</b> too — a loss teaches Veridian what a dead lead looks like. Nothing else can.</div>
+      <div class="hint">What published event started each deal? Include deals you <b>lost</b> too — a loss teaches Auspius what a dead lead looks like. Nothing else can.</div>
       <textarea id="bizWins" placeholder="One deal per line. Example:&#10;We won a data-centre programme after the client announced a funded capacity expansion."></textarea>
     </div>
 
     <div class="field">
       <label for="bizBrief">Anything else you know <span>optional</span></label>
-      <div class="hint">Clients, competitors, markets or publications they trust. Veridian only keeps what it can verify.</div>
+      <div class="hint">Clients, competitors, markets or publications they trust. Auspius only keeps what it can verify.</div>
       <textarea id="bizBrief" style="min-height:72px" placeholder="Add useful context…"></textarea>
     </div>
 
     <div class="promise">
       <span class="tick">✓</span>
-      <span><b>Veridian will not invent polarity.</b> If you skip past wins, it will build everything it can research and leave the commercial direction explicitly unanswered.</span>
+      <span><b>Auspius will not invent polarity.</b> If you skip past wins, it will build everything it can research and leave the commercial direction explicitly unanswered.</span>
     </div>
 
     <div class="err" id="bizError" hidden></div>
@@ -841,7 +1094,9 @@ function drawSignals(signals) {
     const age = x.date ? Math.max(0, Math.round((Date.now() - new Date(x.date)) / 864e5)) : null;
     const areas = (x.practice_areas ?? []).map((a) => `<span class="chip">${esc(a)}</span>`).join('')
       + (x.multi_service ? '<span class="chip ms">multi-service</span>' : '');
+    const w = workOn(x);
     return `<article class="sig" data-i="${i}">
+      <span class="dot-band ${esc(band)}" title="${esc(x.priority_band ?? '')} priority"></span>
       <div class="top">
         <span class="co">${esc(x.company)}</span>
         <span class="pill ${esc(band)}">${esc(x.priority_band ?? '')}</span>
@@ -853,15 +1108,78 @@ function drawSignals(signals) {
       ${x.counter_reading ? `<span class="counter"><b>Counter-reading</b>${esc(x.counter_reading)}</span>` : ''}
       <div class="areas">${areas}</div>
       <a class="src" href="${esc(x.url)}" target="_blank" rel="noopener">${esc(hostOf(x.url))} →</a>
+      <div class="act">
+        <span class="fld"><span class="k">Owner</span><span class="v">${esc(w.owner)}</span></span>
+        <span class="state ${w.status === 'New' ? '' : 'done'}">${esc(w.status)}</span>
+        <span class="sp"></span>
+        <button class="mini go" data-act="done" data-i="${i}">Mark actioned</button>
+        <button class="mini" data-act="crm" data-i="${i}">Send to CRM</button>
+        <button class="mini" data-act="drop" data-i="${i}">Dismiss</button>
+        <span class="next"><b>Next action</b>${esc(w.next)}</span>
+      </div>
     </article>`;
   }).join('');
 
   // Clicking a signal explains its score in the right rail. The arithmetic is
   // the product's proof, so it should be one click from any row.
   for (const node of el.querySelectorAll('.sig')) {
-    node.onclick = (e) => { if (e.target.closest('a')) return; drawBreakdown(signals[Number(node.dataset.i)]); };
+    node.onclick = (e) => {
+      if (e.target.closest('a')) return;
+      // Recording a decision must not also re-open the score panel underneath.
+      const btn = e.target.closest('[data-act]');
+      if (btn) {
+        e.stopPropagation();
+        const sig = signals[Number(btn.dataset.i)];
+        const status = { done: 'Contacted', crm: 'Sent to CRM', drop: 'Dismissed' }[btn.dataset.act];
+        setWork(sig, { status, owner: status === 'Dismissed' ? 'Unassigned' : 'You' });
+        drawSignals(signals);
+        logLine(btn.dataset.act === 'crm'
+          ? `task created for ${sig.company} — source attached, owner you`
+          : `${sig.company} marked ${status.toLowerCase()}`);
+        return;
+      }
+      drawBreakdown(signals[Number(node.dataset.i)]);
+    };
   }
   drawBreakdown(signals[0]);
+}
+
+// ── The work layer ───────────────────────────────────────────────────────────
+// A signal that ends without a decision is a newsletter. Every card carries an
+// owner, a state and one next step, and the reader can record what they did.
+//
+// This is deliberately per-reader and stored in the browser: the outcome model
+// that feeds results back into scoring is not built, and pretending it is would
+// be the one dishonest thing on the screen. What it does prove is where the
+// work goes after the briefing — which is the half most BD tools leave out.
+const WORK_KEY = 'auspius.work.v1';
+const workState = (() => {
+  try { return JSON.parse(localStorage.getItem(WORK_KEY) || '{}'); } catch { return {}; }
+})();
+const saveWork = () => { try { localStorage.setItem(WORK_KEY, JSON.stringify(workState)); } catch { /* private window */ } };
+const sigKey = (x) => `${x.company}|${x.date ?? ''}`;
+
+// The next step is derived from the signal, not invented: a counter-reading
+// means verify before contact; a critical band means contact now.
+function nextActionFor(x) {
+  if (x.counter_reading) return 'Verify the counter-reading before making contact.';
+  if (String(x.priority_band).toLowerCase() === 'critical') return `Contact ${x.company} this week — approach within 7 days.`;
+  if (x.multi_service) return `Open with the broader conversation — this touches more than one practice area.`;
+  return `Review and decide whether ${x.company} is worth an approach.`;
+}
+function workOn(x) {
+  const k = sigKey(x);
+  const saved = workState[k] ?? {};
+  return {
+    owner: saved.owner ?? 'Unassigned',
+    status: saved.status ?? 'New',
+    next: saved.status && saved.status !== 'New' ? `Logged — ${String(saved.status).toLowerCase()}.` : nextActionFor(x),
+  };
+}
+function setWork(x, patch) {
+  const k = sigKey(x);
+  workState[k] = { ...(workState[k] ?? {}), ...patch };
+  saveWork();
 }
 
 const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return 'source'; } };
@@ -1189,7 +1507,7 @@ function drawProfiles(profiles, active) {
   const warn = $('polarityWarn');
   if (meta.needs_polarity) {
     warn.hidden = false;
-    warn.innerHTML = `<b>This configuration has no polarity yet.</b> Veridian built everything it could research, and refused to guess which way events point for this business — that cannot be derived from a description, only from deals already won. It will run, and it will score badly, until ${meta.open_questions} question${meta.open_questions === 1 ? '' : 's'} are answered.`;
+    warn.innerHTML = `<b>This configuration has no polarity yet.</b> Auspius built everything it could research, and refused to guess which way events point for this business — that cannot be derived from a description, only from deals already won. It will run, and it will score badly, until ${meta.open_questions} question${meta.open_questions === 1 ? '' : 's'} are answered.`;
   } else warn.hidden = true;
   drawExamples(active.first_practice_area);
 }

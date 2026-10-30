@@ -1,6 +1,6 @@
-# Veridian — design brief for Figma
+# Auspius — design brief for Figma
 
-**Product:** Veridian · *Verified Signal Intelligence*
+**Product:** Auspius · *Verified Signal Intelligence*
 **What it is:** an autonomous business-development intelligence agent. It reads a
 market every week, verifies every claim against its source, scores what survives
 with arithmetic you can audit, and writes a briefing. Built on NVIDIA Nemotron
@@ -86,7 +86,7 @@ where everything is green says nothing.
 | Scores, codes, URLs, timestamps | **IBM Plex Mono** | This is load-bearing — see below |
 | The weekly briefing only | **Source Serif 4** | Used sparingly, for narrative prose |
 
-**The mono face is doing real work, not decoration.** Veridian's claim is that
+**The mono face is doing real work, not decoration.** Auspius's claim is that
 every number is auditable and every source is checkable. Setting scores, source
 domains, agent timings and rejection codes in mono makes that claim visible:
 
@@ -125,7 +125,7 @@ The HTML reference shows all of this populated. In rough order of importance:
 1. **The weekly briefing.** The centre of the product — a headline, then scored
    signals, each with a source link and sometimes a counter-reading. This is the
    thing people read. Give it document-like typography.
-2. **The configuration selector, in the top bar.** Veridian runs for a different
+2. **The configuration selector, in the top bar.** Auspius runs for a different
    business depending on which configuration is loaded, and switching is a
    *context change*, not a filter — the whole page reloads around it. It needs to
    read as more significant than a dropdown filter usually does.
@@ -189,7 +189,7 @@ system what a dead lead looks like.
 configuration anyway and leaves the polarity *unanswered*, with explicit
 questions for a human. There is a persistent banner for this state:
 
-> **This configuration has no polarity yet.** Veridian built everything it could
+> **This configuration has no polarity yet.** Auspius built everything it could
 > research, and refused to guess which way events point for this business. It
 > will run, and it will score badly, until these questions are answered.
 

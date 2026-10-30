@@ -1,6 +1,6 @@
 # The Perplexity prompt — researching a business so the system can be configured for it
 
-**What this is for.** Veridian needs a *profile* before it can work for a
+**What this is for.** Auspius needs a *profile* before it can work for a
 business: what that business sells, who it can realistically win, which
 publications carry its market's news, and which way each kind of event points
 for it. Most of that is public. This prompt gathers it in one pass.

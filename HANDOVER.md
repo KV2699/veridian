@@ -1,4 +1,4 @@
-# Veridian — session handover
+# Auspius — session handover
 
 **Written:** 3 October 2026 · **Updated:** 23 October 2026
 **Deadline:** 30 October 2026, 17:00 UTC
@@ -312,6 +312,6 @@ active, check `git log` before editing shared files — `profiles/nvidia.js` and
 
 This is a rebuild of the user's **BD Horizon Scanner** — a seven-subagent Claude Code pipeline for a different market. The prior-work declaration is in the README and must stay.
 
-The user is Veridian and owns the methodology. Their own knowledge files (`../GA-BD-Pitfalls-Blockers.md`, `../GA-BD-Lessons-Learned.md`, `../GA-BD-Tool-Performance.md`, `../Acre BD tracker/Acre_BD_Prompt_Pack_v3.md`) are the authoritative source for *why* the architecture is shaped this way. Several bugs found this session are documented pitfalls from those files reappearing in new code.
+The user is Auspius and owns the methodology. Their own knowledge files (`../GA-BD-Pitfalls-Blockers.md`, `../GA-BD-Lessons-Learned.md`, `../GA-BD-Tool-Performance.md`, `../Acre BD tracker/Acre_BD_Prompt_Pack_v3.md`) are the authoritative source for *why* the architecture is shaped this way. Several bugs found this session are documented pitfalls from those files reappearing in new code.
 
 **The recurring lesson, twice over:** the thing that breaks the system is always something no onboarding form could ask. First signal polarity (the same event means opposite things to different businesses), then the value factor (the right metric depends on revenue concentration). The pipeline is generic; the judgement is not, and the profile is where the judgement lives.

@@ -325,7 +325,7 @@ function fixtureBriefing({ weekLabel, signals, profile }) {
   const section = (title, rows) => [`## ${title} (${rows.length} signals)`,
     ...(rows.length ? rows.map((s) => `- ${s.summary} [source](${s.url})`) : ['No signals this week.']), ''];
   return [
-    `# Veridian — Week of ${weekLabel}`, '',
+    `# Auspius — Week of ${weekLabel}`, '',
     "## This Week's Headline",
     'Dry run: this briefing was generated from fixtures without calling Nebius or Tavily.', '',
     ...section('Your Accounts', signals.filter((s) => s.category === 'account')),

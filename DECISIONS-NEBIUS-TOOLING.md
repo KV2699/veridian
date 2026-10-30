@@ -21,7 +21,7 @@ price, with no credit cover.
 ### Serverless Job — for the weekly pipeline
 
 **Decision: do this.** It is the cheapest honest claim on Nebius AI Cloud
-available to this project, and the narrative fit is exact: Veridian *is* a
+available to this project, and the narrative fit is exact: Auspius *is* a
 finite weekly background run. A Job bills for the duration of the run and then
 stops. An Endpoint bills every hour between create and delete, including idle —
 and judging runs 1–15 December, six weeks after the deadline, so an Endpoint
