@@ -216,14 +216,11 @@
 
   /* Says plainly that this is saved output, not a live pipeline. Calling a
      baked demo "live" would be the one dishonest thing on the screen. */
-  .demo-note {
-    display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px;
-    margin: 0 var(--pad); padding: 9px 14px;
-    background: var(--blue-wash); border: 1px solid var(--blue);
-    border-radius: var(--r-sm);
-  }
-  .demo-note .t { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--blue); }
-  .demo-note .s { font-size: 12.5px; font-weight: 500; color: var(--ink); }
+  /* A quiet fact under the wordmark, not a banner competing with the product
+     for the first thing you read. */
+  .demo-note { display: block; margin: 0 var(--pad); padding: 7px 0 0; background: none; border: 0; }
+  .demo-note .s { font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: .04em; color: var(--label); }
+  .demo-note .s b { font-weight: 700; color: var(--ink); }
 
   .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line-soft); }
   @media (max-width: 620px) { .stats { grid-template-columns: 1fr 1fr; } }
@@ -647,51 +644,52 @@
      priority. Colour alone is never the only cue — the band is always
      written next to it in words. ── */
   .dot-band {
-    position: absolute; top: 16px; right: 16px;
-    width: 13px; height: 13px; border-radius: 50%;
-    border: 2px solid var(--card); box-shadow: 0 0 0 1px currentColor;
+    width: 17px; height: 17px; border-radius: 50%; flex: none;
+    box-shadow: 0 0 0 1px currentColor, 0 0 0 4px var(--card);
   }
   .dot-band.critical { background: var(--critical); color: var(--critical); }
   .dot-band.high     { background: var(--high);     color: var(--high); }
   .dot-band.medium   { background: var(--medium);   color: var(--medium); }
   .dot-band.low      { background: var(--low);      color: var(--low); }
 
-  /* ── Signal cards ─────────────────────────────────────────────────── */
-  .sig {
-    position: relative; border: 1px solid var(--line); border-radius: var(--r);
-    background: var(--card); padding: 24px 26px 20px; margin-bottom: 14px;
+  /* ── Leads, as rows ──────────────────────────────────────────────────
+     A briefing that scrolls for two screens is a document, not a worklist.
+     Each lead is one line — who, how urgent, what happened — and opens on
+     demand. Built on <details>, so keyboard and screen-reader behaviour comes
+     for free rather than being re-implemented badly. */
+  .sig { border: 0; border-top: 1px solid var(--line-soft); background: none; padding: 0; margin: 0; border-radius: 0; }
+  .sig:first-child { border-top: 0; }
+  .sig > details > summary {
+    list-style: none; cursor: pointer; display: flex; align-items: center;
+    gap: 16px; padding: 20px 26px;
   }
-  .sig:hover { border-color: #C3CEDE; }
-  .sig .top { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-bottom: 10px; padding-right: 26px; }
-  .sig .co { font-family: var(--display); font-size: 16px; letter-spacing: -.01em; }
-  .sig h3 { font-family: var(--display); font-size: 19px; margin: 0 0 8px; letter-spacing: -.02em; }
-  .sig p { font-size: 15px; font-weight: 450; line-height: 1.62; margin: 0 0 12px; max-width: 76ch; }
-  .pill {
-    font-family: var(--mono); font-size: 9.5px; font-weight: 700;
-    letter-spacing: .1em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px;
-    border: 1px solid var(--line); background: var(--card-2); color: var(--ink);
+  .sig > details > summary::-webkit-details-marker { display: none; }
+  .sig > details > summary:hover { background: var(--card-2); }
+  .sig > details > summary:focus-visible { outline: 3px solid var(--blue); outline-offset: -3px; background: var(--card-2); }
+  .sig > details[open] > summary { background: var(--card-2); }
+
+  .sig .co { font-family: var(--display); font-size: clamp(17px, 1.7vw, 23px); letter-spacing: -.02em; flex: none; }
+  .sig .ttl { font-size: 14.5px; font-weight: 500; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; flex: 1 1 auto; min-width: 0; }
+  .sig .score { font-family: var(--mono); font-size: 17px; font-weight: 700; flex: none; }
+  .sig .score i { font-style: normal; font-size: 11px; font-weight: 500; color: var(--label); }
+  .sig .chev {
+    flex: none; width: 36px; height: 36px; border-radius: 50%;
+    border: 1px solid var(--line); display: grid; place-items: center;
+    font-family: var(--mono); font-size: 16px; font-weight: 700; line-height: 1;
+    transition: transform .18s ease, background .18s ease, border-color .18s ease;
   }
-  .pill.critical { background: var(--critical-wash); border-color: var(--critical); color: var(--critical); }
-  .pill.high     { background: var(--high-wash);     border-color: var(--high);     color: var(--high); }
-  .pill.medium   { background: var(--medium-wash);   border-color: var(--medium);   color: #7A6210; }
-  .pill.low      { background: var(--low-wash);      border-color: var(--low);      color: var(--low); }
-  .counter {
-    display: block; background: var(--high-wash); border-left: 3px solid var(--high);
-    border-radius: 0 var(--r-sm) var(--r-sm) 0; padding: 13px 16px; margin: 0 0 13px;
-    font-size: 14px; font-weight: 500; line-height: 1.6; max-width: 76ch;
+  .sig > details > summary:hover .chev,
+  .sig > details > summary:focus-visible .chev { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .sig > details[open] .chev { transform: rotate(45deg); background: var(--ink); color: #fff; border-color: var(--ink); }
+  @media (prefers-reduced-motion: reduce) { .sig .chev { transition: none; } }
+  @media (max-width: 760px) {
+    .sig > details > summary { flex-wrap: wrap; gap: 10px 12px; padding: 18px; }
+    .sig .ttl { flex-basis: 100%; order: 5; white-space: normal; }
   }
-  .counter b {
-    display: block; font-family: var(--mono); font-size: 9.5px; font-weight: 700;
-    letter-spacing: .12em; text-transform: uppercase; color: var(--high); margin-bottom: 5px;
-  }
-  .chip {
-    font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .05em;
-    background: var(--card-2); border: 1px solid var(--line);
-    border-radius: 999px; padding: 4px 10px; margin: 0 5px 5px 0; display: inline-block;
-  }
-  .chip.ms { background: var(--blue-wash); border-color: var(--blue); color: var(--blue-ink); font-weight: 700; }
-  .src { font-family: var(--mono); font-size: 11.5px; font-weight: 600; color: var(--blue); text-decoration: none; }
-  .src:hover { text-decoration: underline; }
+  .deets { padding: 2px 26px 24px; }
+  .deets p { font-size: 15px; font-weight: 450; line-height: 1.62; margin: 0 0 14px; max-width: 74ch; }
+  .deets .areas { margin-bottom: 10px; }
 
   /* ── The action bar. A signal that ends without a decision is a
      newsletter. Every card names an owner, a state and one next step. ── */
@@ -729,6 +727,38 @@
   }
   .demo-note { margin: 0 var(--pad) 0; border-radius: var(--r); }
 
+
+  /* ── Diagnostics, folded away ─────────────────────────────────────────
+     Funnel counts, per-collector yield and "Run log: Idle" are engineering
+     telemetry. They earn their place the week a run goes wrong, and no place
+     at all on the Monday a head of growth opens this to decide who to call. */
+  .diag { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); }
+  .diag > summary {
+    list-style: none; cursor: pointer; padding: 15px 18px;
+    font-family: var(--mono); font-size: 10px; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--label);
+    display: flex; align-items: center; gap: 8px; border-radius: var(--r);
+  }
+  .diag > summary::-webkit-details-marker { display: none; }
+  .diag > summary::after { content: '+'; margin-left: auto; font-size: 15px; }
+  .diag[open] > summary::after { content: '–'; }
+  .diag > summary:hover { background: var(--card-2); color: var(--ink); }
+  .diagwrap { padding: 0 18px 18px; border-top: 1px solid var(--line-soft); }
+  .diagwrap .sub { font-family: var(--mono); font-size: 9.5px; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--label); margin: 18px 0 8px; }
+
+  /* Every control states its focus as loudly as its hover. Hover alone is
+     invisible to anyone driving this from a keyboard. */
+  .btn:focus-visible, .mini:focus-visible, .flow button:focus-visible,
+  a:focus-visible, summary:focus-visible, select:focus-visible, input:focus-visible {
+    outline: 3px solid var(--blue); outline-offset: 2px;
+  }
+  .btn:hover, .btn:focus-visible { border-color: var(--ink); background: var(--card-2); }
+  .mini:hover, .mini:focus-visible { border-color: var(--ink); background: var(--card-2); }
+  .mini.go:hover, .mini.go:focus-visible { background: #000; color: #fff; border-color: #000; }
+  .flow button:focus-visible { outline-offset: 3px; }
+  .src:hover, .src:focus-visible { color: var(--ink); }
+
 </style>
 
 <header>
@@ -756,8 +786,7 @@
 </header>
 
 <div class="demo-note" id="demoNote" hidden>
-  <span class="t">Interactive demonstration</span>
-  <span class="s">Saved results from real pipeline runs — every organisation, briefing, score, engine label and rejection below was produced by NVIDIA Nemotron on Nebius Token Factory. Running the pipeline live needs API keys and a local server.</span>
+  <span class="s">Saved results from real runs · <b>NVIDIA Nemotron</b> on <b>Nebius Token Factory</b></span>
 </div>
 
 <div class="flow" role="tablist" aria-label="Sections">
@@ -947,40 +976,24 @@
     </section>
 
     <section class="card">
-      <h2>Yield this run</h2>
-      <div class="funnel" id="funnel"></div>
-      <div id="findings"></div>
-      <details class="qtable" id="qtable" hidden>
-        <summary>Per-query yield</summary>
-        <div id="qrows"></div>
-      </details>
-    </section>
-
-    <section class="card">
-      <h2>Signals by category</h2>
-      <div class="bars" id="bars"></div>
-    </section>
-
-    <section class="card">
-      <h2>Practice area coverage</h2>
-      <div class="bars" id="areas"></div>
-      <div id="multi" class="pad" style="font-size:12.5px"></div>
-    </section>
-
-    <section class="card">
       <h2>Running on</h2>
       <div class="runon" id="runon"></div>
     </section>
 
-    <section class="card">
-      <h2>Past briefings</h2>
-      <div class="hist" id="history"></div>
-    </section>
-
-    <section class="card">
-      <h2>Run log</h2>
-      <div class="log" id="log">Idle.</div>
-    </section>
+    <details class="card diag">
+      <summary>Run diagnostics</summary>
+      <div class="diagwrap">
+        <div class="sub">Yield this run</div>
+        <div class="funnel" id="funnel"></div>
+        <div id="findings"></div>
+        <details class="qtable" id="qtable" hidden><summary>Per-query yield</summary><div id="qrows"></div></details>
+        <div class="sub">Signals by category</div><div class="bars" id="bars"></div>
+        <div class="sub">Practice area coverage</div><div class="bars" id="areas"></div>
+        <div id="multi" class="pad" style="font-size:12.5px"></div>
+        <div class="sub">Past briefings</div><div class="hist" id="history"></div>
+        <div class="sub">Run log</div><div class="log" id="log">Idle.</div>
+      </div>
+    </details>
   </div>
 </main>
 <script>
@@ -1096,27 +1109,31 @@ function drawSignals(signals) {
       + (x.multi_service ? '<span class="chip ms">multi-service</span>' : '');
     const w = workOn(x);
     return `<article class="sig" data-i="${i}">
-      <span class="dot-band ${esc(band)}" title="${esc(x.priority_band ?? '')} priority"></span>
-      <div class="top">
-        <span class="co">${esc(x.company)}</span>
-        <span class="pill ${esc(band)}">${esc(x.priority_band ?? '')}</span>
-        <span class="pill plain">Score ${x.priority_score} / 100</span>
-        ${age === null ? '' : `<span class="lbl">${age === 0 ? 'today' : age + ' days ago'}</span>`}
-      </div>
-      <h3>${esc(x.signal_type ?? 'Signal')}</h3>
-      <p>${esc(x.summary ?? '')}</p>
-      ${x.counter_reading ? `<span class="counter"><b>Counter-reading</b>${esc(x.counter_reading)}</span>` : ''}
-      <div class="areas">${areas}</div>
-      <a class="src" href="${esc(x.url)}" target="_blank" rel="noopener">${esc(hostOf(x.url))} →</a>
-      <div class="act">
-        <span class="fld"><span class="k">Owner</span><span class="v">${esc(w.owner)}</span></span>
-        <span class="state ${w.status === 'New' ? '' : 'done'}">${esc(w.status)}</span>
-        <span class="sp"></span>
-        <button class="mini go" data-act="done" data-i="${i}">Mark actioned</button>
-        <button class="mini" data-act="crm" data-i="${i}">Send to CRM</button>
-        <button class="mini" data-act="drop" data-i="${i}">Dismiss</button>
-        <span class="next"><b>Next action</b>${esc(w.next)}</span>
-      </div>
+      <details>
+        <summary>
+          <span class="dot-band ${esc(band)}"></span>
+          <span class="co">${esc(x.company)}</span>
+          <span class="pill ${esc(band)}">${esc(x.priority_band ?? '')}</span>
+          <span class="ttl">${esc(x.signal_type ?? 'Signal')}${age === null ? '' : ` · ${age === 0 ? 'today' : age + ' days ago'}`}</span>
+          <span class="score">${x.priority_score}<i>/100</i></span>
+          <span class="chev" aria-hidden="true">+</span>
+        </summary>
+        <div class="deets">
+          <p>${esc(x.summary ?? '')}</p>
+          ${x.counter_reading ? `<span class="counter"><b>Counter-reading</b>${esc(x.counter_reading)}</span>` : ''}
+          <div class="areas">${areas}</div>
+          <a class="src" href="${esc(x.url)}" target="_blank" rel="noopener">${esc(hostOf(x.url))} →</a>
+          <div class="act">
+            <span class="fld"><span class="k">Owner</span><span class="v">${esc(w.owner)}</span></span>
+            <span class="state ${w.status === 'New' ? '' : 'done'}">${esc(w.status)}</span>
+            <span class="sp"></span>
+            <button class="mini go" data-act="done" data-i="${i}">Mark actioned</button>
+            <button class="mini" data-act="crm" data-i="${i}">Send to CRM</button>
+            <button class="mini" data-act="drop" data-i="${i}">Dismiss</button>
+            <span class="next"><b>Next action</b>${esc(w.next)}</span>
+          </div>
+        </div>
+      </details>
     </article>`;
   }).join('');
 
