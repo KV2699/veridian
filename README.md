@@ -18,6 +18,25 @@ The vendor and the search firm read the identical event in opposite directions, 
 
 ---
 
+## The stack, and where each piece earns its place
+
+| | |
+|---|---|
+| **NVIDIA Nemotron, three tiers** | `nemotron-3-super-120b-a12b` reads every search result and extracts dated, sourced events. `Nemotron-3-Ultra-550b-a55b` does the grounding check — *is this article about this company, or does it merely mention it?* — writes the counter-reading, and writes the briefing. `nemotron-3-nano-30b-a3b` handles the mechanical passes. |
+| **Nebius Token Factory** | Every model call. It is serverless inference, not a managed GPU: no instance is provisioned or sized, and one OpenAI-compatible endpoint serves all three tiers, so moving an agent between tiers is configuration, not code. The client is a 120-line `fetch` wrapper — `server/lib/nebius.js` — with no vendor SDK. |
+| **Tavily** | The search layer, called at runtime by seven of the nine collectors. `normalise()` in `server/agents/collector-base.js` discards any signal whose URL was not in the Tavily result set the model was shown, so a fabricated source is structurally impossible. Covered by `test/collector.test.mjs`. |
+
+**Where Token Factory accelerated the work.** Running Super for volume and Ultra for
+judgement in the same codebase, under the same auth, is what made a twelve-agent pipeline
+affordable: **6.77M tokens through Super, 1.97M through Ultra, $8.20 for a full weekly run
+across seven markets**. Putting everything on Ultra would have cost roughly four times as
+much and read no better. Swapping a tier to test that was a one-line environment change.
+
+> Note on naming: the code calls `api.studio.nebius.com`, which the console now brands as
+> **Nebius Token Factory**. Same service, former hostname.
+
+---
+
 ## What it actually is
 
 Most BD tools are news alerts with a filter on top. They tell you something happened.
