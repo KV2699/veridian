@@ -271,7 +271,7 @@ npm test               # agent logic tests, no API calls
 |---|---|---|
 | `NEBIUS_API_KEY` | — | Required |
 | `TAVILY_API_KEY` | — | Required |
-| `NEBIUS_BASE_URL` | `https://api.studio.nebius.com/v1` | |
+| `NEBIUS_BASE_URL` | `https://api.studio.nebius.com/v1` | This is the Token Factory inference API. Nebius has since rebranded Studio to **Token Factory**, and the console now shows a regional host such as `https://api.tokenfactory.us-central1.nebius.com/v1/`. The Studio host above is the one these runs used and it still works; either can be set here. |
 | `NEBIUS_MODEL_ULTRA` | `nvidia/llama-3.1-nemotron-70b-instruct` | **Verify with `npm run models`** |
 | `NEBIUS_MODEL_FAST` | `nvidia/llama-3.1-nemotron-nano-8b-v1` | **Verify with `npm run models`** |
 | `PORT` | `8080` | |
