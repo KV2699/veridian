@@ -20,8 +20,11 @@
      2. NOTHING IS LIGHT BLUE. The old cyan-to-blue gradient and the pale
         blue washes read as generic SaaS chrome and competed with the acid.
         Where a surface needs to separate, it separates in grey.
-     3. THE PAGE GROUND IS GREY, cards are white. Panels read by value and a
-        hairline rather than by a drawn border everywhere.
+     3. THE PAGE GROUND IS NAVY, every component on it is white or near-white.
+        The chrome — header, demo strip, the space between panels — belongs to
+        the ground and carries white type with acid for the brand and the
+        labels. The panels are the paper, and they are the only thing that is
+        light. It is the same stage the film uses: a white browser on navy.
      ══════════════════════════════════════════════════════════════════════ */
   :root {
     /* ── Navy is the ink. Deepest at the bottom of the ramp, where it is a
@@ -36,7 +39,8 @@
     /* ── Light grey is the structure: the ground the cards sit on, the fill
        inside a panel, and the hairlines. This is what breaks the interface
        up now that the blue washes are gone. ── */
-    --ground: #F3F5FA;
+    --ground: #071637;
+    --ground-2: #0B1C45;
     --card: #FFFFFF;
     --card-2: #E9EDF4;
     --card-3: #DFE5EF;
@@ -116,8 +120,8 @@
   /* ── Top bar ───────────────────────────────────────────────────────── */
   header {
     display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap;
-    padding: 11px var(--pad); background: var(--card);
-    border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 30;
+    padding: 11px var(--pad); background: var(--ground);
+    border-bottom: 1px solid var(--navy-3); position: sticky; top: 0; z-index: 30;
   }
   /* The header carries a lot: identity, configuration, four views and two
      actions. Chrome goes before controls do. */
@@ -543,7 +547,7 @@
   /* ── Header ───────────────────────────────────────────────────────── */
   header {
     display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-    padding: 20px var(--pad); background: var(--card);
+    padding: 20px var(--pad); background: var(--ground);
     border-bottom: 1px solid var(--line);
   }
   header .brand { display: flex; align-items: baseline; gap: 12px; }
@@ -806,6 +810,73 @@
   .rejline { padding: 11px 26px; border-top: 1px solid var(--line-soft);
     font-size: 13px; font-weight: 500; color: var(--ink); background: var(--card-2); }
   .rejline b { font-weight: 700; }
+  /* ══ ON THE NAVY GROUND ═══════════════════════════════════════════════
+     Everything above this point styles a component. These rules style the
+     ground it sits on, and the handful of things that sit directly on it:
+     the header, the demo strip, the greeting and the gaps between panels.
+
+     The division is the same one the film uses — a white browser on a navy
+     stage. Anything that holds content is paper: white, with navy type.
+     Anything that is chrome belongs to the ground: navy, with white type
+     and acid for the brand and the small labels. Nothing in between.
+     ═════════════════════════════════════════════════════════════════════ */
+
+  header, .greet, .flow, .demo-note { background: var(--ground); }
+  header { border-bottom-color: rgba(255,255,255,.10); }
+
+  /* The wordmark is acid here, because here it is on navy. */
+  .brand h1 { color: var(--acid); }
+  .brand h1::after { background: var(--acid); }
+  .brand .tagline { color: rgba(255,255,255,.72); border-left-color: rgba(255,255,255,.18); }
+  header .cfgbox .lbl, .runhint { color: rgba(255,255,255,.62); }
+
+  /* The demo strip is chrome, so it loses its light-grey panel. */
+  .demo-note { border-bottom: 1px solid rgba(255,255,255,.10); }
+  .demo-note .s { color: rgba(255,255,255,.78); }
+  .demo-note .s b { color: #FFFFFF; }
+
+  /* The greeting is a line of voice-over, and reads like one. */
+  .greet .when { color: var(--acid); }
+  .greet h2 { color: #FFFFFF; }
+  .ground-badge { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.20); }
+  .ground-badge .t { color: var(--acid); }
+  .ground-badge .s { color: #FFFFFF; }
+
+  /* ── The four cards are paper now. On a navy page a navy card disappears,
+     and the selected one takes the acid instead of a gradient. ── */
+  .flow button {
+    background: var(--card); color: var(--ink); border-color: transparent;
+    box-shadow: 0 1px 2px rgba(3,10,28,.22), 0 18px 40px -26px rgba(3,10,28,.55);
+  }
+  .flow button .t { color: var(--ink); }
+  .flow button .s { color: var(--label); }
+  .flow button .n { background: var(--ground); color: var(--acid); }
+  .flow button[aria-selected="true"] {
+    background: var(--acid); border-color: var(--acid);
+  }
+  .flow button[aria-selected="true"] .t,
+  .flow button[aria-selected="true"] .s { color: var(--navy); }
+  .flow button[aria-selected="true"] .s { color: rgba(7,22,55,.78); }
+  .flow button[aria-selected="true"] .n { background: var(--navy); color: var(--acid); }
+
+  /* Buttons in the header are small components, so they stay light. */
+  header .btn { background: rgba(255,255,255,.08); color: #FFFFFF; border-color: rgba(255,255,255,.22); }
+  header .btn:hover, header .btn:focus-visible { background: rgba(255,255,255,.16); border-color: rgba(255,255,255,.4); }
+  header .btn .caret { color: rgba(255,255,255,.6); }
+  header .btn.primary { background: var(--acid); color: var(--navy); border-color: var(--acid); }
+  header .btn.primary:hover { background: #EEFF66; }
+  header .btn.dashed { border-style: dashed; }
+
+  /* Panels float on the ground, so they drop their hairline and take a shadow
+     instead — a border against navy reads as a seam. */
+  main .panel, main .card, main .box, .diag, .stats {
+    border-color: transparent;
+    box-shadow: 0 1px 2px rgba(3,10,28,.20), 0 20px 46px -28px rgba(3,10,28,.50);
+  }
+  .stats { background: var(--line-soft); }
+
+  :focus-visible { outline-color: var(--acid); }
+
 </style>
 
 <header>

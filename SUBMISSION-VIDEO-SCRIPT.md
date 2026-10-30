@@ -179,112 +179,107 @@ Record these in one pass with the dashboard already loaded, then cut to the VO.
 
 # Part two — the narration still to record
 
-The recording you have covers frames 1–49 and runs **1:39**. With the 1.4-second
-brand flash in front of it the film currently sits at **1:40**.
+**The file you sent is not part two.** It is the original, untrimmed part-one
+recording — the same take already in the film, with the 15.8 seconds of chat
+message still on the front. Three checks agree: 114.8 − 15.8 = 99.0, exactly the
+length of the audio in the cut; the loudness envelope of your file offset by
+15.8s correlates with the published narration at **1.0000**; and Whisper
+transcribes it as *"I've smoothed out the narration, tightened the
+transitions…"* followed by *"It's Monday morning…"*, ending on the same
+unfinished *"Netflix loses its first Chief Sustainability"*. Nothing to stitch.
 
-Kyla reads at **177 words a minute** — measured off the transcript, not guessed.
-The cap is 3:00. What follows is **193 words**, which lands at about **1:05**,
-and takes the finished film to roughly **2:49** including the pauses between
-beats. That is the whole of the rest of the film; nothing else is outstanding.
+**Budget.** The film is now 1:50 — a 1.4s brand flash, 1:39 of narration, and a
+9.4s close. The cap is 3:00. What follows is **201 words**, which at Kyla's measured 177 wpm lands at about **1:08** and takes the finished film to roughly **2:57**, leaving headroom for the pauses between beats. That is everything outstanding.
 
-**Two notes before you record it.**
-
-1. **The existing take cuts off mid-phrase.** The last thing Kyla says is
-   *"Netflix loses its first Chief Sustainability."* — the word *Officer* is
-   missing. Beat 1 below opens on that word so the join is clean. If you would
-   rather re-record the whole line, it is
-   *"Netflix loses its first Chief Sustainability Officer."*
-2. **She says "Ospius".** Spell it `Aw-SPEE-us` for the engine, or flag it on
-   the retake.
+**Record it in one take, starting on the word "Officer."** The existing take cuts
+off mid-phrase. If you would rather re-record that whole line it is *"Netflix
+loses its first Chief Sustainability Officer."* And spell the name `Aw-SPEE-us`
+for the engine — she currently says "Ospius".
 
 ---
 
-### Beat 1 · Finishing the Netflix line — 23 words
+### Beat 1 · Finish the line, and land the score — 23 words
 
 > Officer. No successor named. Scored eighty out of a hundred. Critical.
 >
 > Then it does something most tools won't do. It argues against itself.
 
-**On screen:** `07-netflix-signal.png`, spotlight moving from the lead paragraph
-to the score. Hold on the word *Critical*.
+**On screen:** `07-netflix-signal.png`, spotlight on the lead, then the score.
 
 ---
 
-### Beat 2 · The counter-reading — 21 words
+### Beat 2 · What a counter-reading is, in plain words — 34 words
 
-> Netflix has its own recruiting team. They may never go to market. It tells you
-> that before you waste the call.
+> Netflix has its own recruiting team, so they may never go to market. Auspius
+> says so on the same card. It would rather talk you out of a bad call than win
+> the click.
 
-**On screen:** a signal card with the counter-reading open, spotlight on the
-counter-reading itself. **This is the shot I still need from you** if you want it
-to be a different signal from the Netflix one — otherwise I will cut it from the
-briefing capture I already have.
-
----
-
-### Beat 3 · Nemotron and Token Factory ★ — 38 words
-
-> Twelve agents produced that briefing. NVIDIA Nemotron, running on Nebius Token
-> Factory. Super does the fast reading. Ultra does the judging, and writes the
-> briefing you just read. Tavily fetches the sources, so every claim carries a link.
-
-**On screen, in this order:**
-- `08-agent-activity.png` — the ULTRA / SUPER / FREE tiers, spotlight on the rail.
-  **Already captured and uploaded.**
-- `nebius-console.png` — **yours to grab.** Lands on "Nebius Token Factory".
-- `tavily-dashboard.png` — **yours to grab.** Lands on "Tavily fetches the sources".
-
-★ Required by the rules. Do not cut this beat, and do not cut the audio — two of
-the four judging criteria turn on it and the spoken words count.
+**On screen:** the counter-reading, spotlit. *This is the beat that explains the
+product to someone who has never seen it — the thing it does that a news alert
+cannot. Worth the extra seconds.*
 
 ---
 
-### Beat 4 · The score is arithmetic, not an opinion — 34 words
+### Beat 3 · Where the facts come from ★ — 38 words
 
-> The score isn't a model's opinion. Four factors, added up in code. Take any
-> number apart and see where it came from. And it keeps what it threw away —
-> every rejection, with its reason.
+> None of this is the model remembering things. Every week, Tavily searches the
+> live web and brings back the actual pages — filings, postings, press
+> releases. Auspius reads only those. A claim with no source is thrown away.
 
-**On screen:** `06-why-this-scored.png`, spotlight walking the four factors and
-landing on the 80. Then the "Rejected, and why" panel. I have the first; say the
-word and I will capture the rejections panel too.
-
----
-
-### Beat 5 · It isn't one industry — 42 words
-
-> And this isn't one industry. Seven sectors. Executive search. Law. Policy.
-> Hospitality. AI infrastructure. Two hundred and forty-seven organisations nobody
-> handed it — it found them all itself. Same code every time. The only thing that
-> changes is one file describing your business.
-
-**On screen:** `01-sector-chooser.png` with the spotlight released — all seven
-cards up, then the counts.
-
-**The 247 is checked.** It is the sum of the `organisations` figure across the
-seven profiles in `public/demo-data.json`: 150 + 17 + 11 + 13 + 33 + 20 + 3. It is
-the same number the sector chooser prints as "prospects found", so the screen and
-the voice agree.
+**On screen:** `tavily-dashboard.png` — **yours to grab** — then the grounding
+badge (*"18 signals · every claim source-checked"*) and the "Rejected, and why"
+panel showing an `UNGROUNDED` row. *You asked for more Tavily: this is now its
+own beat rather than half a sentence, and it is the answer to the first question
+a sceptical judge asks — how do you know it isn't making this up.*
 
 ---
 
-### Beat 6 · Add your own business — 19 words
+### Beat 4 · The models ★ — 30 words
 
-> And if your sector isn't there, point it at a company website. It configures
-> itself in about two minutes.
+> Twelve agents did the work. NVIDIA Nemotron, running on Nebius Token Factory.
+> Super does the fast reading. Ultra does the judging, and wrote the briefing
+> you saw a moment ago.
 
-**On screen:** `+ Add a business`, a URL pasted, the build log ticking. Cut before
-it finishes. **Yours to screen-record** — it needs a live run with API keys.
+**On screen:** `08-agent-activity.png` (already captured — the ULTRA / SUPER /
+FREE rail), then `nebius-console.png` — **yours to grab**.
+
+★ Two of the four judging criteria turn on this beat. Do not cut it.
 
 ---
 
-### Beat 7 · Close — 16 words
+### Beat 5 · The score is arithmetic — 28 words
 
-> Auspius. Verified signal intelligence. Your pipeline knows who you've met. This
-> tells you who you haven't.
+> And the score is not an opinion. Four factors, added up in code. Open any
+> number and see where it came from. Nothing here is a black box.
 
-**On screen:** acid frame, navy type, the wordmark with the dot. Then the repo and
-demo URLs, and `NVIDIA Nemotron · Nebius Token Factory · Tavily` small underneath.
+**On screen:** `06-why-this-scored.png`, spotlight walking the factors to the 80.
+
+---
+
+### Beat 6 · It isn't one industry — 31 words
+
+> This isn't one industry. Seven sectors — executive search, law, policy,
+> hospitality, AI infrastructure. Two hundred and forty-seven organisations
+> nobody handed it. Same code every time; one file describes your business.
+
+**On screen:** `01-sector-chooser.png`, spotlight released, all seven cards.
+
+**The 247 is checked** against `public/demo-data.json`: 150 + 17 + 11 + 13 + 33
++ 20 + 3, the same figure the chooser prints as "prospects found".
+
+---
+
+### Beat 7 · Close — 17 words
+
+> Auspius. Verified signal intelligence. Your pipeline knows who you have met.
+> This tells you who you haven't.
+
+**On screen:** the close is already built and plays at the end of the board —
+every capture the film showed returns at once as a wall, pulls back and blurs,
+the wordmark comes up in acid over it, and it ends on an acid card reading
+**Thank you — Kerrie Vincent** with `NVIDIA Nemotron · Nebius Token Factory ·
+Tavily` underneath. 9.4 seconds. Leave two seconds of silence after the last
+word so the wall lands on its own.
 
 ---
 
@@ -292,8 +287,12 @@ demo URLs, and `NVIDIA Nemotron · Nebius Token Factory · Tavily` small underne
 
 | # | Shot | Why I can't take it |
 |---|------|---------------------|
-| 1 | `nebius-console.png` | Signed-in third-party console. This session has no browser control and the network policy blocks `nebius.com` outright. |
-| 2 | `tavily-dashboard.png` | Same — signed in, and `tavily.com` is blocked here too. |
-| 3 | The `+ Add a business` live build log | Needs a real run with `NEBIUS_API_KEY` and `TAVILY_API_KEY` set. |
+| 1 | `nebius-console.png` | Signed-in console, and the network policy here blocks `nebius.com`. |
+| 2 | `tavily-dashboard.png` | Same — `tavily.com` is blocked from this container. |
+| 3 | The `+ Add a business` live build log | Needs a real run with `NEBIUS_API_KEY` and `TAVILY_API_KEY`. |
+| 4 | The part-two recording | 201 words above. |
 
-Send those three and the recorded Part Two audio, and the cut is finished.
+**If you want me to time it exactly like part one:** Whisper now runs in this
+container (sherpa-onnx + Whisper base.en, pulled from GitHub since HuggingFace is
+blocked), so send the audio and I can cut frames to it. Your own `scribelab`
+environment is on your machine, which this cloud session cannot reach.
